@@ -1587,12 +1587,13 @@ async function reintentarPendientes(){var lista=leerPendientes();if(lista.length
 function limpiarCache(){['tambo_rodeo','tambo_rodeo_ts','tambo_guachera','tambo_recria','tambo_pending'].forEach(function(k){localStorage.removeItem(k);});showToast('Caché limpiada — recargando...');setTimeout(function(){location.reload();},1200);}
 // ============================================================
 
-async function enviarASheets(hoja, fila) {
+async function enviarASheets(hoja, fila, datosExtra) {
   guardarCacheLocal();
   showSaving(true); setSyncStatus('⟳ Guardando...');
 
   try {
-    await fetch(SCRIPT_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/json'},body:JSON.stringify({hoja:hoja,fila:fila})});
+    var payload = {hoja:hoja, fila:fila, rp:String(fila[2]||''), datos:datosExtra||{}};
+    await fetch(SCRIPT_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
     setSyncStatus('● Sincronizado'); showSaving(false); return true;
   } catch(e) {
     agregarPendiente(hoja, fila);
