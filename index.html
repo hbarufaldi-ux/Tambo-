@@ -1662,7 +1662,7 @@ async function guardarCelo() {
   if(!animal){showToast('Seleccioná un animal',true);return;}
   var a=getAnimal(animal);
   var fila=[generarID('Cel',animal),document.getElementById('c-fecha').value,animal,a.nombre,a.estadoRepro,document.getElementById('c-obs').value||''];
-  var ok=await enviarASheets('Reg_Celos',fila);
+  var ok=await enviarASheets('Reg_Celos',fila,{resultado:a.estadoRepro});
   if(ok){agregarReciente('celo', animal, a.estadoRepro+' — '+document.getElementById('c-obs').value);document.getElementById('celo-form').style.display='none';document.getElementById('celo-ok').style.display='block';}
 }
 
@@ -1680,7 +1680,7 @@ async function guardarTacto() {
   }
   var metodo=resultado==='Vacía'?document.getElementById('t-metodo-v').value:document.getElementById('t-metodo').value;
   var fila=[generarID('Tac',animal),fecha,animal,a.nombre,resultado,document.getElementById('t-dias').value||'',document.getElementById('t-vet').value,metodo,document.getElementById('t-obs').value||'',a.partoEstimado||''];
-  var ok=await enviarASheets('Reg_Tactos',fila);
+  var ok=await enviarASheets('Reg_Tactos',fila,{resultado:resultado});
   if(ok){poblarSelects();renderDashboard();renderRodeo();var msgTacto = resultado==='Preñada' ? a.nombre+' confirmada preñada. Parto est: '+fmtFecha(a.partoEstimado)+'.' : (eraPreniada ? a.nombre+' pasó a Vacía — aborto registrado. Ya puede ser inseminada.' : a.nombre+' pasó a Vacía.');
 document.getElementById('tacto-ok-msg').textContent=msgTacto;document.getElementById('tacto-form').style.display='none';document.getElementById('tacto-ok').style.display='block';}
 }
