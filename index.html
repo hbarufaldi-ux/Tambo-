@@ -2507,14 +2507,8 @@ async function guardarTactoMasivo() {
   // Limpiar el dataset.sel
   document.querySelectorAll('#tm-resultados button').forEach(function(b){ delete b.dataset.sel; });
 
-  // FIX: NO recalcular la lista desde cero — solo actualizar el item en la lista existente
-  // Agregar nuevos pendientes que puedan haber aparecido, sin borrar los ya resueltos
-  var nuevasPendientes = calcAlertas().filter(function(al){ return al.cat === 'tacto'; });
-  nuevasPendientes.forEach(function(p) {
-    if(!_tactoMasivoLista.find(function(x){ return String(x.rp) === String(p.rp); })) {
-      _tactoMasivoLista.push(p);
-    }
-  });
+  // Recalcular lista — el animal tactado ya no aparece como alerta, desaparece de la lista
+  _tactoMasivoLista = calcAlertas().filter(function(a){ return a.cat === 'tacto'; });
 
   renderTactoMasivo();
   renderDashboard();
