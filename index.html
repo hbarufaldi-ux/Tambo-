@@ -1806,25 +1806,34 @@ function limpiarCache(){['tambo_rodeo','tambo_rodeo_ts','tambo_guachera','tambo_
 // ENVIAR A SHEETS
 // ============================================================
 async function enviarASheets(hoja, fila, datosExtra) {
-  guardarCacheLocal();showSaving(true);setSyncStatus('⟳ Guardando...');
+  guardarCacheLocal();
+  showSaving(true);
+  setSyncStatus('⟳ Guardando...');
   try {
-    var payload={hoja:hoja,fila:fila,rp:String(fila[2]||''),datos:datosExtra||{}};
-    await new Promise(function(resolve){
-      var cbName='cb_'+Date.now();
-      var encoded=encodeURIComponent(JSON.stringify(payload));
-      var url=SCRIPT_URL+'?accion=post&data='+encoded+'&callback='+cbName;
-      var s=document.createElement('script');
-      window[cbName]=function(r){delete window[cbName];s.remove();resolve(r);};
-      s.onerror=function(){delete window[cbName];s.remove();resolve(null);};
-      s.src=url;document.head.appendChild(s);
-      setTimeout(function(){if(window[cbName]){delete window[cbName];s.remove();resolve(null);}},10000);
+    var payload = {
+      hoja: hoja,
+      fila: fila,
+      rp: String(fila[2] || ''),
+      datos: datosExtra || {}
+    };
+    // Usamos fetch POST con no-cors — el doPost del AppScript lo recibe correctamente.
+    // Con no-cors no podemos leer la respuesta, pero el script SÍ se ejecuta.
+    await fetch(SCRIPT_URL, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify(payload)
     });
-    setSyncStatus('● Sincronizado');showSaving(false);return true;
+    setSyncStatus('● Sincronizado');
+    showSaving(false);
+    return true;
   } catch(e) {
-    agregarPendiente(hoja,fila);
-    var nPend=leerPendientes().length;
-    setSyncStatus('⚠ Sin red ('+nPend+' pend.)');
-    showSaving(false);showToast('Sin conexión — guardado localmente');return true;
+    agregarPendiente(hoja, fila);
+    var nPend = leerPendientes().length;
+    setSyncStatus('⚠ Sin red (' + nPend + ' pend.)');
+    showSaving(false);
+    showToast('Sin conexión — guardado localmente');
+    return true;
   }
 }
 
