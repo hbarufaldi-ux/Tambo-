@@ -2118,34 +2118,6 @@ function cerrarSesion() {
   document.getElementById('main-nav').style.display='none';
 }
 
-// ============================================================
-// MÓDULO DE CACHÉ LOCAL
-// ============================================================
-var CACHE_KEY_RODEO='tambo_rodeo',CACHE_KEY_TS='tambo_rodeo_ts',CACHE_KEY_GUACHERA='tambo_guachera',CACHE_KEY_RECRIA='tambo_recria',CACHE_KEY_PENDING='tambo_pending',CACHE_TTL_MS=4*60*60*1000;
-function guardarCacheLocal(){try{localStorage.setItem(CACHE_KEY_RODEO,JSON.stringify(rodeo));localStorage.setItem(CACHE_KEY_GUACHERA,JSON.stringify(guachera));localStorage.setItem(CACHE_KEY_RECRIA,JSON.stringify(recria));localStorage.setItem(CACHE_KEY_TS,Date.now().toString());}catch(e){}}
-function cargarCacheLocal(){try{var r=localStorage.getItem(CACHE_KEY_RODEO);if(!r)return false;var pr=JSON.parse(r);if(!pr||pr.length===0)return false;rodeo.length=0;pr.forEach(function(a){rodeo.push(a);});var g=localStorage.getItem(CACHE_KEY_GUACHERA);if(g){var pg=JSON.parse(g);guachera.length=0;pg.forEach(function(a){guachera.push(a)});}var rc=localStorage.getItem(CACHE_KEY_RECRIA);if(rc){var prc=JSON.parse(rc);recria.length=0;prc.forEach(function(a){recria.push(a)});}return true;}catch(e){return false;}}
-function cacheTTLVencido(){var ts=localStorage.getItem(CACHE_KEY_TS);if(!ts)return true;return(Date.now()-parseInt(ts))>CACHE_TTL_MS;}
-function leerPendientes(){try{var p=localStorage.getItem(CACHE_KEY_PENDING);return p?JSON.parse(p):[];}catch(e){return[];}}
-function guardarPendientes(l){try{localStorage.setItem(CACHE_KEY_PENDING,JSON.stringify(l));}catch(e){}}
-function agregarPendiente(hoja,fila){var l=leerPendientes();l.push({hoja:hoja,fila:fila,ts:Date.now()});guardarPendientes(l);}
-async function reintentarPendientes(){var lista=leerPendientes();if(lista.length===0)return;setSyncStatus('⟳ Sincronizando '+lista.length+' eventos...');var err=0;for(var i=lista.length-1;i>=0;i--){try{await fetch(SCRIPT_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/json'},body:JSON.stringify({hoja:lista[i].hoja,fila:lista[i].fila})});var l=leerPendientes();l.splice(i,1);guardarPendientes(l);}catch(e){err++;}}setSyncStatus(err===0?'● Sincronizado':'⚠ '+err+' pendientes');}
-function limpiarCache(){['tambo_rodeo','tambo_rodeo_ts','tambo_guachera','tambo_recria','tambo_pending'].forEach(function(k){localStorage.removeItem(k);});showToast('Caché limpiada — recargando...');setTimeout(function(){location.reload();},1200);}
-// ============================================================
-
-async function enviarASheets(hoja, fila) {
-  guardarCacheLocal();
-  showSaving(true); setSyncStatus('⟳ Guardando...');
-  try {
-    await fetch(SCRIPT_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/json'},body:JSON.stringify({hoja:hoja,fila:fila})});
-    setSyncStatus('● Sincronizado'); showSaving(false); return true;
-  } catch(e) {
-    agregarPendiente(hoja, fila);
-    var nPend = leerPendientes().length;
-    setSyncStatus('⚠ Sin red ('+nPend+' pend.)');
-    showSaving(false); showToast('Sin conexión — guardado localmente'); return true;
-  }
-}
-
 // ---- CARGAR PADRON DESDE SHEETS (con caché) ----
 function cargarPadronDesdeSheets(callback) {
   // 1. Intentar caché primero
@@ -2381,9 +2353,20 @@ var _tactoMasivoResultados = {};
 var _tactoMasivoRPActual = null;
 
 function abrirTactoMasivo() {
+  // Inicializar lista solo si está vacía (no resetear resultados ya guardados)
   _tactoMasivoLista = calcAlertas().filter(function(a){ return a.cat === 'tacto'; });
   _tactoMasivoResultados = {};
-  goTo('tacto-masivo');
+
+  // Navegar sin limpiar _navStack para que goBack() funcione
+  var pantallaActual = document.querySelector('.screen.active');
+  if(pantallaActual) {
+    var idActual = pantallaActual.id.replace('screen-','');
+    if(idActual !== 'tacto-masivo') _navStack.push(idActual);
+  }
+  document.querySelectorAll('.screen').forEach(function(s){s.classList.remove('active');});
+  document.getElementById('screen-tacto-masivo').classList.add('active');
+  document.querySelectorAll('.nav-btn').forEach(function(b){b.classList.remove('active');});
+  window.scrollTo(0,0);
   renderTactoMasivo();
 }
 
@@ -2524,8 +2507,15 @@ async function guardarTactoMasivo() {
   // Limpiar el dataset.sel
   document.querySelectorAll('#tm-resultados button').forEach(function(b){ delete b.dataset.sel; });
 
-  // Recalcular lista — quitar animales ya no necesitan tacto
-  _tactoMasivoLista = calcAlertas().filter(function(a){ return a.cat === 'tacto'; });
+  // FIX: NO recalcular la lista desde cero — solo actualizar el item en la lista existente
+  // Agregar nuevos pendientes que puedan haber aparecido, sin borrar los ya resueltos
+  var nuevasPendientes = calcAlertas().filter(function(al){ return al.cat === 'tacto'; });
+  nuevasPendientes.forEach(function(p) {
+    if(!_tactoMasivoLista.find(function(x){ return String(x.rp) === String(p.rp); })) {
+      _tactoMasivoLista.push(p);
+    }
+  });
+
   renderTactoMasivo();
   renderDashboard();
 
@@ -2570,7 +2560,7 @@ async function guardarTactoMasivo() {
 </div>
 
 <!-- MODAL RESULTADO TACTO MASIVO -->
-<div id="modal-tm" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:1000;display:none;align-items:flex-end;justify-content:center;">
+<div id="modal-tm" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:1000;align-items:flex-end;justify-content:center;">
   <div style="background:#fff;border-radius:20px 20px 0 0;padding:20px;width:100%;max-width:600px;">
     <div style="font-size:16px;font-weight:700;color:#1C1C1E;margin-bottom:4px;" id="tm-modal-titulo">RP 0000</div>
     <div style="font-size:13px;color:#8E8E93;margin-bottom:16px;" id="tm-modal-detalle"></div>
