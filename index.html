@@ -587,7 +587,7 @@ var _navStack = []; // historial de pantallas
 var registrosRecientes = {celo:[], insem:[], parto:[], prod:[]};
 var BADGE = {
   'En Ordeñe':'badge-green','Preñada':'badge-blue','Seca':'badge-gray',
-  'Vacía':'badge-amber','Inseminada':'badge-purple','Rechazo':'badge-red',
+  'Vacía':'badge-amber','Inseminada':'badge-purple','Rechazo':'badge-red','Celo':'badge-amber',
   'Ternera':'badge-gray','Vaquillona':'badge-gray','Ternero':'badge-gray',
   'Novillito':'badge-gray','Novillo':'badge-gray','Torito':'badge-amber','Toro':'badge-red'
 };
@@ -818,6 +818,9 @@ function calcAlertas() {
     }
 
     // A tactar — por días post servicio o días NR
+    if(a.estadoRepro==='Celo') {
+      alerts.push({cat:'tacto', rp:a.rp, detalle:'Celo detectado — tactar urgente', urgencia:99});
+    }
     if(a.estadoRepro==='Inseminada'&&a.ultimaInsem) {
       var dPost=-diasHasta(sumarDias(a.ultimaInsem,30));
       if(dPost>=0) alerts.push({cat:'tacto', rp:a.rp, detalle:'Día '+(dPost+30)+' post servicio', urgencia:dPost});
@@ -1667,7 +1670,14 @@ async function guardarCelo() {
   var a=getAnimal(animal);
   var fila=[generarID('Cel',animal),document.getElementById('c-fecha').value,animal,a.nombre,a.estadoRepro,document.getElementById('c-obs').value||''];
   var ok=await enviarASheets('Reg_Celos',fila,{resultado:a.estadoRepro});
-  if(ok){agregarReciente('celo', animal, a.estadoRepro+' — '+document.getElementById('c-obs').value);document.getElementById('celo-form').style.display='none';document.getElementById('celo-ok').style.display='block';}
+  if(ok){
+    a.estadoRepro='Celo';
+    guardarCacheLocal();
+    agregarReciente('celo', animal, a.estadoRepro+' — '+document.getElementById('c-obs').value);
+    poblarSelects(); renderDashboard(); renderRodeo();
+    document.getElementById('celo-form').style.display='none';
+    document.getElementById('celo-ok').style.display='block';
+  }
 }
 
 async function guardarTacto() {
@@ -1818,8 +1828,8 @@ function abrirModalEventoVaca(a, catAlerta) {
   var opciones = [
     {label:'Inseminar', visible: a.estadoProd!=='Seca' && a.estadoRepro!=='Preñada' && a.estadoRepro!=='Rechazo', fn: function(){ cerrarMEV(); goToNav('inseminacion'); setTimeout(function(){ var s=document.getElementById('i-animal'); if(s){s.value=a.rp; onAnimalInsem();} },50); }},
     {label:'Registrar aborto', visible: a.estadoRepro==='Preñada', fn: function(){ cerrarMEV(); goToNav('aborto'); setTimeout(function(){ var s=document.getElementById('ab-animal'); if(s){s.value=a.rp; onAnimalAborto();} },50); }},
-    {label:'Registrar celo', visible: a.estadoRepro==='Preñada'||a.estadoRepro==='Vacía'||a.estadoRepro==='Rechazo', fn: function(){ cerrarMEV(); goToNav('celo'); setTimeout(function(){ var s=document.getElementById('c-animal'); if(s){s.value=a.rp; onAnimalCelo();} },50); }},
-    {label:'Registrar tacto', visible: a.estadoRepro==='Inseminada'||a.estadoRepro==='Preñada'||a.estadoRepro==='Vacía', fn: function(){ cerrarMEV(); goToNav('tacto'); setTimeout(function(){ var s=document.getElementById('t-animal'); if(s){s.value=a.rp; onAnimalTacto();} },50); }},
+    {label:'Registrar celo', visible: a.estadoRepro==='Preñada'||a.estadoRepro==='Vacía'||a.estadoRepro==='Rechazo'||a.estadoRepro==='Celo', fn: function(){ cerrarMEV(); goToNav('celo'); setTimeout(function(){ var s=document.getElementById('c-animal'); if(s){s.value=a.rp; onAnimalCelo();} },50); }},
+    {label:'Registrar tacto', visible: a.estadoRepro==='Inseminada'||a.estadoRepro==='Preñada'||a.estadoRepro==='Vacía'||a.estadoRepro==='Celo', fn: function(){ cerrarMEV(); goToNav('tacto'); setTimeout(function(){ var s=document.getElementById('t-animal'); if(s){s.value=a.rp; onAnimalTacto();} },50); }},
     {label:'Registrar parto', visible: a.estadoRepro==='Preñada'||a.estadoProd==='Seca', fn: function(){ cerrarMEV(); goToNav('parto'); setTimeout(function(){ var s=document.getElementById('p-madre'); if(s){s.value=a.rp; onMadreParto();} },50); }},
     {label:'Registrar producción', visible: a.estadoProd==='En Ordeñe', fn: function(){ cerrarMEV(); goToNav('produccion'); setTimeout(function(){ var s=document.getElementById('pr-animal'); if(s){s.value=a.rp; onAnimalProd();} },50); }},
     {label:'Secar', visible: a.estadoProd==='En Ordeñe', fn: function(){ cerrarMEV(); goToNav('secado'); setTimeout(function(){ var s=document.getElementById('s-animal'); if(s){s.value=a.rp; onAnimalSecado();} },50); }},
