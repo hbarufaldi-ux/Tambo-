@@ -961,7 +961,11 @@ function renderDashboard() {
         var row=document.createElement('div');
         row.style.cssText='display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-bottom:0.5px solid rgba(0,0,0,0.06);cursor:pointer;';
         row.innerHTML='<span style="font-size:14px;font-weight:600;color:#fff;">RP '+a.rp+'</span><span style="font-size:13px;color:rgba(255,255,255,0.7);">'+a.detalle+' ›</span>';
-        row.onclick=function(){ abrirFicha(a.rp); };
+        row.onclick=(function(alerta){ return function(){
+          var animal = rodeo.find(function(v){ return v.rp===alerta.rp; });
+          if(animal) abrirModalEventoVaca(animal, alerta.cat);
+          else abrirFicha(alerta.rp);
+        }; })(a);
         body.appendChild(row);
       });
 
@@ -1799,10 +1803,14 @@ async function guardarAborto() {
 }
 
 // ---- MODAL EVENTO VACA ----
-function abrirModalEventoVaca(a) {
+function abrirModalEventoVaca(a, catAlerta) {
   document.getElementById('mev-titulo').textContent = 'RP '+a.rp+' — '+a.nombre;
   document.getElementById('mev-subtitulo').textContent = (a.estadoProd||'')+(a.estadoRepro?' · '+a.estadoRepro:'');
   var cont = document.getElementById('mev-opciones'); cont.innerHTML='';
+
+  // Mapa de categoría de alerta → label de la acción sugerida
+  var CAT_ACCION = {'tacto':'Registrar tacto','parto':'Registrar parto','secar':'Secar','servicios':'Registrar celo','produccion':'Registrar producción'};
+  var accionSugerida = catAlerta ? CAT_ACCION[catAlerta] : null;
 
   var rodeosLecheros = ['R1','R2','R3','R4','R5','R6'];
   var rodeoActual = a.rodeoManual || calcRodeo(a);
@@ -1848,8 +1856,9 @@ function abrirModalEventoVaca(a) {
   }
   opcionesVisibles.forEach(function(o) {
     var b=document.createElement('button');
-    b.style.cssText='width:100%;padding:13px;border-radius:14px;font-size:15px;font-weight:500;cursor:pointer;text-align:left;'+(o.danger?'background:#fff;color:#A0200A;border:0.5px solid #FFD6D6;':'background:#F2F2F7;color:#1C1C1E;border:none;');
-    b.textContent=o.label;
+    var esSugerida = accionSugerida && o.label === accionSugerida;
+    b.style.cssText='width:100%;padding:13px;border-radius:14px;font-size:15px;font-weight:500;cursor:pointer;text-align:left;'+(o.danger?'background:#fff;color:#A0200A;border:0.5px solid #FFD6D6;':(esSugerida?'background:#1C1C1E;color:#fff;border:none;':'background:#F2F2F7;color:#1C1C1E;border:none;'));
+    b.textContent=esSugerida ? '→ '+o.label : o.label;
     b.onclick=o.fn;
     cont.appendChild(b);
   });
