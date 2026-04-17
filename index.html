@@ -1593,7 +1593,7 @@ async function enviarASheets(hoja, fila, datosExtra) {
 
   try {
     var payload = {hoja:hoja, fila:fila, rp:String(fila[2]||''), datos:datosExtra||{}};
-    await fetch(SCRIPT_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain'},body:JSON.stringify(payload)});
+    await fetch(SCRIPT_URL,{method:'POST',body:JSON.stringify(payload),headers:{'Content-Type':'text/plain'}});
     setSyncStatus('● Sincronizado'); showSaving(false); return true;
   } catch(e) {
     agregarPendiente(hoja, fila);
