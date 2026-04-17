@@ -1593,7 +1593,18 @@ async function enviarASheets(hoja, fila, datosExtra) {
 
   try {
     var payload = {hoja:hoja, fila:fila, rp:String(fila[2]||''), datos:datosExtra||{}};
-    await fetch(SCRIPT_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain;charset=UTF-8'},body:JSON.stringify(payload)});
+    // Usar script tag para evitar problemas CORS con Google Apps Script
+    await new Promise(function(resolve) {
+      var cbName = 'cb_' + Date.now();
+      var encoded = encodeURIComponent(JSON.stringify(payload));
+      var url = SCRIPT_URL + '?accion=post&data=' + encoded + '&callback=' + cbName;
+      var s = document.createElement('script');
+      window[cbName] = function(r) { delete window[cbName]; s.remove(); resolve(r); };
+      s.onerror = function() { delete window[cbName]; s.remove(); resolve(null); };
+      s.src = url;
+      document.head.appendChild(s);
+      setTimeout(function(){ if(window[cbName]){ delete window[cbName]; s.remove(); resolve(null); } }, 10000);
+    });
     setSyncStatus('● Sincronizado'); showSaving(false); return true;
   } catch(e) {
     agregarPendiente(hoja, fila);
