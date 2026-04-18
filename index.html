@@ -965,9 +965,13 @@ function renderDashboard() {
         row.style.cssText='display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-bottom:0.5px solid rgba(0,0,0,0.06);cursor:pointer;';
         row.innerHTML='<span style="font-size:14px;font-weight:600;color:#fff;">RP '+a.rp+'</span><span style="font-size:13px;color:rgba(255,255,255,0.7);">'+a.detalle+' ›</span>';
         row.onclick=(function(alerta){ return function(){
-          var animal = rodeo.find(function(v){ return v.rp===alerta.rp; });
-          if(animal) abrirModalEventoVaca(animal, alerta.cat);
-          else abrirFicha(alerta.rp);
+          if(alerta.cat === 'tacto') {
+            abrirModalTM(alerta.rp, alerta.detalle);
+          } else {
+            var animal = rodeo.find(function(v){ return v.rp===alerta.rp; });
+            if(animal) abrirModalEventoVaca(animal, alerta.cat);
+            else abrirFicha(alerta.rp);
+          }
         }; })(a);
         body.appendChild(row);
       });
