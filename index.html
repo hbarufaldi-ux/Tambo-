@@ -1590,7 +1590,7 @@ function cacheTTLVencido(){var ts=localStorage.getItem(CACHE_KEY_TS);if(!ts)retu
 function leerPendientes(){try{var p=localStorage.getItem(CACHE_KEY_PENDING);return p?JSON.parse(p):[];}catch(e){return[];}}
 function guardarPendientes(l){try{localStorage.setItem(CACHE_KEY_PENDING,JSON.stringify(l));}catch(e){}}
 function agregarPendiente(hoja,fila){var l=leerPendientes();l.push({hoja:hoja,fila:fila,ts:Date.now()});guardarPendientes(l);}
-async function reintentarPendientes(){var lista=leerPendientes();if(lista.length===0)return;setSyncStatus('⟳ Sincronizando '+lista.length+' eventos...');var err=0;for(var i=lista.length-1;i>=0;i--){try{await fetch(SCRIPT_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/json'},body:JSON.stringify({hoja:lista[i].hoja,fila:lista[i].fila})});var l=leerPendientes();l.splice(i,1);guardarPendientes(l);}catch(e){err++;}}setSyncStatus(err===0?'● Sincronizado':'⚠ '+err+' pendientes');}
+async function reintentarPendientes(){var lista=leerPendientes();if(lista.length===0)return;setSyncStatus('⟳ Sincronizando '+lista.length+' eventos...');var err=0;for(var i=lista.length-1;i>=0;i--){try{var payload={hoja:lista[i].hoja,fila:lista[i].fila};var url=SCRIPT_URL+'?accion=post&data='+encodeURIComponent(JSON.stringify(payload));await fetch(url,{method:'GET',mode:'no-cors'});var l=leerPendientes();l.splice(i,1);guardarPendientes(l);}catch(e){err++;}}setSyncStatus(err===0?'● Sincronizado':'⚠ '+err+' pendientes');}
 function limpiarCache(){['tambo_rodeo','tambo_rodeo_ts','tambo_guachera','tambo_recria','tambo_pending'].forEach(function(k){localStorage.removeItem(k);});showToast('Caché limpiada — recargando...');setTimeout(function(){location.reload();},1200);}
 // ============================================================
 
@@ -2188,6 +2188,10 @@ function _fetchPadronBackground(callback) {
         if(s === 'Preñada') return 'Preñada';
         if(s === 'Vacia' || s === 'Vacía') return 'Vacía';
         if(s === 'Inseminada') return 'Inseminada';
+        if(s === 'Celo') return 'Celo';
+        if(s === 'Anestro') return 'Anestro';
+        if(s === 'IATF') return 'IATF';
+        if(s === 'PG') return 'PG';
         return 'Vacía';
       }
       var importados = 0;
