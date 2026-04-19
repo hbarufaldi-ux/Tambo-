@@ -168,7 +168,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
   <div style="background:#fff;border-radius:18px;padding:14px;margin-bottom:10px;">
     <div style="font-size:17px;font-weight:800;color:#1C1C1E;margin-bottom:10px;">Estado Reproductivo</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px;">
-      <div style="background:#D6EAFF;border-radius:14px;padding:20px 14px;position:relative;min-height:90px;">
+      <div style="background:#D6EAFF;border-radius:14px;padding:20px 14px;position:relative;min-height:110px;">
         <div style="font-size:11px;color:#1060C0;font-weight:700;margin-bottom:4px;">Preñadas</div>
         <div style="display:flex;align-items:center;gap:8px;">
           <div style="font-size:38px;font-weight:900;color:#1060C0;line-height:1;" id="m-prenadas">—</div>
@@ -176,7 +176,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
           <span style="font-size:13px;font-weight:700;color:#1060C0;" id="pct-prenadas" style="font-size:15px;font-weight:800;color:#1060C0;"></span>
         </div>
       </div>
-      <div style="background:#FFF3CC;border-radius:14px;padding:20px 14px;position:relative;min-height:90px;">
+      <div style="background:#FFF3CC;border-radius:14px;padding:20px 14px;position:relative;min-height:110px;">
         <div style="font-size:11px;color:#7A5500;font-weight:700;margin-bottom:4px;">Vacías</div>
         <div style="display:flex;align-items:center;gap:8px;">
           <div style="font-size:38px;font-weight:900;color:#7A5500;line-height:1;" id="m-vacias">—</div>
@@ -184,7 +184,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
           <span style="font-size:13px;font-weight:700;color:#7A5500;" id="pct-vacias" style="font-size:15px;font-weight:800;color:#7A5500;"></span>
         </div>
       </div>
-      <div style="background:#EEE0FF;border-radius:14px;padding:20px 14px;position:relative;min-height:90px;">
+      <div style="background:#EEE0FF;border-radius:14px;padding:20px 14px;position:relative;min-height:110px;">
         <div style="font-size:11px;color:#6B35D4;font-weight:700;margin-bottom:4px;">Inseminadas</div>
         <div style="display:flex;align-items:center;gap:8px;">
           <div style="font-size:38px;font-weight:900;color:#6B35D4;line-height:1;" id="m-inseminadas">—</div>
@@ -192,7 +192,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
           <span style="font-size:13px;font-weight:700;color:#6B35D4;" id="pct-inseminadas" style="font-size:15px;font-weight:800;color:#6B35D4;"></span>
         </div>
       </div>
-      <div style="background:#FFD6D6;border-radius:14px;padding:20px 14px;position:relative;min-height:90px;">
+      <div style="background:#FFD6D6;border-radius:14px;padding:20px 14px;position:relative;min-height:110px;">
         <div style="font-size:11px;color:#A0200A;font-weight:700;margin-bottom:4px;">Rechazo</div>
         <div style="display:flex;align-items:center;gap:8px;">
           <div style="font-size:38px;font-weight:900;color:#A0200A;line-height:1;" id="m-rechazo">—</div>
@@ -2189,11 +2189,11 @@ function cargarPadronDesdeSheets(callback) {
   var desdeCache = cargarCacheLocal();
   if(desdeCache) {
     actualizarCats(); poblarSelects(); renderDashboard(); renderRodeo();
-    setSyncStatus('● '+rodeo.length+' animales');
+    setSyncStatus('● '+(usuario ? usuario.nombre : rodeo.length+' animales'));
     if(callback) callback(true);
     // 2. Refrescar en background si TTL venció
     if(cacheTTLVencido()) {
-      setSyncStatus('● '+rodeo.length+' · actualizando...');
+      setSyncStatus('● '+(usuario ? usuario.nombre : rodeo.length+' · actualizando...'));
       _fetchPadronBackground(null);
     }
     return;
