@@ -933,10 +933,8 @@ function renderDashboard() {
   var nSecas=rodeo.filter(function(a){return a.estadoProd==='Seca';}).length;
   var nRechazo=rodeo.filter(function(a){return a.estadoRepro==='Rechazo';}).length;
   var nInseminadas=rodeo.filter(function(a){return a.estadoRepro==='Inseminada';}).length;
-  function pct(n){ return totalVacas>0 ? ' <span style="font-size:13px;font-weight:600;opacity:0.7;">'+Math.round(n/totalVacas*100)+'%</span>' : ''; }
+  function pct(n){ return ''; }
   document.getElementById('m-vacas').textContent=totalVacas;
-  document.getElementById('m-ordene').innerHTML=nOrdene+pct(nOrdene);
-  if(document.getElementById('m-secas')) document.getElementById('m-secas').innerHTML=nSecas+pct(nSecas);
   document.getElementById('m-prenadas').textContent=nPrenadas;
   document.getElementById('m-vacias').textContent=nVacias;
   if(document.getElementById('m-inseminadas')) document.getElementById('m-inseminadas').textContent=nInseminadas;
