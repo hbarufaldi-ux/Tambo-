@@ -94,36 +94,23 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
   </div>
   <div style="display:flex;align-items:center;gap:10px;">
     <button onclick="cerrarSesion()" style="font-size:15px;font-weight:700;color:#1C1C1E;background:none;border:1px solid #C0C0C0;border-radius:8px;cursor:pointer;padding:4px 12px;">Salir</button>
-    <svg onclick="goTo('rodeo')" style="width:72px;height:72px;cursor:pointer;flex-shrink:0;" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+    <svg onclick="goTo('rodeo')" style="width:64px;height:64px;cursor:pointer;flex-shrink:0;" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
   <circle cx="50" cy="50" r="47" fill="white" stroke="#3a2010" stroke-width="4"/>
-  <!-- Cabeza vaca de frente -->
   <ellipse cx="50" cy="42" rx="22" ry="20" fill="#3a2010"/>
-  <!-- Cara -->
   <ellipse cx="50" cy="46" rx="16" ry="14" fill="#c8a87a"/>
-  <!-- Hocico -->
   <ellipse cx="50" cy="55" rx="10" ry="7" fill="#e8c4a0"/>
-  <!-- Narinas -->
   <ellipse cx="46" cy="56" rx="2.5" ry="2" fill="#8B5E3C"/>
   <ellipse cx="54" cy="56" rx="2.5" ry="2" fill="#8B5E3C"/>
-  <!-- Ojos -->
-  <circle cx="42" cy="43" r="4" fill="white"/>
-  <circle cx="58" cy="43" r="4" fill="white"/>
-  <circle cx="42" cy="43" r="2.5" fill="#1a0a00"/>
-  <circle cx="58" cy="43" r="2.5" fill="#1a0a00"/>
-  <circle cx="43" cy="42" r="1" fill="white"/>
-  <circle cx="59" cy="42" r="1" fill="white"/>
-  <!-- Orejas -->
+  <circle cx="42" cy="43" r="4" fill="white"/><circle cx="58" cy="43" r="4" fill="white"/>
+  <circle cx="42" cy="43" r="2.5" fill="#1a0a00"/><circle cx="58" cy="43" r="2.5" fill="#1a0a00"/>
+  <circle cx="43" cy="42" r="1" fill="white"/><circle cx="59" cy="42" r="1" fill="white"/>
   <ellipse cx="28" cy="38" rx="7" ry="10" fill="#3a2010" transform="rotate(-15 28 38)"/>
   <ellipse cx="28" cy="38" rx="4" ry="6" fill="#c8a87a" transform="rotate(-15 28 38)"/>
   <ellipse cx="72" cy="38" rx="7" ry="10" fill="#3a2010" transform="rotate(15 72 38)"/>
   <ellipse cx="72" cy="38" rx="4" ry="6" fill="#c8a87a" transform="rotate(15 72 38)"/>
-  <!-- Cuernos -->
   <path d="M30 30 Q22 18 28 12" stroke="#3a2010" stroke-width="4" fill="none" stroke-linecap="round"/>
   <path d="M70 30 Q78 18 72 12" stroke="#3a2010" stroke-width="4" fill="none" stroke-linecap="round"/>
-  <!-- Manchas negras -->
-  <ellipse cx="44" cy="37" rx="5" ry="4" fill="#3a2010" opacity="0.4"/>
-  <!-- Texto CN -->
-  <text x="50" y="78" text-anchor="middle" font-family="Arial Black, Arial" font-weight="900" font-size="13" fill="#3a2010" letter-spacing="2">CN</text>
+  <text x="50" y="78" text-anchor="middle" font-family="Arial Black,Arial" font-weight="900" font-size="13" fill="#3a2010" letter-spacing="2">CN</text>
 </svg>
   </div>
 </div>
@@ -177,13 +164,13 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
             <span style="font-size:9px;color:rgba(255,255,255,0.65);font-weight:700;text-transform:uppercase;letter-spacing:0.08em;">En ordeñe</span>
           </div>
           <div style="display:flex;align-items:baseline;gap:5px;">
-            <span style="font-size:30px;font-weight:900;color:#fff;line-height:1;letter-spacing:-1px;" id="m-ordene">—</span>
+            <span style="font-size:30px;font-weight:900;color:#fff;line-height:1;letter-spacing:-1px;" id="m-ordene-num">—</span>
           </div>
         </div>
         <div style="background:rgba(0,0,0,0.22);border-radius:14px;padding:12px 14px;">
           <div style="font-size:9px;color:rgba(255,255,255,0.55);font-weight:700;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:3px;">Secas</div>
           <div style="display:flex;align-items:baseline;gap:5px;">
-            <span style="font-size:30px;font-weight:900;color:#fff;line-height:1;letter-spacing:-1px;" id="m-secas">—</span>
+            <span style="font-size:30px;font-weight:900;color:#fff;line-height:1;letter-spacing:-1px;" id="m-secas-num">—</span>
           </div>
         </div>
       </div>
@@ -196,19 +183,35 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px;">
       <div style="background:#D6EAFF;border-radius:14px;padding:20px 14px;min-height:110px;">
         <div style="font-size:11px;color:#1060C0;font-weight:700;margin-bottom:4px;">Preñadas</div>
-        <div style="font-size:28px;font-weight:800;color:#1060C0;line-height:1;" id="m-prenadas">—</div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <div style="font-size:38px;font-weight:900;color:#1060C0;line-height:1;" id="m-prenadas">—</div>
+          <canvas id="donut-prenadas" width="36" height="36" style="flex-shrink:0;"></canvas>
+          <span style="font-size:13px;font-weight:700;color:#1060C0;" id="pct-prenadas"></span>
+        </div>
       </div>
       <div style="background:#FFF3CC;border-radius:14px;padding:20px 14px;min-height:110px;">
         <div style="font-size:11px;color:#7A5500;font-weight:700;margin-bottom:4px;">Vacías</div>
-        <div style="font-size:28px;font-weight:800;color:#7A5500;line-height:1;" id="m-vacias">—</div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <div style="font-size:38px;font-weight:900;color:#7A5500;line-height:1;" id="m-vacias">—</div>
+          <canvas id="donut-vacias" width="36" height="36" style="flex-shrink:0;"></canvas>
+          <span style="font-size:13px;font-weight:700;color:#7A5500;" id="pct-vacias"></span>
+        </div>
       </div>
       <div style="background:#EEE0FF;border-radius:14px;padding:20px 14px;min-height:110px;">
         <div style="font-size:11px;color:#6B35D4;font-weight:700;margin-bottom:4px;">Inseminadas</div>
-        <div style="font-size:28px;font-weight:800;color:#6B35D4;line-height:1;" id="m-inseminadas">—</div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <div style="font-size:38px;font-weight:900;color:#6B35D4;line-height:1;" id="m-inseminadas">—</div>
+          <canvas id="donut-inseminadas" width="36" height="36" style="flex-shrink:0;"></canvas>
+          <span style="font-size:13px;font-weight:700;color:#6B35D4;" id="pct-inseminadas"></span>
+        </div>
       </div>
       <div style="background:#FFD6D6;border-radius:14px;padding:20px 14px;min-height:110px;">
         <div style="font-size:11px;color:#A0200A;font-weight:700;margin-bottom:4px;">Rechazo</div>
-        <div style="font-size:28px;font-weight:800;color:#A0200A;line-height:1;" id="m-rechazo">—</div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <div style="font-size:38px;font-weight:900;color:#A0200A;line-height:1;" id="m-rechazo">—</div>
+          <canvas id="donut-rechazo" width="36" height="36" style="flex-shrink:0;"></canvas>
+          <span style="font-size:13px;font-weight:700;color:#A0200A;" id="pct-rechazo"></span>
+        </div>
       </div>
     </div>
   </div>
@@ -606,7 +609,21 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
   <div id="ficha-contenido"></div>
 </div>
 
-<script src="https://accounts.google.com/gsi/client" async defer></script>
+<script src="https://accounts.google.com/gsi/client" async defer>
+function drawDonut(canvasId, pct, color) {
+  var c = document.getElementById(canvasId);
+  if(!c) return;
+  var ctx = c.getContext('2d');
+  var s = c.width, cx = s/2, cy = s/2, r = s/2 - 3;
+  ctx.clearRect(0,0,s,s);
+  ctx.beginPath(); ctx.arc(cx,cy,r,0,2*Math.PI);
+  ctx.strokeStyle='rgba(0,0,0,0.1)'; ctx.lineWidth=4; ctx.stroke();
+  var ang = (pct/100)*2*Math.PI;
+  ctx.beginPath(); ctx.arc(cx,cy,r,-Math.PI/2,-Math.PI/2+ang);
+  ctx.strokeStyle=color; ctx.lineWidth=4; ctx.lineCap='round'; ctx.stroke();
+}
+
+</script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
 var SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxPT8TP7gpxNsVBXTbNIjW70SQtJdIu2iYOiBvvFKbxtQCPXZZ0DEUMfz241U7tVrEPEQ/exec';
@@ -920,10 +937,29 @@ function renderDashboard() {
   document.getElementById('m-vacas').textContent=totalVacas;
   document.getElementById('m-ordene').innerHTML=nOrdene+pct(nOrdene);
   if(document.getElementById('m-secas')) document.getElementById('m-secas').innerHTML=nSecas+pct(nSecas);
-  document.getElementById('m-prenadas').innerHTML=nPrenadas+pct(nPrenadas);
-  document.getElementById('m-vacias').innerHTML=nVacias+pct(nVacias);
-  if(document.getElementById('m-inseminadas')) document.getElementById('m-inseminadas').innerHTML=nInseminadas+pct(nInseminadas);
-  if(document.getElementById('m-rechazo')) document.getElementById('m-rechazo').innerHTML=nRechazo+pct(nRechazo);
+  document.getElementById('m-prenadas').textContent=nPrenadas;
+  document.getElementById('m-vacias').textContent=nVacias;
+  if(document.getElementById('m-inseminadas')) document.getElementById('m-inseminadas').textContent=nInseminadas;
+  if(document.getElementById('m-rechazo')) document.getElementById('m-rechazo').textContent=nRechazo;
+  // % labels
+  var tv = totalVacas||1;
+  var setPct = function(id,n){ var el=document.getElementById(id); if(el) el.textContent=tv>0?Math.round(n/tv*100)+'%':''; };
+  setPct('pct-prenadas',nPrenadas); setPct('pct-vacias',nVacias);
+  setPct('pct-inseminadas',nInseminadas); setPct('pct-rechazo',nRechazo);
+  // En ordeñe y secas
+  document.getElementById('m-ordene-num').textContent=nOrdene;
+  document.getElementById('m-secas-num').textContent=nSecas;
+  var setOrdPct = function(id,n){ var el=document.getElementById(id); if(el) el.textContent=tv>0?Math.round(n/tv*100)+'%':''; };
+  setOrdPct('m-ordene-pct',nOrdene); setOrdPct('m-secas-pct',nSecas);
+  // Donas
+  setTimeout(function(){
+    drawDonut('donut-prenadas', tv>0?Math.round(nPrenadas/tv*100):0, '#1060C0');
+    drawDonut('donut-vacias', tv>0?Math.round(nVacias/tv*100):0, '#E0A000');
+    drawDonut('donut-inseminadas', tv>0?Math.round(nInseminadas/tv*100):0, '#6B35D4');
+    drawDonut('donut-rechazo', tv>0?Math.round(nRechazo/tv*100):0, '#A0200A');
+    drawDonut('donut-ordene', tv>0?Math.round(nOrdene/tv*100):0, 'rgba(255,255,255,0.9)');
+    drawDonut('donut-secas', tv>0?Math.round(nSecas/tv*100):0, 'rgba(255,255,255,0.6)');
+  }, 50);
   var nRecria=recria.filter(function(a){return a.activo;}).length;
   if(document.getElementById('m-recria-total')) document.getElementById('m-recria-total').textContent=nRecria;
   var gAct=guachera.filter(function(c){return !c.salio;}).length;
