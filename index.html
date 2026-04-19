@@ -908,8 +908,7 @@ function renderDashboard() {
   var nInseminadas=rodeo.filter(function(a){return a.estadoRepro==='Inseminada';}).length;
   function pct(n){ return ''; } // % manejado por donas
   document.getElementById('m-vacas').textContent=totalVacas;
-  document.getElementById('m-ordene').innerHTML=nOrdene+pct(nOrdene);
-  if(document.getElementById('m-secas')) document.getElementById('m-secas').innerHTML=nSecas+pct(nSecas);
+  // m-ordene y m-secas manejados más abajo con donas
   document.getElementById('m-prenadas').textContent=nPrenadas;
   document.getElementById('m-vacias').textContent=nVacias;
   if(document.getElementById('m-inseminadas')) document.getElementById('m-inseminadas').textContent=nInseminadas;
