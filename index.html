@@ -2191,33 +2191,6 @@ function cerrarSesion() {
   // Re-inicializar login
   initLogin();
 }
-  location.reload();
-}
-  // Ocultar todas las screens
-  document.querySelectorAll('.screen').forEach(function(s){
-    s.classList.remove('active');
-    s.style.display='none';
-  });
-  // Ocultar topbar y nav
-  var tb=document.querySelector('.topbar');
-  var nav=document.getElementById('main-nav');
-  if(tb) tb.style.display='none';
-  if(nav) nav.style.display='none';
-  // Mostrar login
-  var login=document.getElementById('screen-login');
-  if(login){ login.style.display='flex'; }
-  // Re-inicializar Google Sign In
-  try {
-    google.accounts.id.initialize({
-      client_id: clientId,
-      callback: handleCredentialResponse
-    });
-    google.accounts.id.renderButton(
-      document.getElementById('google-signin-btn'),
-      { theme:'outline', size:'large', width:280 }
-    );
-  } catch(e){}
-}
 
 // ---- CARGAR PADRON DESDE SHEETS (con caché) ----
 function cargarPadronDesdeSheets(callback) {
