@@ -1401,7 +1401,56 @@ function abrirFichaJoven(rp) {
   var c3=document.createElement('div'); c3.className='card';
   var t3=document.createElement('div'); t3.className='section-title'; t3.textContent='Acciones'; c3.appendChild(t3);
   var btns=document.createElement('div'); btns.style.cssText='display:flex;flex-direction:column;gap:8px;';
-  var be=document.createElement('button'); be.className='btn-secondary'; be.textContent='+ Registrar evento'; be.onclick=function(){registrarEvento(rp);}; btns.appendChild(be);
+
+  if(enG && !enG.salio) {
+    // GUACHERA: vacunaciones, tratamiento, mover a recría
+    var btnVacDia=document.createElement('button'); btnVacDia.className='btn-secondary';
+    btnVacDia.textContent='💉 Vacunación diarrea';
+    btnVacDia.onclick=function(){registrarEventoTipo(rp,'Vacunación diarrea');}; btns.appendChild(btnVacDia);
+
+    var btnVacRes=document.createElement('button'); btnVacRes.className='btn-secondary';
+    btnVacRes.textContent='💉 Vacunación respiratoria';
+    btnVacRes.onclick=function(){registrarEventoTipo(rp,'Vacunación respiratoria');}; btns.appendChild(btnVacRes);
+
+    var btnVacMan=document.createElement('button'); btnVacMan.className='btn-secondary';
+    btnVacMan.textContent='💉 Vacunación mancha';
+    btnVacMan.onclick=function(){registrarEventoTipo(rp,'Vacunación mancha');}; btns.appendChild(btnVacMan);
+
+    var btnTrat=document.createElement('button'); btnTrat.className='btn-secondary';
+    btnTrat.textContent='🩺 Tratamiento';
+    btnTrat.onclick=function(){registrarEventoTipo(rp,'Tratamiento');}; btns.appendChild(btnTrat);
+
+    var btnMover=document.createElement('button'); btnMover.className='btn-primary';
+    btnMover.textContent='→ Mover a Recría';
+    btnMover.onclick=function(){confirmarMoverRecria(rp);}; btns.appendChild(btnMover);
+
+  } else {
+    // RECRÍA: tratamiento, pesaje, inseminación, tacto, IATF, parto
+    var btnTratR=document.createElement('button'); btnTratR.className='btn-secondary';
+    btnTratR.textContent='🩺 Tratamiento';
+    btnTratR.onclick=function(){registrarEventoTipo(rp,'Tratamiento');}; btns.appendChild(btnTratR);
+
+    var btnPes=document.createElement('button'); btnPes.className='btn-secondary';
+    btnPes.textContent='⚖️ Pesaje';
+    btnPes.onclick=function(){registrarEventoTipo(rp,'Pesaje');}; btns.appendChild(btnPes);
+
+    var btnInsem=document.createElement('button'); btnInsem.className='btn-secondary';
+    btnInsem.textContent='🔬 Inseminación';
+    btnInsem.onclick=function(){registrarEventoTipo(rp,'Inseminación');}; btns.appendChild(btnInsem);
+
+    var btnTacto=document.createElement('button'); btnTacto.className='btn-secondary';
+    btnTacto.textContent='🔍 Tacto';
+    btnTacto.onclick=function(){registrarEventoTipo(rp,'Tacto');}; btns.appendChild(btnTacto);
+
+    var btnIATF=document.createElement('button'); btnIATF.className='btn-secondary';
+    btnIATF.textContent='🧬 IATF';
+    btnIATF.onclick=function(){registrarEventoTipo(rp,'IATF');}; btns.appendChild(btnIATF);
+
+    var btnParto=document.createElement('button'); btnParto.className='btn-primary';
+    btnParto.textContent='🐄 Registrar parto → pasa a Padrón';
+    btnParto.onclick=function(){confirmarPartoVaquillona(rp);}; btns.appendChild(btnParto);
+  }
+
   var bb=document.createElement('button'); bb.style.cssText='width:100%;padding:12px;background:#fff;color:#A0200A;border:0.5px solid #FFD6D6;border-radius:14px;font-size:15px;cursor:pointer;'; bb.textContent='Dar de baja'; bb.onclick=function(){darDeBajaAnimal(rp);}; btns.appendChild(bb);
   c3.appendChild(btns); cont.appendChild(c3);
 
@@ -1435,6 +1484,35 @@ function salirCorral(rp) {
 }
 var _eventoRpActual = null;
 
+function registrarEventoTipo(rp, tipo) {
+  _eventoRpActual = rp;
+  document.getElementById('ev-fecha').value = TODAY;
+  document.getElementById('ev-obs').value = '';
+  // Agregar campo de obs específico si es pesaje
+  var an = guachera.find(function(g){return g.rp===rp;}) || recria.find(function(r){return r.rp===rp;});
+  document.getElementById('modal-evento-titulo').textContent = tipo + ' — RP ' + rp;
+  // Guardar tipo en un atributo del modal para usarlo en confirmarEvento
+  document.getElementById('modal-evento').setAttribute('data-tipo', tipo);
+  var m = document.getElementById('modal-evento');
+  m.style.display = 'flex';
+  // Ocultar el select de tipo y mostrar el tipo fijo
+  var selectTipo = document.getElementById('ev-tipo');
+  if(selectTipo) {
+    selectTipo.value = selectTipo.querySelector('option') ? selectTipo.options[0].value : tipo;
+    selectTipo.parentElement.style.display = 'none';
+  }
+  // Mostrar label del tipo
+  var tipoFixed = document.getElementById('ev-tipo-fixed');
+  if(!tipoFixed) {
+    tipoFixed = document.createElement('div');
+    tipoFixed.id = 'ev-tipo-fixed';
+    tipoFixed.style.cssText = 'font-size:15px;font-weight:600;color:#1C1C1E;padding:8px 0;margin-bottom:8px;';
+    selectTipo.parentElement.parentElement.insertBefore(tipoFixed, selectTipo.parentElement);
+  }
+  tipoFixed.textContent = tipo;
+  tipoFixed.style.display = 'block';
+}
+
 function registrarEvento(rp) {
   _eventoRpActual = rp;
   document.getElementById('ev-fecha').value = TODAY;
@@ -1453,7 +1531,11 @@ function cerrarModalEvento() {
 
 function confirmarEvento() {
   var rp = _eventoRpActual; if(!rp) return;
-  var tipo = document.getElementById('ev-tipo').value;
+  var tipoFijo = document.getElementById('modal-evento').getAttribute('data-tipo');
+  var tipo = tipoFijo || document.getElementById('ev-tipo').value;
+  document.getElementById('modal-evento').removeAttribute('data-tipo');
+  var selectTipo = document.getElementById('ev-tipo'); if(selectTipo) selectTipo.parentElement.style.display='';
+  var tipoFixed = document.getElementById('ev-tipo-fixed'); if(tipoFixed) tipoFixed.style.display='none';
   var obs = document.getElementById('ev-obs').value || '';
   var fecha = document.getElementById('ev-fecha').value || TODAY;
   var enG=guachera.find(function(g){return g.rp===rp;}), enR=recria.find(function(r){return r.rp===rp;});
@@ -1465,6 +1547,49 @@ function confirmarEvento() {
   cerrarModalEvento();
   abrirFichaJoven(rp);
 }
+function confirmarMoverRecria(rp) {
+  var g = guachera.find(function(x){ return x.rp===rp; });
+  if(!g) return;
+  if(!confirm('¿Mover RP '+rp+' a Recría?')) return;
+  g.salio = true;
+  var cat = g.sexo==='H' ? 'Ternera' : 'Ternero';
+  if(!recria.find(function(r){return r.rp===rp;})) {
+    recria.push({rp:g.rp, nombre:g.nombre, sexo:g.sexo, cat:cat,
+      fechaNac:g.fechaNac, padre:g.padre, madre:g.madre||'', eventos:[], activo:true});
+    var a = getAnimal(rp);
+    if(a) { a.cat = cat; }
+  }
+  renderGuachera(); renderRecria(); renderDashboard();
+  enviarASheets('Guachera_Eventos',[generarID('Sal',rp),TODAY,rp,g.nombre,'Salida a Recría',diasDeVida(g.fechaNac)||0]);
+  showToast('RP '+rp+' movido a Recría ✓');
+  goBack();
+}
+
+// ============================================================
+// Parto de vaquillona: sale de recría, entra a padrón
+// ============================================================
+function confirmarPartoVaquillona(rp) {
+  var r = recria.find(function(x){ return x.rp===rp; });
+  if(!r) return;
+  if(!confirm('¿Registrar parto de RP '+rp+'? Pasará a Padrón como Vaca.')) return;
+  // Mover de recría a rodeo como Vaca
+  var a = getAnimal(rp);
+  if(a) {
+    a.cat = 'Vaca';
+    a.estadoProd = 'En Ordeñe';
+    a.estadoRepro = 'Vacía';
+    a.ultimoParto = TODAY;
+  }
+  r.activo = false;
+  // Registrar evento
+  if(!r.eventos) r.eventos = [];
+  r.eventos.push({fecha:TODAY, tipo:'Parto', obs:'Pasó a Padrón como Vaca'});
+  renderRecria(); renderRodeo(); renderDashboard();
+  enviarASheets('Reg_Partos',[generarID('Par',rp),TODAY,rp,r.nombre,'—','—','','','','','','','','Vaca']);
+  showToast('RP '+rp+' registrada como Vaca en Padrón ✓');
+  goBack();
+}
+
 function darDeBajaAnimal(rp) {
   var op=prompt('Motivo de baja:\n1. Muerte\n2. Venta\n3. Movimiento a recría');
   if(op===null) return;
