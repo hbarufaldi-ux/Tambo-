@@ -547,10 +547,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
     <div class="section-title">Crías en guachera</div>
     <div id="g-lista"></div>
   </div>
-  <div class="card" style="margin-top:8px;">
-    <div class="section-title">Ingresos últimos 30 días</div>
-    <div id="guachera-recientes-lista"><div style="color:#8E8E93;font-size:14px;text-align:center;padding:8px 0;">Sin ingresos recientes</div></div>
-  </div>
+
 </div>
 
 <!-- RECRIA -->
@@ -565,10 +562,6 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
     <input type="search" id="recria-buscar" placeholder="Buscar por RP o nombre..." oninput="renderRecria()" style="width:100%;padding:11px 14px;border:0.5px solid #C8C8CE;border-radius:12px;font-size:17px;background:#fff;color:#1C1C1E;">
   </div>
   <div class="card"><div id="r-lista"></div></div>
-  <div class="card" style="margin-top:8px;">
-    <div class="section-title">Ingresos últimos 30 días</div>
-    <div id="recria-recientes-lista"><div style="color:#8E8E93;font-size:14px;text-align:center;padding:8px 0;">Sin ingresos recientes</div></div>
-  </div>
 </div>
 
 <!-- RODEO -->
@@ -1158,6 +1151,7 @@ function renderGuachera() {
   if(activasFiltradas.length===0){lista.innerHTML='<div style="padding:12px 0;text-align:center;color:#8E8E93;font-size:14px;">Sin resultados para ese RP</div>';return;}
   var buscarG = (document.getElementById('guachera-buscar') ? document.getElementById('guachera-buscar').value : '').trim();
   var activasFiltradas = buscarG ? activas.filter(function(c){ return String(c.rp).startsWith(buscarG); }) : activas;
+  activasFiltradas.sort(function(a,b){ return (b.fechaNac||'').localeCompare(a.fechaNac||''); });
   activasFiltradas.forEach(function(c) {
     var d=diasDeVida(c.fechaNac);
     var row=document.createElement('div'); row.className='animal-row'; row.style.cursor='pointer'; row.style.position='relative'; row.style.zIndex='1';
@@ -1189,6 +1183,7 @@ function renderRecria() {
   var buscar=(document.getElementById('recria-buscar')?document.getElementById('recria-buscar').value:'').toLowerCase();
   var todos=recria.filter(function(a){return a.activo;});
   var activos=todos.filter(function(a){return !buscar||a.nombre.toLowerCase().includes(buscar)||String(a.rp).includes(buscar);});
+  activos.sort(function(a,b){ return (b.fechaNac||'').localeCompare(a.fechaNac||''); });
   document.getElementById('r-total').textContent=todos.length;
   document.getElementById('r-hembras').textContent=todos.filter(function(a){return a.sexo==='H';}).length;
   document.getElementById('r-machos').textContent=todos.filter(function(a){return a.sexo==='M';}).length;
