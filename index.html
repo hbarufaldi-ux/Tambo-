@@ -536,6 +536,9 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
     <div class="metric"><div class="metric-label">Salen a corral</div><div class="metric-val" id="g-corral">—</div></div>
     <div class="metric"><div class="metric-label">% mortandad</div><div class="metric-val" id="g-mort">—</div></div>
   </div>
+  <div style="margin-bottom:10px;">
+    <input type="text" id="guachera-buscar" placeholder="Buscar por RP..." inputmode="numeric" oninput="renderGuachera()" style="width:100%;padding:11px 14px;border:0.5px solid #C8C8CE;border-radius:12px;font-size:17px;background:#fff;color:#1C1C1E;box-sizing:border-box;"/>
+  </div>
   <div class="card">
     <div class="section-title">Alertas guachera</div>
     <div id="g-alertas"></div>
@@ -543,6 +546,10 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
   <div class="card">
     <div class="section-title">Crías en guachera</div>
     <div id="g-lista"></div>
+  </div>
+  <div class="card" style="margin-top:8px;">
+    <div class="section-title">Ingresos últimos 30 días</div>
+    <div id="guachera-recientes-lista"><div style="color:#8E8E93;font-size:14px;text-align:center;padding:8px 0;">Sin ingresos recientes</div></div>
   </div>
 </div>
 
@@ -558,6 +565,10 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
     <input type="search" id="recria-buscar" placeholder="Buscar por RP o nombre..." oninput="renderRecria()" style="width:100%;padding:11px 14px;border:0.5px solid #C8C8CE;border-radius:12px;font-size:17px;background:#fff;color:#1C1C1E;">
   </div>
   <div class="card"><div id="r-lista"></div></div>
+  <div class="card" style="margin-top:8px;">
+    <div class="section-title">Ingresos últimos 30 días</div>
+    <div id="recria-recientes-lista"><div style="color:#8E8E93;font-size:14px;text-align:center;padding:8px 0;">Sin ingresos recientes</div></div>
+  </div>
 </div>
 
 <!-- RODEO -->
@@ -1144,13 +1155,16 @@ function renderGuachera() {
 
   var lista=document.getElementById('g-lista'); lista.innerHTML='';
   if(activas.length===0){lista.innerHTML='<div style="padding:12px 0;text-align:center;color:#8E8E93;font-size:14px;">Sin crías en guachera</div>';return;}
-  activas.forEach(function(c) {
+  if(activasFiltradas.length===0){lista.innerHTML='<div style="padding:12px 0;text-align:center;color:#8E8E93;font-size:14px;">Sin resultados para ese RP</div>';return;}
+  var buscarG = (document.getElementById('guachera-buscar') ? document.getElementById('guachera-buscar').value : '').trim();
+  var activasFiltradas = buscarG ? activas.filter(function(c){ return String(c.rp).startsWith(buscarG); }) : activas;
+  activasFiltradas.forEach(function(c) {
     var d=diasDeVida(c.fechaNac);
     var row=document.createElement('div'); row.className='animal-row'; row.style.cursor='pointer'; row.style.position='relative'; row.style.zIndex='1';
     row.addEventListener('click',function(){abrirFichaJoven(c.rp);});
     var left=document.createElement('div'); left.style.cssText='flex:1;pointer-events:none;';
     var nm=document.createElement('div'); nm.className='animal-name';
-    nm.innerHTML='RP '+c.rp+' <span style="font-weight:400;color:#8E8E93;font-size:13px;">'+c.nombre+'</span>';
+    nm.innerHTML='RP '+c.rp;
     var inf=document.createElement('div'); inf.className='animal-info';
     inf.textContent=(c.sexo==='H'?'Hembra':'Macho')+' · Día '+(d||0)+' · Nació '+fmtFecha(c.fechaNac);
     left.appendChild(nm); left.appendChild(inf);
@@ -1705,12 +1719,13 @@ async function guardarParto() {
   if(getRadio('viva')==='Sí'&&rpCria) {
     rodeo.push({rp:parseInt(rpCria),nombre:nombreCria,sexo:sexoCria==='Hembra'?'H':'M',raza:a.raza,cat:catCria,estadoRepro:catCria,estadoProd:'',fechaNac:fecha,madre:parseInt(madre),padre:nombreToro,ultimoParto:null,ultimaInsem:null,ultimaInsemToro:null,partoEstimado:null,nroServicios:0,produccionUltima:null});
     guachera.push({rp:parseInt(rpCria),nombre:nombreCria,sexo:sexoCria==='Hembra'?'H':'M',padre:nombreToro,madre:a.nombre+' (RP '+madre+')',fechaNac:fecha,vacunado:false,salio:false,eventos:[]});
+  agregarReciente('guachera', parseInt(rpCria), fecha);
     enviarASheets('Guachera_Eventos',[generarID('Ing',rpCria),fecha,rpCria,nombreCria,'Ingreso',0,'',a.nombre,nombreToro,sexoCria]);
   }
 
   var fila=[generarID('Par',madre),fecha,madre,a.nombre,nombreToro,sexoCria,rpCria,nombreCria,document.getElementById('p-tipo').value,getRadio('viva'),getRadio('mellizo'),document.getElementById('p-obs').value||'',getRadio('placenta'),catCria];
   var ok=await enviarASheets('Reg_Partos',fila);
-  if(ok){agregarReciente('parto', parseInt(madre), 'Cría RP '+rpCria+' — '+getRadio('sexo'));poblarSelects();renderDashboard();renderRodeo();renderGuachera();document.getElementById('p-rp-cria').value=nextRP();document.getElementById('parto-ok-msg').textContent=a.nombre+' pasó a En Ordeñe. Cría RP '+rpCria+' en guachera.';document.getElementById('parto-form').style.display='none';document.getElementById('parto-ok').style.display='block';}
+  if(ok){agregarReciente('parto', parseInt(madre), 'Cría RP '+rpCria+' · '+getRadio('sexo'));poblarSelects();renderDashboard();renderRodeo();renderGuachera();document.getElementById('p-rp-cria').value=nextRP();document.getElementById('parto-ok-msg').textContent=a.nombre+' pasó a En Ordeñe. Cría RP '+rpCria+' en guachera.';document.getElementById('parto-form').style.display='none';document.getElementById('parto-ok').style.display='block';}
 }
 
 async function guardarInsem() {
@@ -2307,13 +2322,14 @@ function renderRecientes(tipo) {
   var lista = document.getElementById(tipo+'-recientes-lista');
   if(!lista) return;
   var hoy = TODAY;
-  var hace7 = sumarDias(hoy, -7);
+  var diasAtras = (tipo === 'parto' || tipo === 'insem') ? -30 : -7;
+  var fechaLimite = sumarDias(hoy, diasAtras);
   var regs = registrosRecientes[tipo] || [];
-  // Show today's or last 7 days
-  var filtrados = regs.filter(function(r){ return r.fecha >= hace7; });
+  // Partos: últimos 30 días. Resto: últimos 7 días
+  var filtrados = regs.filter(function(r){ return r.fecha >= fechaLimite; });
   filtrados.sort(function(a,b){ return b.fecha.localeCompare(a.fecha); });
   if(filtrados.length === 0) {
-    lista.innerHTML = '<div style="color:#8E8E93;font-size:14px;text-align:center;padding:8px 0;">Sin registros esta semana</div>';
+    lista.innerHTML = '<div style="color:#8E8E93;font-size:14px;text-align:center;padding:8px 0;">Sin registros recientes</div>';
     return;
   }
   lista.innerHTML = '';
@@ -2321,8 +2337,15 @@ function renderRecientes(tipo) {
     var row = document.createElement('div');
     row.style.cssText = 'display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:0.5px solid #F2F2F7;cursor:pointer;';
     var esHoy = r.fecha === hoy;
-    row.innerHTML = '<div><div style="font-size:15px;font-weight:600;">RP '+r.rp+'</div><div style="font-size:13px;color:#8E8E93;">'+(r.detalle||'')+'</div></div>'
-      +'<div style="text-align:right;"><span style="font-size:12px;color:'+(esHoy?'#1A7A40':'#8E8E93')+';">'+(esHoy?'Hoy':fmtFecha(r.fecha))+'</span></div>';
+    var labelRP = 'RP '+r.rp;
+    var labelFecha = esHoy ? 'Hoy' : fmtFecha(r.fecha);
+    var colorFecha = esHoy ? '#1A7A40' : '#8E8E93';
+    // Guachera y recría: el detalle es la fecha de nacimiento/ingreso
+    var isGuachera = tipo === 'guachera' || tipo === 'recria';
+    var detalleStr = isGuachera ? ('Nac. '+fmtFecha(r.detalle||r.fecha)) : (r.detalle||'');
+    row.innerHTML = '<div><div style="font-size:15px;font-weight:600;">'+labelRP+'</div>'
+      +'<div style="font-size:13px;color:#8E8E93;">'+detalleStr+'</div></div>'
+      +'<div style="text-align:right;font-size:12px;color:'+colorFecha+';">'+labelFecha+'</div>';
     row.onclick = function(){ abrirFicha(r.rp); };
     lista.appendChild(row);
   });
