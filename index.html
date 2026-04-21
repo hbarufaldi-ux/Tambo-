@@ -2385,9 +2385,9 @@ function renderResumenTambo() {
   var rVaqPren = rActivos.filter(function(a){ return a.estadoRepro==='Preñada'; }).length;
 
   var row = function(label, val, color) {
-    return '<div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:0.5px solid #F2F2F7;">'
-      +'<span style="font-size:14px;color:#3C3C43;">'+label+'</span>'
-      +'<span style="font-size:14px;font-weight:700;color:'+(color||'#1C1C1E')+';">'+val+'</span></div>';
+    return '<div style="display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:0.5px solid #F2F2F7;">'
+      +'<span style="font-size:15px;color:#3C3C43;">'+label+'</span>'
+      +'<span style="font-size:22px;font-weight:800;color:'+(color||'#1C1C1E')+';">'+val+'</span></div>';
   };
   var subtitle = function(t) {
     return '<div style="font-size:12px;font-weight:800;color:#8E8E93;text-transform:uppercase;letter-spacing:0.06em;margin:12px 0 4px;">'+t+'</div>';
