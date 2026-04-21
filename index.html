@@ -595,14 +595,16 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
     <div id="import-resultado" style="margin-top:12px;"></div>
   </div>
   <div class="card">
-    <div class="section-title">Exportar datos</div>
+    <div class="section-title">Resumen Tambo</div>
+    <div id="resumen-tambo-contenido"></div>
+    <button class="btn-secondary" style="margin-top:10px;" onclick="exportar('resumen')">Exportar Resumen</button>
+  </div>
+  <div class="card">
+    <div class="section-title">Exportar informes</div>
     <div style="display:flex;flex-direction:column;gap:8px;">
-      <button class="btn-secondary" onclick="exportar('prenadas')">Preñadas</button>
-      <button class="btn-secondary" onclick="exportar('ordene')">En ordeñe</button>
-      <button class="btn-secondary" onclick="exportar('secas')">Secas</button>
-      <button class="btn-secondary" onclick="exportar('vacias')">Vacías</button>
-      <button class="btn-secondary" onclick="exportar('rodeo')">Rodeo completo</button>
+      <button class="btn-secondary" onclick="exportar('rodeo')">Padrón</button>
       <button class="btn-secondary" onclick="exportar('guachera')">Guachera</button>
+      <button class="btn-secondary" onclick="exportar('recria')">Recría</button>
       <button class="btn-secondary" onclick="exportar('alertas')" style="background:#FFF3CC;color:#7A5500;border-color:#F0C040;">Alertas para veterinario</button>
       <button class="btn-secondary" onclick="limpiarCache()" style="color:#8E8E93;">Forzar recarga desde Sheets</button>
     </div>
@@ -1810,6 +1812,7 @@ function goToNav(screen) {
 }
 
 function goTo(screen, btn) {
+  if(screen==='reportes'){ setTimeout(function(){ renderResumenTambo(); }, 50); }
   document.querySelectorAll('.screen').forEach(function(s){s.classList.remove('active');});
   var sc=document.getElementById('screen-'+screen);
   if(sc) sc.classList.add('active');
@@ -2350,6 +2353,66 @@ function agregarReciente(tipo, rp, detalle) {
   if(!registrosRecientes[tipo]) registrosRecientes[tipo] = [];
   registrosRecientes[tipo].unshift({fecha: TODAY, rp: rp, detalle: detalle});
   renderRecientes(tipo);
+}
+
+// ---- RESUMEN TAMBO ----
+function renderResumenTambo() {
+  var el = document.getElementById('resumen-tambo-contenido');
+  if(!el) return;
+
+  var vacas = rodeo.filter(function(a){ return a.cat==='Vaca' && a.estadoRepro!=='Baja'; });
+  var nVacas = vacas.length;
+  var nOrdene = vacas.filter(function(a){ return a.estadoProd==='En Ordeñe'; }).length;
+  var nSecas = vacas.filter(function(a){ return a.estadoProd==='Seca'; }).length;
+  var nPrenadas = vacas.filter(function(a){ return a.estadoRepro==='Preñada'; }).length;
+  var nVacias = vacas.filter(function(a){ return a.estadoRepro==='Vacía'; }).length;
+  var nInsem = vacas.filter(function(a){ return a.estadoRepro==='Inseminada'; }).length;
+
+  // Guachera
+  var gActivas = guachera.filter(function(g){ return !g.salio; });
+  var gTotal = guachera.length;
+  var gBajas = guachera.filter(function(g){ return g.salio==='baja'; }).length;
+  var gMort = gTotal > 0 ? Math.round(gBajas/gTotal*100) : 0;
+  var gHembras = gActivas.filter(function(g){ return g.sexo==='H'; }).length;
+  var gMachos = gActivas.filter(function(g){ return g.sexo==='M'; }).length;
+
+  // Recría
+  var rActivos = recria.filter(function(a){ return a.activo; });
+  var rHembras = rActivos.filter(function(a){ return a.sexo==='H'; }).length;
+  var rMachos = rActivos.filter(function(a){ return a.sexo==='M'; }).length;
+  var rVaqPre = rActivos.filter(function(a){ return a.cat==='Vaquillona' && (!a.estadoRepro||a.estadoRepro==='Vaquillona'); }).length;
+  var rVaqInsem = rActivos.filter(function(a){ return a.estadoRepro==='Inseminada'; }).length;
+  var rVaqPren = rActivos.filter(function(a){ return a.estadoRepro==='Preñada'; }).length;
+
+  var row = function(label, val, color) {
+    return '<div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:0.5px solid #F2F2F7;">'
+      +'<span style="font-size:14px;color:#3C3C43;">'+label+'</span>'
+      +'<span style="font-size:14px;font-weight:700;color:'+(color||'#1C1C1E')+';">'+val+'</span></div>';
+  };
+  var subtitle = function(t) {
+    return '<div style="font-size:12px;font-weight:800;color:#8E8E93;text-transform:uppercase;letter-spacing:0.06em;margin:12px 0 4px;">'+t+'</div>';
+  };
+
+  el.innerHTML =
+    subtitle('Rodeo') +
+    row('Vacas activas', nVacas) +
+    row('En ordeñe', nOrdene, '#1D9E75') +
+    row('Secas', nSecas, '#8E8E93') +
+    row('Preñadas', nPrenadas, '#1060C0') +
+    row('Vacías', nVacias, '#C08000') +
+    row('Inseminadas', nInsem, '#6B35D4') +
+    subtitle('Guachera') +
+    row('Crías activas', gActivas.length) +
+    row('Hembras', gHembras, '#6B35D4') +
+    row('Machos', gMachos, '#1060C0') +
+    row('Mortandad', gMort+'%', gMort>5?'#A0200A':'#1A7A40') +
+    subtitle('Recría') +
+    row('Total en recría', rActivos.length) +
+    row('Hembras', rHembras, '#6B35D4') +
+    row('Machos', rMachos, '#1060C0') +
+    row('Vaq. preservicio', rVaqPre) +
+    row('Vaq. inseminadas', rVaqInsem, '#6B35D4') +
+    row('Vaq. preñadas', rVaqPren, '#1060C0');
 }
 
 // ---- INIT ----
