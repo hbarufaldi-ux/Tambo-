@@ -2866,6 +2866,71 @@ async function guardarTactoMasivo() {
   showToast('RP ' + rp + ' — ' + resultado);
 }
 // ============ FIN TACTO MASIVO ============
+
+// ============================================================
+// SWIPE NAVIGATION
+// ============================================================
+(function(){
+  var SCREENS = ['dashboard','rodeo','inseminacion','parto','guachera','recria','reportes'];
+  var touchStartX = 0, touchStartY = 0;
+  var touchEndX = 0, touchEndY = 0;
+  var MIN_SWIPE_X = 60;  // mínimo px horizontal
+  var MAX_SWIPE_Y = 40;  // máximo px vertical para considerar swipe
+
+  function getCurrentScreen() {
+    var active = document.querySelector('.screen.active');
+    if(!active) return -1;
+    var id = active.id.replace('screen-','');
+    return SCREENS.indexOf(id);
+  }
+
+  function swipeToScreen(idx) {
+    if(idx < 0 || idx >= SCREENS.length) return;
+    var navBtn = document.querySelectorAll('.nav-btn')[idx];
+    goTo(SCREENS[idx], navBtn || null);
+  }
+
+  document.addEventListener('touchstart', function(e) {
+    touchStartX = e.changedTouches[0].screenX;
+    touchStartY = e.changedTouches[0].screenY;
+  }, {passive: true});
+
+  document.addEventListener('touchend', function(e) {
+    touchEndX = e.changedTouches[0].screenX;
+    touchEndY = e.changedTouches[0].screenY;
+
+    var dx = touchEndX - touchStartX;
+    var dy = Math.abs(touchEndY - touchStartY);
+
+    // Solo swipe horizontal significativo y no en modal abierto
+    if(Math.abs(dx) < MIN_SWIPE_X) return;
+    if(dy > MAX_SWIPE_Y) return;
+
+    // No swipear si hay un modal abierto
+    var modals = ['modal-tm','modal-evento','modal-evento-vaca'];
+    for(var i=0;i<modals.length;i++){
+      var m = document.getElementById(modals[i]);
+      if(m && m.style.display !== 'none') return;
+    }
+
+    // No swipear en ficha o celo
+    var active = document.querySelector('.screen.active');
+    if(!active) return;
+    var activeId = active.id;
+    if(activeId === 'screen-ficha' || activeId === 'screen-celo') return;
+
+    var cur = getCurrentScreen();
+    if(cur === -1) return;
+
+    if(dx < 0) {
+      // Swipe izquierda → siguiente
+      swipeToScreen(cur + 1);
+    } else {
+      // Swipe derecha → anterior
+      swipeToScreen(cur - 1);
+    }
+  }, {passive: true});
+})();
 </script>
 
 <!-- MODAL EVENTO VACA -->
