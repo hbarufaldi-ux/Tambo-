@@ -3323,10 +3323,8 @@ function abrirControlLechero() {
   } else {
     // Header
     var hdr = document.createElement('div');
-    hdr.style.cssText = 'display:grid;grid-template-columns:65px 1fr 55px 75px 75px 65px;gap:4px;padding:6px 0;border-bottom:1px solid #E5E5EA;margin-bottom:4px;';
-    hdr.innerHTML = '<span style="font-size:11px;font-weight:700;color:#8E8E93;">RP</span>'
-      +'<span style="font-size:11px;font-weight:700;color:#8E8E93;">Nombre</span>'
-      +'<span style="font-size:11px;font-weight:700;color:#8E8E93;">Rodeo</span>'
+    hdr.style.cssText = 'display:grid;grid-template-columns:1fr 90px 90px 70px;gap:6px;padding:6px 0;border-bottom:1px solid #E5E5EA;margin-bottom:4px;';
+    hdr.innerHTML = '<span style="font-size:11px;font-weight:700;color:#8E8E93;">RP · Nombre</span>'
       +'<span style="font-size:11px;font-weight:700;color:#8E8E93;text-align:center;">Mañana</span>'
       +'<span style="font-size:11px;font-weight:700;color:#8E8E93;text-align:center;">Tarde</span>'
       +'<span style="font-size:11px;font-weight:700;color:#8E8E93;text-align:center;">Total</span>';
@@ -3352,7 +3350,7 @@ function abrirControlLechero() {
 
       grupos[rodeo].forEach(function(a) {
         var row = document.createElement('div');
-        row.style.cssText = 'display:grid;grid-template-columns:65px 1fr 55px 75px 75px 65px;gap:4px;align-items:center;padding:7px 0;border-bottom:0.5px solid #F2F2F7;';
+        row.style.cssText = 'display:grid;grid-template-columns:1fr 90px 90px 70px;gap:6px;align-items:center;padding:7px 0;border-bottom:0.5px solid #F2F2F7;';
 
         // Selector de rodeo
         var selR = document.createElement('select');
@@ -3374,14 +3372,14 @@ function abrirControlLechero() {
         var inpM = document.createElement('input');
         inpM.type = 'number'; inpM.inputMode = 'decimal';
         inpM.placeholder = '0'; inpM.id = 'cl-m-'+a.rp;
-        inpM.style.cssText = 'width:100%;padding:8px 4px;border:0.5px solid #C8C8CE;border-radius:8px;font-size:18px;font-weight:700;text-align:center;';
+        inpM.style.cssText = 'width:100%;padding:10px 4px;border:0.5px solid #C8C8CE;border-radius:8px;font-size:20px;font-weight:700;text-align:center;box-sizing:border-box;';
         inpM.oninput = function(){ actualizarTotalCL(a.rp); };
 
         // Input tarde
         var inpT = document.createElement('input');
         inpT.type = 'number'; inpT.inputMode = 'decimal';
         inpT.placeholder = '0'; inpT.id = 'cl-t-'+a.rp;
-        inpT.style.cssText = 'width:100%;padding:8px 4px;border:0.5px solid #C8C8CE;border-radius:8px;font-size:18px;font-weight:700;text-align:center;';
+        inpT.style.cssText = 'width:100%;padding:10px 4px;border:0.5px solid #C8C8CE;border-radius:8px;font-size:20px;font-weight:700;text-align:center;box-sizing:border-box;';
         inpT.oninput = function(){ actualizarTotalCL(a.rp); };
 
         // Total
@@ -3404,9 +3402,12 @@ function abrirControlLechero() {
         }
 
         row.setAttribute('data-rp', String(a.rp));
-        row.innerHTML = '<span style="font-size:15px;font-weight:800;color:#1C1C1E;">'+a.rp+'</span>'
-          +'<span style="font-size:12px;color:#3C3C43;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+a.nombre+'</span>';
-        row.appendChild(selR);
+        // Celda izquierda: RP + nombre + selector rodeo
+        var leftDiv = document.createElement('div');
+        leftDiv.innerHTML = '<div style="font-size:15px;font-weight:800;color:#1C1C1E;">'+a.rp+'</div>'
+          +'<div style="font-size:12px;color:#8E8E93;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+a.nombre+'</div>';
+        leftDiv.appendChild(selR);
+        row.appendChild(leftDiv);
         row.appendChild(inpM);
         row.appendChild(inpT);
         row.appendChild(totSpan);
