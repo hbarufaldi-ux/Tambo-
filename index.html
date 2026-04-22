@@ -2886,8 +2886,19 @@ async function guardarTactoMasivo() {
 
   function swipeToScreen(idx) {
     if(idx < 0 || idx >= SCREENS.length) return;
-    var navBtn = document.querySelectorAll('.nav-btn')[idx];
-    goTo(SCREENS[idx], navBtn || null);
+    var navBtns = document.querySelectorAll('.nav-btn');
+    var navBtn = navBtns[idx] || null;
+    goTo(SCREENS[idx], navBtn);
+    // Asegurar que el nav-btn correcto quede activo
+    navBtns.forEach(function(b){ b.classList.remove('active'); });
+    if(navBtn) navBtn.classList.add('active');
+    // Scroll topbar al botón activo
+    var nav = document.getElementById('main-nav');
+    if(nav && navBtn) {
+      nav.scrollLeft = navBtn.offsetLeft - nav.offsetWidth/2 + navBtn.offsetWidth/2;
+    }
+    // Volver al top de la pantalla
+    window.scrollTo(0, 0);
   }
 
   document.addEventListener('touchstart', function(e) {
