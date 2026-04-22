@@ -3372,14 +3372,18 @@ function abrirControlLechero() {
         var inpM = document.createElement('input');
         inpM.type = 'number'; inpM.inputMode = 'decimal';
         inpM.placeholder = '0'; inpM.id = 'cl-m-'+a.rp;
-        inpM.style.cssText = 'width:100%;padding:10px 4px;border:0.5px solid #C8C8CE;border-radius:8px;font-size:20px;font-weight:700;text-align:center;box-sizing:border-box;';
+        inpM.style.cssText = 'width:100%;padding:10px 4px;border:1.5px solid #C8C8CE;border-radius:8px;font-size:20px;font-weight:700;text-align:center;box-sizing:border-box;transition:border-color 0.15s;';
+        inpM.onfocus = function(){ this.style.borderColor='#1060C0'; this.style.background='#EEF4FF'; };
+        inpM.onblur = function(){ this.style.borderColor='#C8C8CE'; this.style.background=''; };
         inpM.oninput = function(){ actualizarTotalCL(a.rp); };
 
         // Input tarde
         var inpT = document.createElement('input');
         inpT.type = 'number'; inpT.inputMode = 'decimal';
         inpT.placeholder = '0'; inpT.id = 'cl-t-'+a.rp;
-        inpT.style.cssText = 'width:100%;padding:10px 4px;border:0.5px solid #C8C8CE;border-radius:8px;font-size:20px;font-weight:700;text-align:center;box-sizing:border-box;';
+        inpT.style.cssText = 'width:100%;padding:10px 4px;border:1.5px solid #C8C8CE;border-radius:8px;font-size:20px;font-weight:700;text-align:center;box-sizing:border-box;transition:border-color 0.15s;';
+        inpT.onfocus = function(){ this.style.borderColor='#1060C0'; this.style.background='#EEF4FF'; };
+        inpT.onblur = function(){ this.style.borderColor='#C8C8CE'; this.style.background=''; };
         inpT.oninput = function(){ actualizarTotalCL(a.rp); };
 
         // Total
@@ -3388,17 +3392,19 @@ function abrirControlLechero() {
         totSpan.style.cssText = 'text-align:center;font-size:16px;font-weight:800;color:#1060C0;';
         totSpan.textContent = '—';
 
-        // Restaurar valores del cache
-        if(_controlLecheroData[a.rp] && (_controlLecheroData[a.rp].manana > 0 || _controlLecheroData[a.rp].tarde > 0)) {
-          inpM.value = _controlLecheroData[a.rp].manana || '';
-          inpT.value = _controlLecheroData[a.rp].tarde || '';
-          var tot = (_controlLecheroData[a.rp].total||0);
+        // Restaurar valores del cache y pintar fila completa
+        var cached_d = _controlLecheroData[a.rp];
+        if(cached_d && (cached_d.manana > 0 || cached_d.tarde > 0)) {
+          inpM.value = cached_d.manana > 0 ? cached_d.manana : '';
+          inpT.value = cached_d.tarde > 0 ? cached_d.tarde : '';
+          var tot = (cached_d.total||0);
           totSpan.textContent = tot > 0 ? tot.toFixed(1) : '—';
-          if(_controlLecheroData[a.rp].manana > 0 && _controlLecheroData[a.rp].tarde > 0) {
-            row.style.background = '#F0FFF4';
-          } else {
-            row.style.background = '#FFFBEB';
-          }
+          var completa = cached_d.manana > 0 && cached_d.tarde > 0;
+          var color = completa ? '#F0FFF4' : '#FFFBEB';
+          row.style.background = color;
+          inpM.style.background = color;
+          inpT.style.background = color;
+          totSpan.style.background = color;
         }
 
         row.setAttribute('data-rp', String(a.rp));
@@ -3435,12 +3441,20 @@ function actualizarTotalCL(rp) {
   if(totEl) totEl.textContent = tot > 0 ? tot.toFixed(1) : '—';
   _controlLecheroData[rp] = {manana: m, tarde: t, total: tot};
   guardarCacheControl();
-  // Colorear fila según estado
-  var fila = document.getElementById('cl-m-'+rp);
-  if(fila && fila.parentElement) {
-    if(m > 0 && t > 0) fila.parentElement.style.background = '#F0FFF4'; // verde - completo
-    else if(m > 0 || t > 0) fila.parentElement.style.background = '#FFFBEB'; // amarillo - parcial
-    else fila.parentElement.style.background = '';
+  // Colorear fila completa según estado
+  var inpFila = document.getElementById('cl-m-'+rp);
+  if(inpFila && inpFila.parentElement) {
+    var rowEl = inpFila.parentElement;
+    var color = '';
+    if(m > 0 && t > 0) color = '#F0FFF4';
+    else if(m > 0 || t > 0) color = '#FFFBEB';
+    rowEl.style.background = color;
+    // Pintar también los inputs y total
+    var inpTFila = document.getElementById('cl-t-'+rp);
+    var totFila = document.getElementById('cl-tot-'+rp);
+    if(inpTFila) inpTFila.style.background = color;
+    if(totFila) totFila.style.background = color;
+    // No pisar el color de foco del input activo
   }
 
   // Actualizar totales generales
