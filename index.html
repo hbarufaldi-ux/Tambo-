@@ -23,6 +23,8 @@ html{scrollbar-gutter:stable;}body{font-family:-apple-system,BlinkMacSystemFont,
 .screen{display:none;padding:16px;}
 .screen.active{display:block;}
 .card{background:#fff;border-radius:16px;padding:16px;margin-bottom:12px;box-shadow:0 1px 0 rgba(0,0,0,0.05),0 2px 8px rgba(0,0,0,0.04);}
+.input-fill:focus,.input-fill:not(:placeholder-shown){border-color:#1060C0 !important;background:#EEF4FF !important;}
+.input-fill{transition:border-color 0.15s,background 0.15s;}
 .rf-btn{padding:6px 12px;border:1px solid #C8C8CE;border-radius:20px;background:#fff;font-size:13px;font-weight:600;color:#3C3C43;cursor:pointer;white-space:nowrap;}
 .rf-btn.rf-active{background:#1C1C1E;color:#fff;border-color:#1C1C1E;}
 .section-title{font-size:16px;font-weight:800;color:#1C1C1E;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:12px;}
@@ -2756,7 +2758,7 @@ function renderResumenTambo() {
   var row = function(label, val, color) {
     return '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:0.5px solid #F2F2F7;">'
       +'<span style="font-size:14px;color:#3C3C43;">'+label+'</span>'
-      +'<span style="font-size:18px;font-weight:700;color:'+(color||'#1C1C1E')+';">'+val+'</span></div>';
+      +'<span style="font-size:18px;font-weight:700;color:'+(color||'#1C1C1E')+';">'+fmtNum(val)+'</span></div>';
   };
   var subtitle = function(t) {
     return '<div style="display:flex;align-items:center;gap:8px;margin:16px 0 6px;">'
@@ -3111,16 +3113,16 @@ function renderLeche() {
   }
 
   // Actualizar header
-  document.getElementById('l-total-hoy').textContent = totalUltimo > 0 ? totalUltimo : '—';
+  document.getElementById('l-total-hoy').textContent = totalUltimo > 0 ? fmtNum(totalUltimo) : '—';
   document.getElementById('l-fecha-ultimo').textContent = labelUltimo;
-  document.getElementById('l-ucalac-hoy').textContent = acumUcalac > 0 ? acumUcalac : '—';
-  document.getElementById('l-saputo-hoy').textContent = acumSaputo > 0 ? acumSaputo : '—';
+  document.getElementById('l-ucalac-hoy').textContent = acumUcalac > 0 ? fmtNum(acumUcalac) : '—';
+  document.getElementById('l-saputo-hoy').textContent = acumSaputo > 0 ? fmtNum(acumSaputo) : '—';
   document.getElementById('l-prom-vaca').textContent = promVacaUltimo;
   var vsEl = document.getElementById('l-vs-ayer');
   if(vsEl){ vsEl.textContent = vsAyer; vsEl.style.color = vsColor; }
 
   // Cards métricas
-  document.getElementById('l-acum-mes').textContent = acumMes > 0 ? acumMes : '—';
+  document.getElementById('l-acum-mes').textContent = acumMes > 0 ? fmtNum(acumMes) : '—';
   document.getElementById('l-dias-mes').textContent = diasMes;
   // Inicializar estado botones
   validarProduccion();
@@ -3143,10 +3145,10 @@ function renderLeche() {
     var esHoy = r.fecha === TODAY;
     row.innerHTML = '<div>'
       + '<div style="font-size:15px;font-weight:700;color:#1C1C1E;">'+(esHoy?'Hoy':fmtFecha(r.fecha))+'</div>'
-      + '<div style="font-size:12px;color:#8E8E93;">Ucalac: '+(r.ucalac||0)+' · Saputo: '+(r.saputo||0)+'</div>'
+      + '<div style="font-size:12px;color:#8E8E93;">Ucalac: '+fmtNum(r.ucalac||0)+' · Saputo: '+fmtNum(r.saputo||0)+'</div>'
       + '</div>'
       + '<div style="text-align:right;">'
-      + '<div style="font-size:20px;font-weight:800;color:#1060C0;">'+(r.total||0)+'</div>'
+      + '<div style="font-size:20px;font-weight:800;color:#1060C0;">'+fmtNum(r.total||0)+'</div>'
       + '<div style="font-size:11px;color:#8E8E93;">lts</div>'
       + '</div>';
     hist.appendChild(row);
@@ -3207,7 +3209,12 @@ async function guardarProduccion() {
   limpiarFilasEmpresa();
   document.getElementById('l-obs').value = '';
   document.getElementById('l-fecha').value = TODAY;
-
+  // Reset fills
+  ['l-fecha','l-vacas','l-obs'].forEach(function(id){
+    var el = document.getElementById(id);
+    if(el){ el.style.background=''; el.style.borderColor='#C8C8CE'; }
+  });
+  iniciarFilasEmpresa();
   showToast('Producción guardada ✓');
   renderLeche();
 }
@@ -3229,10 +3236,12 @@ async function guardarCalidad() {
   await enviarASheets('Calidad_Leche', fila);
 
   // Limpiar
-  ['l-ufc','l-cs','l-grasa','l-proteina'].forEach(function(id){
-    document.getElementById(id).value = '';
+  ['l-ufc','l-cs','l-grasa','l-proteina','l-cal-fecha'].forEach(function(id){
+    var el = document.getElementById(id);
+    if(el){ el.value = id==='l-cal-fecha'?TODAY:''; el.style.background=''; el.style.borderColor='#C8C8CE'; }
   });
-  document.getElementById('l-cal-empresa').value = '';
+  var emp = document.getElementById('l-cal-empresa');
+  if(emp){ emp.value=''; emp.style.background='#fff'; emp.style.borderColor='#C8C8CE'; }
 
   showToast('Calidad guardada ✓');
 }
