@@ -592,7 +592,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
       <div>
         <div style="font-size:11px;color:rgba(255,255,255,0.7);font-weight:700;text-transform:uppercase;letter-spacing:0.1em;">Producción del mes</div>
         <div style="font-size:48px;font-weight:900;color:#fff;line-height:1;letter-spacing:-2px;" id="l-total-hoy">—</div>
-        <div style="font-size:13px;color:rgba(255,255,255,0.7);margin-top:2px;">litros acumulados</div>
+        <div style="font-size:13px;color:rgba(255,255,255,0.7);margin-top:2px;" id="l-fecha-ultimo">—</div>
       </div>
       <div style="text-align:right;">
         <div style="font-size:11px;color:rgba(255,255,255,0.7);font-weight:700;text-transform:uppercase;letter-spacing:0.1em;">Prom/vaca</div>
@@ -639,22 +639,10 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
     </div>
     <div id="l-entregas-container">
       <label style="font-size:13px;font-weight:600;color:#3C3C43;display:block;margin-bottom:6px;">Entregas por empresa</label>
-      <div style="display:flex;gap:8px;align-items:center;margin-bottom:6px;">
-        <select style="flex:1.5;padding:10px;border:0.5px solid #C8C8CE;border-radius:10px;font-size:15px;background:#fff;" id="l-emp-1">
-          <option value="">Empresa...</option>
-          <option>Ucalac SA</option>
-          <option>Saputo</option>
-        </select>
-        <input type="number" inputmode="decimal" placeholder="Litros" id="l-lts-1" style="flex:1;padding:10px;border:0.5px solid #C8C8CE;border-radius:10px;font-size:15px;">
+      <div id="l-filas-empresas">
+        <!-- filas generadas por JS -->
       </div>
-      <div style="display:flex;gap:8px;align-items:center;margin-bottom:6px;">
-        <select style="flex:1.5;padding:10px;border:0.5px solid #C8C8CE;border-radius:10px;font-size:15px;background:#fff;" id="l-emp-2">
-          <option value="">Empresa...</option>
-          <option>Ucalac SA</option>
-          <option>Saputo</option>
-        </select>
-        <input type="number" inputmode="decimal" placeholder="Litros" id="l-lts-2" style="flex:1;padding:10px;border:0.5px solid #C8C8CE;border-radius:10px;font-size:15px;">
-      </div>
+      <button type="button" onclick="agregarFilaEmpresa()" style="width:100%;padding:10px;border:0.5px dashed #C8C8CE;border-radius:10px;background:#F8F8F8;font-size:14px;color:#3C3C43;cursor:pointer;margin-top:4px;">+ Agregar empresa</button>
     </div>
     <div class="field"><label>Observaciones</label><textarea id="l-obs" rows="2" placeholder="Opcional..."></textarea></div>
     <button class="btn-primary" onclick="guardarProduccion()">Guardar producción</button>
@@ -3010,6 +2998,8 @@ function guardarCacheLeche() {
 }
 
 function renderLeche() {
+  // Inicializar filas empresa si están vacías
+  if(document.getElementById('l-filas-empresas') && document.getElementById('l-filas-empresas').children.length===0) iniciarFilasEmpresa();
   // Inicializar fecha
   var fEl = document.getElementById('l-fecha');
   if(fEl && !fEl.value) fEl.value = TODAY;
@@ -3083,13 +3073,7 @@ function renderLeche() {
 
 async function guardarProduccion() {
   var fecha = document.getElementById('l-fecha').value || TODAY;
-  // Leer entregas por empresa
-  var entregas = {};
-  for(var i=1;i<=2;i++){
-    var emp = document.getElementById('l-emp-'+i) ? document.getElementById('l-emp-'+i).value : '';
-    var lts = document.getElementById('l-lts-'+i) ? parseFloat(document.getElementById('l-lts-'+i).value)||0 : 0;
-    if(emp && lts > 0) entregas[emp] = (entregas[emp]||0) + lts;
-  }
+  var entregas = leerEntregasEmpresa();
   var ucalac = entregas['Ucalac SA'] || 0;
   var saputo = entregas['Saputo'] || 0;
   var total = Object.values(entregas).reduce(function(s,v){return s+v;},0);
@@ -3111,11 +3095,9 @@ async function guardarProduccion() {
   await enviarASheets('Reg_Produccion_Tambo', fila);
 
   // Limpiar form
-  for(var i=1;i<=2;i++){
-    if(document.getElementById('l-emp-'+i)) document.getElementById('l-emp-'+i).value='';
-    if(document.getElementById('l-lts-'+i)) document.getElementById('l-lts-'+i).value='';
-  }
+  limpiarFilasEmpresa();
   document.getElementById('l-obs').value = '';
+  document.getElementById('l-fecha').value = TODAY;
 
   showToast('Producción guardada ✓');
   renderLeche();
@@ -3192,18 +3174,134 @@ function exportarReporteMensual() {
     rows.push([r.fecha, r.empresa, r.ufc||0, r.cs||0, r.grasa||0, r.proteina||0]);
   });
 
-  var csv = rows.map(function(r){
-    return r.map(function(v){ return '"'+String(v||'').replace(/"/g,'""')+'"'; }).join(',');
-  }).join('\n');
-
-  var blob = new Blob(['\uFEFF'+csv], {type:'text/csv;charset=utf-8;'});
-  var url = URL.createObjectURL(blob);
-  var a = document.createElement('a');
-  a.href = url;
-  a.download = 'leche_'+mes+'.csv';
-  a.click();
-  URL.revokeObjectURL(url);
+  // Generar Excel con SheetJS si está disponible, sino CSV
+  if(typeof XLSX !== 'undefined') {
+    var wb = XLSX.utils.book_new();
+    // Hoja producción
+    var wsProd = XLSX.utils.aoa_to_sheet([
+      ['Fecha','Ucalac SA','Saputo','Total','Vacas','Obs'],
+      ...delMes.sort(function(a,b){return a.fecha.localeCompare(b.fecha);}).map(function(r){
+        return [r.fecha,r.ucalac||0,r.saputo||0,r.total||0,r.vacas||'',r.obs||''];
+      })
+    ]);
+    XLSX.utils.book_append_sheet(wb, wsProd, 'Producción');
+    // Hoja calidad
+    var wsCal = XLSX.utils.aoa_to_sheet([
+      ['Fecha','Empresa','UFC','Células Som.','Grasa %','Proteína %'],
+      ...calMes.sort(function(a,b){return a.fecha.localeCompare(b.fecha);}).map(function(r){
+        return [r.fecha,r.empresa,r.ufc||0,r.cs||0,r.grasa||0,r.proteina||0];
+      })
+    ]);
+    XLSX.utils.book_append_sheet(wb, wsCal, 'Calidad');
+    // Hoja resumen
+    var wsRes = XLSX.utils.aoa_to_sheet(rows.slice(0,10));
+    XLSX.utils.book_append_sheet(wb, wsRes, 'Resumen');
+    XLSX.writeFile(wb, 'leche_'+mes+'.xlsx');
+  } else {
+    var csv = rows.map(function(r){
+      return r.map(function(v){ return '"'+String(v||'').replace(/"/g,'""')+'"'; }).join(',');
+    }).join('\n');
+    var blob = new Blob(['\uFEFF'+csv], {type:'text/csv;charset=utf-8;'});
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url; a.download = 'leche_'+mes+'.csv'; a.click();
+    URL.revokeObjectURL(url);
+  }
   showToast('Reporte descargado ✓');
+}
+
+
+// ============================================================
+// LECHE - EMPRESAS DINÁMICAS
+// ============================================================
+var _empresasLeche = ['Ucalac SA', 'Saputo'];
+
+function iniciarFilasEmpresa() {
+  var cont = document.getElementById('l-filas-empresas');
+  if(!cont) return;
+  cont.innerHTML = '';
+  agregarFilaEmpresa();
+}
+
+function agregarFilaEmpresa() {
+  var cont = document.getElementById('l-filas-empresas');
+  if(!cont) return;
+  var idx = cont.children.length + 1;
+  var div = document.createElement('div');
+  div.style.cssText = 'display:flex;gap:8px;align-items:center;margin-bottom:6px;';
+  div.id = 'l-fila-emp-'+idx;
+
+  // Select de empresa
+  var sel = document.createElement('select');
+  sel.id = 'l-emp-'+idx;
+  sel.style.cssText = 'flex:1.5;padding:10px;border:0.5px solid #C8C8CE;border-radius:10px;font-size:15px;background:#fff;';
+  sel.innerHTML = '<option value="">Empresa...</option>';
+  _empresasLeche.forEach(function(e){
+    sel.innerHTML += '<option>'+e+'</option>';
+  });
+  sel.innerHTML += '<option value="__nueva__">+ Nueva empresa...</option>';
+  sel.onchange = function() {
+    if(sel.value === '__nueva__') {
+      var nueva = prompt('Nombre de la nueva empresa:');
+      if(nueva && nueva.trim()) {
+        nueva = nueva.trim();
+        if(!_empresasLeche.includes(nueva)) _empresasLeche.push(nueva);
+        // Actualizar todos los selects
+        document.querySelectorAll('[id^="l-emp-"]').forEach(function(s){
+          var cur = s.value;
+          s.innerHTML = '<option value="">Empresa...</option>';
+          _empresasLeche.forEach(function(e){ s.innerHTML += '<option>'+e+'</option>'; });
+          s.innerHTML += '<option value="__nueva__">+ Nueva empresa...</option>';
+          s.value = cur === '__nueva__' ? nueva : cur;
+        });
+        sel.value = nueva;
+      } else {
+        sel.value = '';
+      }
+    }
+  };
+
+  // Input litros
+  var inp = document.createElement('input');
+  inp.type = 'number';
+  inp.inputMode = 'decimal';
+  inp.placeholder = 'Litros';
+  inp.id = 'l-lts-'+idx;
+  inp.style.cssText = 'flex:1;padding:10px;border:0.5px solid #C8C8CE;border-radius:10px;font-size:15px;';
+
+  // Botón eliminar (solo si no es la primera)
+  if(idx > 1) {
+    var btn = document.createElement('button');
+    btn.type = 'button';
+    btn.textContent = '✕';
+    btn.style.cssText = 'padding:10px;border:none;background:none;color:#A0200A;font-size:16px;cursor:pointer;';
+    btn.onclick = function(){ div.remove(); };
+    div.appendChild(sel); div.appendChild(inp); div.appendChild(btn);
+  } else {
+    div.appendChild(sel); div.appendChild(inp);
+  }
+  cont.appendChild(div);
+}
+
+function leerEntregasEmpresa() {
+  var entregas = {};
+  var idx = 1;
+  while(document.getElementById('l-emp-'+idx)) {
+    var emp = document.getElementById('l-emp-'+idx).value;
+    var lts = parseFloat(document.getElementById('l-lts-'+idx).value) || 0;
+    if(emp && emp !== '__nueva__' && lts > 0) entregas[emp] = (entregas[emp]||0) + lts;
+    idx++;
+  }
+  return entregas;
+}
+
+function limpiarFilasEmpresa() {
+  var idx = 1;
+  while(document.getElementById('l-emp-'+idx)) {
+    document.getElementById('l-emp-'+idx).value = '';
+    document.getElementById('l-lts-'+idx).value = '';
+    idx++;
+  }
 }
 
 // ============================================================
