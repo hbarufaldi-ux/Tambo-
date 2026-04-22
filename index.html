@@ -3001,68 +3001,72 @@ function guardarCacheLeche() {
 function renderLeche() {
   // Inicializar filas empresa si están vacías
   if(document.getElementById('l-filas-empresas') && document.getElementById('l-filas-empresas').children.length===0) iniciarFilasEmpresa();
-  // Inicializar fecha
+  // Inicializar fechas
   var fEl = document.getElementById('l-fecha');
-  if(fEl && !fEl.value) fEl.value = TODAY;
+  if(fEl) { if(!fEl.value) fEl.value = TODAY; fEl.max = TODAY; }
   var fcEl = document.getElementById('l-cal-fecha');
-  if(fcEl && !fcEl.value) fcEl.value = TODAY;
+  if(fcEl) { if(!fcEl.value) fcEl.value = TODAY; fcEl.max = TODAY; }
 
   var nOrdene = rodeo.filter(function(a){ return a.estadoProd==='En Ordeñe'; }).length;
   document.getElementById('l-vacas').placeholder = nOrdene ? nOrdene+' (auto)' : '0';
 
   // Acumulado del mes
   var mesActual = TODAY.substring(0,7);
-  var delMes = produccionDiaria.filter(function(r){ return r.fecha.startsWith(mesActual); });
+  var delMes = produccionDiaria.filter(function(r){ return r.fecha && r.fecha.startsWith(mesActual); });
   var acumMes = delMes.reduce(function(s,r){ return s+(r.total||0); }, 0);
   var acumUcalac = delMes.reduce(function(s,r){ return s+(r.ucalac||0); }, 0);
   var acumSaputo = delMes.reduce(function(s,r){ return s+(r.saputo||0); }, 0);
   var diasMes = delMes.length;
 
-  // Promedio diario por vaca
-  var totalVacasDias = delMes.reduce(function(s,r){ return s+(r.vacas||nOrdene||1); }, 0);
-  var promVaca = diasMes > 0 && totalVacasDias > 0 ? (acumMes / totalVacasDias).toFixed(1) : '—';
+  // Último día cargado (más reciente de todos, no solo del mes)
+  var todosSorted = produccionDiaria.slice().sort(function(a,b){ return b.fecha.localeCompare(a.fecha); });
+  var ultimo = todosSorted[0] || null;
+  var penultimo = todosSorted[1] || null;
+  var totalUltimo = ultimo ? (ultimo.total||0) : 0;
+  var vacasUltimo = ultimo ? (ultimo.vacas||nOrdene||1) : (nOrdene||1);
+  var promVacaUltimo = totalUltimo > 0 && vacasUltimo > 0 ? (totalUltimo/vacasUltimo).toFixed(1) : '—';
+  var labelUltimo = ultimo ? (ultimo.fecha === TODAY ? 'Hoy' : fmtFecha(ultimo.fecha)) : '—';
 
-  // vs ayer (comparar último día con el anterior)
-  var ultimos = delMes.slice().sort(function(a,b){ return b.fecha.localeCompare(a.fecha); });
+  // vs día anterior
   var vsAyer = '—';
   var vsColor = '#fff';
-  if(ultimos.length >= 2) {
-    var diff = (ultimos[0].total||0) - (ultimos[1].total||0);
+  if(ultimo && penultimo) {
+    var diff = totalUltimo - (penultimo.total||0);
     vsAyer = (diff >= 0 ? '+' : '') + diff;
     vsColor = diff >= 0 ? '#7FFFB0' : '#FFB0B0';
   }
 
   // Actualizar header
-  document.getElementById('l-total-hoy').textContent = acumMes > 0 ? acumMes : '—';
+  document.getElementById('l-total-hoy').textContent = totalUltimo > 0 ? totalUltimo : '—';
+  document.getElementById('l-fecha-ultimo').textContent = labelUltimo;
   document.getElementById('l-ucalac-hoy').textContent = acumUcalac > 0 ? acumUcalac : '—';
   document.getElementById('l-saputo-hoy').textContent = acumSaputo > 0 ? acumSaputo : '—';
-  document.getElementById('l-prom-vaca').textContent = promVaca;
+  document.getElementById('l-prom-vaca').textContent = promVacaUltimo;
   var vsEl = document.getElementById('l-vs-ayer');
-  vsEl.textContent = vsAyer;
-  vsEl.style.color = vsColor;
+  if(vsEl){ vsEl.textContent = vsAyer; vsEl.style.color = vsColor; }
 
+  // Cards métricas
   document.getElementById('l-acum-mes').textContent = acumMes > 0 ? acumMes : '—';
   document.getElementById('l-dias-mes').textContent = diasMes;
 
   // Historial últimos 7 días
   var hist = document.getElementById('l-historial');
   hist.innerHTML = '';
-  var ultimos = produccionDiaria
+  var ultimos7 = produccionDiaria
     .filter(function(r){ return r.fecha >= sumarDias(TODAY,-7); })
     .sort(function(a,b){ return b.fecha.localeCompare(a.fecha); });
 
-  if(ultimos.length === 0) {
+  if(ultimos7.length === 0) {
     hist.innerHTML = '<div style="color:#8E8E93;font-size:14px;text-align:center;padding:8px 0;">Sin registros</div>';
     return;
   }
-
-  ultimos.forEach(function(r) {
+  ultimos7.forEach(function(r) {
     var row = document.createElement('div');
     row.style.cssText = 'display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:0.5px solid #F2F2F7;';
     var esHoy = r.fecha === TODAY;
     row.innerHTML = '<div>'
-      + '<div style="font-size:15px;font-weight:700;color:#1C1C1E;">' + (esHoy?'Hoy':fmtFecha(r.fecha)) + '</div>'
-      + '<div style="font-size:12px;color:#8E8E93;">Ucalac: '+( r.ucalac||0)+' · Saputo: '+(r.saputo||0)+'</div>'
+      + '<div style="font-size:15px;font-weight:700;color:#1C1C1E;">'+(esHoy?'Hoy':fmtFecha(r.fecha))+'</div>'
+      + '<div style="font-size:12px;color:#8E8E93;">Ucalac: '+(r.ucalac||0)+' · Saputo: '+(r.saputo||0)+'</div>'
       + '</div>'
       + '<div style="text-align:right;">'
       + '<div style="font-size:20px;font-weight:800;color:#1060C0;">'+(r.total||0)+'</div>'
@@ -3071,6 +3075,7 @@ function renderLeche() {
     hist.appendChild(row);
   });
 }
+
 
 async function guardarProduccion() {
   var fecha = document.getElementById('l-fecha').value || TODAY;
