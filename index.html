@@ -738,13 +738,14 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 
 <!-- CONTROL LECHERO MASIVO -->
 <div id="screen-control-lechero" class="screen">
-  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
     <div>
       <div style="font-size:20px;font-weight:800;color:#1C1C1E;">Control lechero</div>
       <div style="font-size:13px;color:#8E8E93;" id="cl-subtitulo">—</div>
     </div>
     <input type="date" id="cl-fecha" style="padding:8px 10px;border:0.5px solid #C8C8CE;border-radius:10px;font-size:14px;">
   </div>
+  <input type="search" id="cl-buscar" placeholder="Buscar por RP o nombre..." oninput="filtrarControlLechero()" style="width:100%;padding:10px 14px;border:0.5px solid #C8C8CE;border-radius:12px;font-size:16px;background:#fff;margin-bottom:8px;box-sizing:border-box;">
 
   <!-- Totales -->
   <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:10px;">
@@ -3270,11 +3271,46 @@ function exportarReporteMensual() {
 // CONTROL LECHERO MASIVO
 // ============================================================
 var _controlLecheroData = {}; // {rp: {manana, tarde}}
+var CACHE_KEY_CONTROL = 'tambo_control_lechero_v1';
+
+function guardarCacheControl() {
+  try {
+    var fecha = document.getElementById('cl-fecha') ? document.getElementById('cl-fecha').value : TODAY;
+    localStorage.setItem(CACHE_KEY_CONTROL, JSON.stringify({fecha:fecha, data:_controlLecheroData}));
+  } catch(e) {}
+}
+
+function cargarCacheControl() {
+  try {
+    var raw = localStorage.getItem(CACHE_KEY_CONTROL);
+    if(!raw) return null;
+    return JSON.parse(raw);
+  } catch(e) { return null; }
+}
+
+function limpiarCacheControl() {
+  localStorage.removeItem(CACHE_KEY_CONTROL);
+}
 
 function abrirControlLechero() {
-  _controlLecheroData = {};
+  // Intentar recuperar sesión guardada
+  var cached = cargarCacheControl();
+  if(cached && cached.data && Object.keys(cached.data).length > 0) {
+    if(confirm('Hay un control del ' + (cached.fecha||'') + ' sin guardar. ¿Continuar desde donde dejaste?')) {
+      _controlLecheroData = cached.data;
+    } else {
+      _controlLecheroData = {};
+      limpiarCacheControl();
+    }
+  } else {
+    _controlLecheroData = {};
+  }
+
   var fechaEl = document.getElementById('cl-fecha');
-  if(fechaEl) { fechaEl.value = TODAY; fechaEl.max = TODAY; }
+  if(fechaEl) {
+    fechaEl.value = (cached && cached.fecha) ? cached.fecha : TODAY;
+    fechaEl.max = TODAY;
+  }
 
   var vacas = rodeo.filter(function(a){
     return a.estadoProd === 'En Ordeñe' && a.cat === 'Vaca';
@@ -3290,41 +3326,93 @@ function abrirControlLechero() {
   } else {
     // Header
     var hdr = document.createElement('div');
-    hdr.style.cssText = 'display:grid;grid-template-columns:60px 1fr 80px 80px 60px;gap:6px;padding:6px 0;border-bottom:1px solid #E5E5EA;margin-bottom:4px;';
+    hdr.style.cssText = 'display:grid;grid-template-columns:65px 1fr 55px 75px 75px 65px;gap:4px;padding:6px 0;border-bottom:1px solid #E5E5EA;margin-bottom:4px;';
     hdr.innerHTML = '<span style="font-size:11px;font-weight:700;color:#8E8E93;">RP</span>'
       +'<span style="font-size:11px;font-weight:700;color:#8E8E93;">Nombre</span>'
+      +'<span style="font-size:11px;font-weight:700;color:#8E8E93;">Rodeo</span>'
       +'<span style="font-size:11px;font-weight:700;color:#8E8E93;text-align:center;">Mañana</span>'
       +'<span style="font-size:11px;font-weight:700;color:#8E8E93;text-align:center;">Tarde</span>'
       +'<span style="font-size:11px;font-weight:700;color:#8E8E93;text-align:center;">Total</span>';
     lista.appendChild(hdr);
 
+    // Agrupar por rodeo
+    var grupos = {};
     vacas.forEach(function(a) {
-      var row = document.createElement('div');
-      row.style.cssText = 'display:grid;grid-template-columns:60px 1fr 80px 80px 60px;gap:6px;align-items:center;padding:6px 0;border-bottom:0.5px solid #F2F2F7;';
+      var r = a.rodeoManual || 'SR';
+      if(!grupos[r]) grupos[r] = [];
+      grupos[r].push(a);
+    });
+    var ordenRodeos = ['R1','R2','R3','R4','R5','SR'];
 
-      var inpM = document.createElement('input');
-      inpM.type = 'number'; inpM.inputMode = 'decimal';
-      inpM.placeholder = '0'; inpM.id = 'cl-m-'+a.rp;
-      inpM.style.cssText = 'width:100%;padding:6px;border:0.5px solid #C8C8CE;border-radius:8px;font-size:15px;text-align:center;';
-      inpM.oninput = function(){ actualizarTotalCL(a.rp); };
+    ordenRodeos.forEach(function(rodeo) {
+      if(!grupos[rodeo] || grupos[rodeo].length === 0) return;
+      // Separador de rodeo
+      var sep = document.createElement('div');
+      sep.style.cssText = 'background:#1060C0;color:#fff;font-size:12px;font-weight:800;padding:5px 10px;border-radius:8px;margin:10px 0 4px;letter-spacing:0.06em;';
+      sep.textContent = (rodeo==='SR'?'Sin rodeo':rodeo) + ' · ' + grupos[rodeo].length + ' vacas';
+      lista.appendChild(sep);
 
-      var inpT = document.createElement('input');
-      inpT.type = 'number'; inpT.inputMode = 'decimal';
-      inpT.placeholder = '0'; inpT.id = 'cl-t-'+a.rp;
-      inpT.style.cssText = 'width:100%;padding:6px;border:0.5px solid #C8C8CE;border-radius:8px;font-size:15px;text-align:center;';
-      inpT.oninput = function(){ actualizarTotalCL(a.rp); };
+      grupos[rodeo].forEach(function(a) {
+        var row = document.createElement('div');
+        row.style.cssText = 'display:grid;grid-template-columns:65px 1fr 55px 75px 75px 65px;gap:4px;align-items:center;padding:7px 0;border-bottom:0.5px solid #F2F2F7;';
 
-      var totSpan = document.createElement('span');
-      totSpan.id = 'cl-tot-'+a.rp;
-      totSpan.style.cssText = 'text-align:center;font-size:14px;font-weight:700;color:#1060C0;';
-      totSpan.textContent = '—';
+        // Selector de rodeo
+        var selR = document.createElement('select');
+        selR.style.cssText = 'width:100%;padding:4px;border:0.5px solid #C8C8CE;border-radius:6px;font-size:12px;background:#fff;';
+        ['R1','R2','R3','R4','R5'].forEach(function(r){
+          var opt = document.createElement('option');
+          opt.value = r; opt.textContent = r;
+          if(r === (a.rodeoManual||'')) opt.selected = true;
+          selR.appendChild(opt);
+        });
+        selR.onchange = function() {
+          a.rodeoManual = selR.value;
+          if(!_controlLecheroData[a.rp]) _controlLecheroData[a.rp] = {manana:0,tarde:0,total:0};
+          _controlLecheroData[a.rp].rodeo = selR.value;
+          guardarCacheControl();
+        };
 
-      row.innerHTML = '<span style="font-size:13px;font-weight:700;">'+a.rp+'</span>'
-        +'<span style="font-size:12px;color:#3C3C43;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+a.nombre+'</span>';
-      row.appendChild(inpM);
-      row.appendChild(inpT);
-      row.appendChild(totSpan);
-      lista.appendChild(row);
+        // Input mañana
+        var inpM = document.createElement('input');
+        inpM.type = 'number'; inpM.inputMode = 'decimal';
+        inpM.placeholder = '0'; inpM.id = 'cl-m-'+a.rp;
+        inpM.style.cssText = 'width:100%;padding:8px 4px;border:0.5px solid #C8C8CE;border-radius:8px;font-size:18px;font-weight:700;text-align:center;';
+        inpM.oninput = function(){ actualizarTotalCL(a.rp); };
+
+        // Input tarde
+        var inpT = document.createElement('input');
+        inpT.type = 'number'; inpT.inputMode = 'decimal';
+        inpT.placeholder = '0'; inpT.id = 'cl-t-'+a.rp;
+        inpT.style.cssText = 'width:100%;padding:8px 4px;border:0.5px solid #C8C8CE;border-radius:8px;font-size:18px;font-weight:700;text-align:center;';
+        inpT.oninput = function(){ actualizarTotalCL(a.rp); };
+
+        // Total
+        var totSpan = document.createElement('span');
+        totSpan.id = 'cl-tot-'+a.rp;
+        totSpan.style.cssText = 'text-align:center;font-size:16px;font-weight:800;color:#1060C0;';
+        totSpan.textContent = '—';
+
+        // Restaurar valores del cache
+        if(_controlLecheroData[a.rp] && (_controlLecheroData[a.rp].manana > 0 || _controlLecheroData[a.rp].tarde > 0)) {
+          inpM.value = _controlLecheroData[a.rp].manana || '';
+          inpT.value = _controlLecheroData[a.rp].tarde || '';
+          var tot = (_controlLecheroData[a.rp].total||0);
+          totSpan.textContent = tot > 0 ? tot.toFixed(1) : '—';
+          if(_controlLecheroData[a.rp].manana > 0 && _controlLecheroData[a.rp].tarde > 0) {
+            row.style.background = '#F0FFF4';
+          } else {
+            row.style.background = '#FFFBEB';
+          }
+        }
+
+        row.innerHTML = '<span style="font-size:15px;font-weight:800;color:#1C1C1E;">'+a.rp+'</span>'
+          +'<span style="font-size:12px;color:#3C3C43;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+a.nombre+'</span>';
+        row.appendChild(selR);
+        row.appendChild(inpM);
+        row.appendChild(inpT);
+        row.appendChild(totSpan);
+        lista.appendChild(row);
+      });
     });
   }
 
@@ -3332,9 +3420,12 @@ function abrirControlLechero() {
   document.querySelectorAll('.screen').forEach(function(s){s.classList.remove('active');});
   document.getElementById('screen-control-lechero').classList.add('active');
   document.querySelectorAll('.nav-btn').forEach(function(b){b.classList.remove('active');});
+  var navBtns = document.querySelectorAll('.nav-btn');
+  if(navBtns[1]) navBtns[1].classList.add('active');
   window.scrollTo(0,0);
   _navStack.push('leche');
 }
+
 
 function actualizarTotalCL(rp) {
   var m = parseFloat(document.getElementById('cl-m-'+rp).value) || 0;
@@ -3343,6 +3434,14 @@ function actualizarTotalCL(rp) {
   var totEl = document.getElementById('cl-tot-'+rp);
   if(totEl) totEl.textContent = tot > 0 ? tot.toFixed(1) : '—';
   _controlLecheroData[rp] = {manana: m, tarde: t, total: tot};
+  guardarCacheControl();
+  // Colorear fila según estado
+  var fila = document.getElementById('cl-m-'+rp);
+  if(fila && fila.parentElement) {
+    if(m > 0 && t > 0) fila.parentElement.style.background = '#F0FFF4'; // verde - completo
+    else if(m > 0 || t > 0) fila.parentElement.style.background = '#FFFBEB'; // amarillo - parcial
+    else fila.parentElement.style.background = '';
+  }
 
   // Actualizar totales generales
   var totalM = 0, totalT = 0;
@@ -3357,24 +3456,46 @@ function actualizarTotalCL(rp) {
 
 async function guardarControlLechero() {
   var fecha = document.getElementById('cl-fecha').value || TODAY;
-  var registros = Object.entries(_controlLecheroData).filter(function(e){ return e[1].total > 0; });
+  var vacasTotales = rodeo.filter(function(a){ return a.estadoProd==='En Ordeñe' && a.cat==='Vaca'; });
 
-  if(registros.length === 0) { showToast('Sin datos para guardar', true); return; }
+  showToast('Guardando control...');
 
-  showToast('Guardando ' + registros.length + ' registros...');
+  var registrados = 0, noPresentes = [];
 
-  for(var i=0; i<registros.length; i++) {
-    var rp = registros[i][0];
-    var d = registros[i][1];
-    var a = getAnimal(parseInt(rp));
-    if(a) a.produccionUltima = d.total;
-    var fila = [generarID('CL',rp), fecha, rp, a?a.nombre:'', d.manana||0, d.tarde||0, d.total];
-    await enviarASheets('Control_Lechero', fila);
+  for(var i=0; i<vacasTotales.length; i++) {
+    var a = vacasTotales[i];
+    var d = _controlLecheroData[a.rp];
+    if(d && (d.manana > 0 || d.tarde > 0)) {
+      // Guardar con datos reales
+      var fila = [generarID('CL',a.rp), fecha, a.rp, a.nombre||'', d.manana||0, d.tarde||0, d.total||0, d.rodeo||a.rodeoManual||''];
+      await enviarASheets('Control_Lechero', fila);
+      a.produccionUltima = d.total;
+      registrados++;
+    } else {
+      // No presentada - guardar como NP
+      var filaNP = [generarID('CL',a.rp), fecha, a.rp, a.nombre||'', 'NP', 'NP', 'NP', a.rodeoManual||''];
+      await enviarASheets('Control_Lechero', filaNP);
+      noPresentes.push(a);
+    }
   }
 
-  showToast('Control guardado ✓');
+  limpiarCacheControl();
+
+  // Mostrar resumen
+  if(noPresentes.length > 0) {
+    var msg = '✓ ' + registrados + ' vacas registradas
+
+⚠️ ' + noPresentes.length + ' NP (no presentadas):
+';
+    msg += noPresentes.map(function(a){ return '· RP '+a.rp+' '+a.nombre; }).join('
+');
+    alert(msg);
+  } else {
+    showToast('Control completo ✓ — ' + registrados + ' vacas');
+  }
   goBack();
 }
+
 
 function exportarControlLechero() {
   var fecha = document.getElementById('cl-fecha').value || TODAY;
@@ -3408,6 +3529,19 @@ function exportarControlLechero() {
     URL.revokeObjectURL(url);
   }
   showToast('Excel exportado ✓');
+}
+
+
+function filtrarControlLechero() {
+  var buscar = (document.getElementById('cl-buscar') ? document.getElementById('cl-buscar').value : '').toLowerCase();
+  var filas = document.getElementById('cl-lista').querySelectorAll('div[id^="cl-fila-"]');
+  // Como no tenemos IDs en las filas, filtramos por el texto del RP
+  var rows = document.getElementById('cl-lista').children;
+  Array.from(rows).forEach(function(row, i) {
+    if(i === 0) return; // saltar header
+    var texto = row.textContent.toLowerCase();
+    row.style.display = (!buscar || texto.includes(buscar)) ? '' : 'none';
+  });
 }
 
 // ============================================================
