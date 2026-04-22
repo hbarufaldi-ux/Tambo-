@@ -23,6 +23,8 @@ html{scrollbar-gutter:stable;}body{font-family:-apple-system,BlinkMacSystemFont,
 .screen{display:none;padding:16px;}
 .screen.active{display:block;}
 .card{background:#fff;border-radius:16px;padding:16px;margin-bottom:12px;box-shadow:0 1px 0 rgba(0,0,0,0.05),0 2px 8px rgba(0,0,0,0.04);}
+.rf-btn{padding:6px 12px;border:1px solid #C8C8CE;border-radius:20px;background:#fff;font-size:13px;font-weight:600;color:#3C3C43;cursor:pointer;white-space:nowrap;}
+.rf-btn.rf-active{background:#1C1C1E;color:#fff;border-color:#1C1C1E;}
 .section-title{font-size:16px;font-weight:800;color:#1C1C1E;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:12px;}
 .field{margin-bottom:12px;}
 .field-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;}
@@ -560,6 +562,14 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
   </div>
   <div style="margin-bottom:10px;">
     <input type="search" id="recria-buscar" placeholder="Buscar por RP o nombre..." oninput="renderRecria()" style="width:100%;padding:11px 14px;border:0.5px solid #C8C8CE;border-radius:12px;font-size:17px;background:#fff;color:#1C1C1E;">
+  </div>
+  <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;" id="recria-filtros">
+    <button onclick="setFiltroRecria('')" id="rf-todos" class="rf-btn rf-active">Todos</button>
+    <button onclick="setFiltroRecria('Ternera')" id="rf-ternera" class="rf-btn">Terneras</button>
+    <button onclick="setFiltroRecria('Ternero')" id="rf-ternero" class="rf-btn">Terneros</button>
+    <button onclick="setFiltroRecria('vaq-pre')" id="rf-vaqpre" class="rf-btn">Vaq. preservicio</button>
+    <button onclick="setFiltroRecria('Inseminada')" id="rf-vaqinsem" class="rf-btn">Vaq. inseminadas</button>
+    <button onclick="setFiltroRecria('Preñada')" id="rf-vaqpren" class="rf-btn">Vaq. preñadas</button>
   </div>
   <div class="card"><div id="r-lista"></div></div>
 </div>
@@ -1181,10 +1191,29 @@ function renderGuachera() {
 }
 
 // ---- RENDER RECRIA ----
+var _filtroRecria = '';
+function setFiltroRecria(filtro) {
+  _filtroRecria = filtro;
+  // Actualizar botones activos
+  document.querySelectorAll('.rf-btn').forEach(function(b){ b.classList.remove('rf-active'); });
+  var map = {'':'rf-todos','Ternera':'rf-ternera','Ternero':'rf-ternero','vaq-pre':'rf-vaqpre','Inseminada':'rf-vaqinsem','Preñada':'rf-vaqpren'};
+  var el = document.getElementById(map[filtro]);
+  if(el) el.classList.add('rf-active');
+  renderRecria();
+}
+
 function renderRecria() {
   var buscar=(document.getElementById('recria-buscar')?document.getElementById('recria-buscar').value:'').toLowerCase();
   var todos=recria.filter(function(a){return a.activo;});
-  var activos=todos.filter(function(a){return !buscar||a.nombre.toLowerCase().includes(buscar)||String(a.rp).includes(buscar);});
+  var activos=todos.filter(function(a){
+    if(buscar && !a.nombre.toLowerCase().includes(buscar) && !String(a.rp).includes(buscar)) return false;
+    if(_filtroRecria==='Ternera') return (a.rodeoManual==='R11'||a.cat==='Ternera') && a.sexo==='H';
+    if(_filtroRecria==='Ternero') return (a.rodeoManual==='R11'||a.cat==='Ternero') && a.sexo==='M';
+    if(_filtroRecria==='vaq-pre') return a.rodeoManual==='R10' || a.estadoRepro==='Preservicio';
+    if(_filtroRecria==='Inseminada') return a.rodeoManual==='R9' || a.estadoRepro==='Inseminada';
+    if(_filtroRecria==='Preñada') return a.rodeoManual==='R8' || a.estadoRepro==='Preñada';
+    return true;
+  });
   activos.sort(function(a,b){ return (b.fechaNac||'').localeCompare(a.fechaNac||''); });
   document.getElementById('r-total').textContent=todos.length;
   document.getElementById('r-hembras').textContent=todos.filter(function(a){return a.sexo==='H';}).length;
@@ -1843,6 +1872,8 @@ async function guardarParto() {
     guachera.push({rp:parseInt(rpCria),nombre:nombreCria,sexo:sexoCria==='Hembra'?'H':'M',padre:nombreToro,madre:a.nombre+' (RP '+madre+')',fechaNac:fecha,vacunado:false,salio:false,eventos:[]});
   agregarReciente('guachera', parseInt(rpCria), fecha);
     enviarASheets('Guachera_Eventos',[generarID('Ing',rpCria),fecha,rpCria,nombreCria,'Ingreso',0,'',a.nombre,nombreToro,sexoCria]);
+    // Agregar cría al Padrón en Sheets
+    enviarASheets('Padron',[parseInt(rpCria),nombreToro,'Holando','Activa','',fecha,a.rp,'',0,'','','',nombreToro,'','',0,0,0,0,0,0,catCria,'','','',0,0]);
   }
 
   var fila=[generarID('Par',madre),fecha,madre,a.nombre,nombreToro,sexoCria,rpCria,nombreCria,document.getElementById('p-tipo').value,getRadio('viva'),getRadio('mellizo'),document.getElementById('p-obs').value||'',getRadio('placenta'),catCria];
@@ -2373,7 +2404,8 @@ function _fetchPadronBackground(callback) {
         var r = String(rodeoVal||'').trim();
         if(['R1','R2','R3','R4','R5'].includes(r)) return 'En Ordeñe';
         if(r === 'R6') return 'Seca';
-        return 'Seca';
+        if(r === 'R8') return 'En Ordeñe';
+        return '';
       }
       function mapRepro(v) {
         var s = String(v||'').trim();
@@ -2403,7 +2435,12 @@ function _fetchPadronBackground(callback) {
         var nroLact = parseInt(row['Numero Lactancia'] || 0) || 0;
         var cat;
         if(condicion === 'Baja') cat = 'Baja';
-        else if(nroLact > 0 || meses >= 24) cat = 'Vaca';
+        else if(nroLact > 0 || ['R1','R2','R3','R4','R5','R6'].includes(rodeoVal)) cat = 'Vaca';
+        else if(rodeoVal === 'R8') cat = 'Vaquillona';
+        else if(rodeoVal === 'R9') cat = 'Vaquillona';
+        else if(rodeoVal === 'R10') cat = 'Vaquillona';
+        else if(rodeoVal === 'R11') cat = meses < 8 ? 'Ternera' : 'Vaquillona';
+        else if(meses >= 24) cat = 'Vaca';
         else if(meses >= 8) cat = 'Vaquillona';
         else cat = 'Ternera';
         var animal = {
@@ -2420,12 +2457,13 @@ function _fetchPadronBackground(callback) {
           rodeoManual: ['R1','R2','R3','R4','R5','R6'].includes(rodeoVal) ? rodeoVal : null,
         };
         rodeo.push(animal);
-        if(cat === 'Ternera') {
+        if(cat === 'Ternera' || cat === 'Ternero') {
           var d = fechaNac ? -diasHasta(fechaNac) : null;
-          if(d !== null && d <= 75) guachera.push({rp:rp,nombre:animal.nombre,sexo:'H',padre:animal.ultimaInsemToro,fechaNac:fechaNac,vacunado:false,salio:false,eventos:[]});
-          else recria.push({rp:rp,nombre:animal.nombre,sexo:'H',cat:cat,fechaNac:fechaNac,padre:animal.ultimaInsemToro,madre:'',eventos:[],activo:true});
+          var sexoA = animal.sexo || 'H';
+          if(d !== null && d <= 75) guachera.push({rp:rp,nombre:animal.nombre,sexo:sexoA,padre:animal.ultimaInsemToro,fechaNac:fechaNac,vacunado:false,salio:false,eventos:[]});
+          else recria.push({rp:rp,nombre:animal.nombre,sexo:sexoA,cat:cat,estadoRepro:estadoRepro,rodeoManual:animal.rodeoManual,fechaNac:fechaNac,padre:animal.ultimaInsemToro,madre:'',eventos:[],activo:true});
         } else if(cat === 'Vaquillona') {
-          recria.push({rp:rp,nombre:animal.nombre,sexo:'H',cat:cat,fechaNac:fechaNac,padre:animal.ultimaInsemToro,madre:'',eventos:[],activo:true});
+          recria.push({rp:rp,nombre:animal.nombre,sexo:'H',cat:cat,estadoRepro:estadoRepro,rodeoManual:animal.rodeoManual,fechaNac:fechaNac,padre:animal.ultimaInsemToro,madre:'',eventos:[],activo:true});
         }
         importados++;
       }
