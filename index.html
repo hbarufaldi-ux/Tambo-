@@ -589,23 +589,23 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
   <!-- HEADER CARD azul - todo en uno -->
   <div style="background:linear-gradient(135deg,#1060C0,#063A8A);border-radius:18px;padding:16px;margin-bottom:10px;">
 
-    <!-- Fila 1: Título + Prom/vaca -->
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
-      <div style="display:flex;align-items:center;gap:8px;">
-        <span style="font-size:13px;color:#fff;font-weight:900;letter-spacing:0.05em;">LECHE</span>
-        <span style="font-size:12px;color:rgba(255,255,255,0.6);" id="l-fecha-ultimo">—</span>
-      </div>
-      <div style="text-align:right;">
-        <div style="font-size:10px;color:rgba(255,255,255,0.6);font-weight:700;text-transform:uppercase;">Prom/vaca</div>
-        <div style="font-size:24px;font-weight:900;color:#fff;line-height:1;" id="l-prom-vaca">—</div>
-        <div style="font-size:10px;color:rgba(255,255,255,0.5);">lts/vaca</div>
-      </div>
+    <!-- Fila 1: Título + fecha -->
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+      <span style="font-size:14px;color:#fff;font-weight:900;letter-spacing:0.05em;">LECHE</span>
+      <span style="font-size:13px;color:rgba(255,255,255,0.6);" id="l-fecha-ultimo">—</span>
     </div>
 
-    <!-- Fila 2: Número grande -->
-    <div style="margin-bottom:12px;">
-      <div style="font-size:52px;font-weight:900;color:#fff;line-height:1;letter-spacing:-2px;" id="l-total-hoy">—</div>
-      <div style="font-size:12px;color:rgba(255,255,255,0.6);margin-top:2px;">litros del día</div>
+    <!-- Fila 2: Número grande + prom/vaca -->
+    <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:12px;">
+      <div>
+        <div style="font-size:56px;font-weight:900;color:#fff;line-height:1;letter-spacing:-2px;" id="l-total-hoy">—</div>
+        <div style="font-size:14px;color:rgba(255,255,255,0.7);margin-top:2px;">litros del día</div>
+      </div>
+      <div style="text-align:right;padding-bottom:4px;">
+        <div style="font-size:11px;color:rgba(255,255,255,0.6);font-weight:700;text-transform:uppercase;">Prom/vaca</div>
+        <div style="font-size:32px;font-weight:900;color:#fff;line-height:1;" id="l-prom-vaca">—</div>
+        <div style="font-size:12px;color:rgba(255,255,255,0.5);">lts/vaca</div>
+      </div>
     </div>
 
     <!-- Fila 3: Acumulado mes + Días registrados -->
@@ -661,7 +661,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
       <button type="button" onclick="agregarFilaEmpresa()" style="width:100%;padding:10px;border:0.5px dashed #C8C8CE;border-radius:10px;background:#F8F8F8;font-size:14px;color:#3C3C43;cursor:pointer;margin-top:4px;">+ Agregar empresa</button>
     </div>
     <div class="field"><label>Observaciones</label><textarea id="l-obs" rows="2" placeholder="Opcional..."></textarea></div>
-    <button class="btn-primary" onclick="guardarProduccion()">Guardar producción</button>
+    <button class="btn-primary" id="btn-guardar-prod" onclick="guardarProduccion()" disabled style="opacity:0.5;cursor:not-allowed;">Guardar producción</button>
     <button class="btn-secondary" onclick="goBack()" style="margin-top:6px;">Cancelar</button>
   </div>
 
@@ -686,7 +686,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
       <div><label>Grasa %</label><input type="number" id="l-grasa" inputmode="decimal" placeholder="0.00" step="0.01"></div>
       <div><label>Proteína %</label><input type="number" id="l-proteina" inputmode="decimal" placeholder="0.00" step="0.01"></div>
     </div>
-    <button class="btn-primary" onclick="guardarCalidad()">Guardar calidad</button>
+    <button class="btn-primary" id="btn-guardar-cal" onclick="guardarCalidad()" disabled style="opacity:0.5;cursor:not-allowed;">Guardar calidad</button>
     <button class="btn-secondary" onclick="goBack()" style="margin-top:6px;">Cancelar</button>
   </div>
 
@@ -3150,6 +3150,28 @@ function renderLeche() {
   });
 }
 
+
+function validarProduccion() {
+  var btn = document.getElementById('btn-guardar-prod');
+  if(!btn) return;
+  var entregas = leerEntregasEmpresa();
+  var total = Object.values(entregas).reduce(function(s,v){return s+v;},0);
+  var ok = total > 0;
+  btn.disabled = !ok;
+  btn.style.opacity = ok ? '1' : '0.5';
+  btn.style.cursor = ok ? 'pointer' : 'not-allowed';
+}
+
+function validarCalidad() {
+  var btn = document.getElementById('btn-guardar-cal');
+  if(!btn) return;
+  var empresa = document.getElementById('l-cal-empresa') ? document.getElementById('l-cal-empresa').value : '';
+  var ufc = document.getElementById('l-ufc') ? document.getElementById('l-ufc').value : '';
+  var ok = empresa && ufc;
+  btn.disabled = !ok;
+  btn.style.opacity = ok ? '1' : '0.5';
+  btn.style.cursor = ok ? 'pointer' : 'not-allowed';
+}
 
 async function guardarProduccion() {
   var fecha = document.getElementById('l-fecha').value || TODAY;
