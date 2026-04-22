@@ -123,7 +123,6 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
     <div id="login-logo" style="margin-bottom:20px;"></div>
     <div style="font-size:22px;font-weight:700;letter-spacing:-0.3px;margin-bottom:6px;">Tambo Cañada Negra</div>
     <div style="font-size:14px;color:#8E8E93;margin-bottom:32px;">Ingresá con tu cuenta Google</div>
-    <div id="google-btn-container" style="display:none;margin-bottom:12px;display:flex;justify-content:center;"></div>
     <button onclick="loginConGoogle()" style="display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:14px;border:1px solid #dadce0;border-radius:12px;background:#fff;cursor:pointer;font-size:15px;font-weight:500;color:#3c4043;"><svg width="18" height="18" viewBox="0 0 18 18"><path fill="#4285F4" d="M16.51 8H8.98v3h4.3c-.18 1-.74 1.48-1.6 2.04v2.01h2.6a7.8 7.8 0 002.38-5.88c0-.57-.05-.66-.15-1.18z"/><path fill="#34A353" d="M8.98 17c2.16 0 3.97-.72 5.3-1.94l-2.6-2a4.8 4.8 0 01-7.18-2.54H1.83v2.07A8 8 0 008.98 17z"/><path fill="#FBBC05" d="M4.5 10.52a4.8 4.8 0 010-3.04V5.45H1.83a8 8 0 000 7.1l2.67-2.03z"/><path fill="#EA4335" d="M8.98 4.18c1.17 0 2.23.4 3.06 1.2l2.3-2.3A8 8 0 001.83 5.45L4.5 7.49a4.77 4.77 0 014.48-3.3z"/></svg>Iniciar sesión con Google</button>
     <div id="login-error" style="margin-top:16px;font-size:13px;color:#A0200A;display:none;">Tu cuenta no tiene acceso a esta aplicación.</div>
   </div>
@@ -746,7 +745,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
     </div>
     <input type="date" id="cl-fecha" style="padding:8px 10px;border:0.5px solid #C8C8CE;border-radius:10px;font-size:14px;">
   </div>
-  <input type="search" id="cl-buscar" placeholder="Buscar por RP o nombre..." oninput="filtrarControlLechero()" style="width:100%;padding:10px 14px;border:0.5px solid #C8C8CE;border-radius:12px;font-size:16px;background:#fff;margin-bottom:8px;box-sizing:border-box;">
+  <input type="search" id="cl-buscar" placeholder="Buscar por RP..." inputmode="numeric" oninput="filtrarControlLechero()" style="width:100%;padding:10px 14px;border:0.5px solid #C8C8CE;border-radius:12px;font-size:16px;background:#fff;margin-bottom:8px;box-sizing:border-box;">
 
   <!-- Totales -->
   <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:10px;">
@@ -783,8 +782,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
   <div id="ficha-contenido"></div>
 </div>
 
-<script src="https://accounts.google.com/gsi/client" async defer></script>
-<script>
+<script src="https://accounts.google.com/gsi/client" async defer>
 function drawDonut(id,pct,color){
   var svg=document.getElementById(id);
   if(!svg)return;
@@ -2447,46 +2445,23 @@ function initLogin() {
 }
 
 function loginConGoogle() {
-  try {
-    google.accounts.id.initialize({
-      client_id: CLIENT_ID,
-      callback: handleCredentialResponse,
-      auto_select: false,
-      cancel_on_tap_outside: false,
-    });
-    // Intentar One Tap primero
-    google.accounts.id.prompt(function(notification) {
-      if(notification.isNotDisplayed() || notification.isSkippedMoment() || notification.isDismissedMoment()) {
-        // Fallback: renderizar botón de Google visible
-        mostrarBotonGoogle();
-      }
-    });
-  } catch(e) {
-    console.log('Login error:', e);
-    mostrarBotonGoogle();
-  }
-}
-
-function mostrarBotonGoogle() {
-  var cont = document.getElementById('google-btn-container');
-  if(!cont) return;
-  cont.innerHTML = '';
-  cont.style.display = 'block';
-  try {
-    google.accounts.id.initialize({
-      client_id: CLIENT_ID,
-      callback: handleCredentialResponse,
-    });
-    google.accounts.id.renderButton(cont, {
-      theme: 'outline',
-      size: 'large',
-      text: 'signin_with',
-      shape: 'rectangular',
-      width: 280
-    });
-  } catch(e) {
-    cont.innerHTML = '<div style="color:#A0200A;font-size:13px;">Error al cargar Google. Recargá la página.</div>';
-  }
+  google.accounts.id.initialize({
+    client_id: CLIENT_ID,
+    callback: handleCredentialResponse,
+    auto_select: false,
+  });
+  google.accounts.id.prompt(function(notification) {
+    if(notification.isNotDisplayed() || notification.isSkippedMoment()) {
+      var tmp = document.createElement('div');
+      tmp.style.cssText = 'position:fixed;top:-9999px;left:-9999px;';
+      document.body.appendChild(tmp);
+      google.accounts.id.renderButton(tmp, {theme:'outline',size:'large'});
+      setTimeout(function(){
+        var btn = tmp.querySelector('[role=button]') || tmp.querySelector('div');
+        if(btn) btn.click();
+      }, 500);
+    }
+  });
 }
 
 
@@ -3372,6 +3347,7 @@ function abrirControlLechero() {
       var sep = document.createElement('div');
       sep.style.cssText = 'background:#1060C0;color:#fff;font-size:12px;font-weight:800;padding:5px 10px;border-radius:8px;margin:10px 0 4px;letter-spacing:0.06em;';
       sep.textContent = (rodeo==='SR'?'Sin rodeo':rodeo) + ' · ' + grupos[rodeo].length + ' vacas';
+      sep.setAttribute('data-sep', rodeo);
       lista.appendChild(sep);
 
       grupos[rodeo].forEach(function(a) {
@@ -3427,6 +3403,7 @@ function abrirControlLechero() {
           }
         }
 
+        row.setAttribute('data-rp', String(a.rp));
         row.innerHTML = '<span style="font-size:15px;font-weight:800;color:#1C1C1E;">'+a.rp+'</span>'
           +'<span style="font-size:12px;color:#3C3C43;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+a.nombre+'</span>';
         row.appendChild(selR);
@@ -3505,7 +3482,12 @@ async function guardarControlLechero() {
 
   // Mostrar resumen
   if(noPresentes.length > 0) {
-    var msg = '✓ ' + registrados + ' vacas registradas\n\n⚠️ ' + noPresentes.length + ' NP (no presentadas):\n' + noPresentes.map(function(a){ return '· RP '+a.rp+' '+a.nombre; }).join('\n');
+    var msg = '✓ ' + registrados + ' vacas registradas
+
+⚠️ ' + noPresentes.length + ' NP (no presentadas):
+';
+    msg += noPresentes.map(function(a){ return '· RP '+a.rp+' '+a.nombre; }).join('
+');
     alert(msg);
   } else {
     showToast('Control completo ✓ — ' + registrados + ' vacas');
@@ -3550,15 +3532,29 @@ function exportarControlLechero() {
 
 
 function filtrarControlLechero() {
-  var buscar = (document.getElementById('cl-buscar') ? document.getElementById('cl-buscar').value : '').toLowerCase();
-  var filas = document.getElementById('cl-lista').querySelectorAll('div[id^="cl-fila-"]');
-  // Como no tenemos IDs en las filas, filtramos por el texto del RP
-  var rows = document.getElementById('cl-lista').children;
-  Array.from(rows).forEach(function(row, i) {
-    if(i === 0) return; // saltar header
-    var texto = row.textContent.toLowerCase();
-    row.style.display = (!buscar || texto.includes(buscar)) ? '' : 'none';
+  var buscar = (document.getElementById('cl-buscar') ? document.getElementById('cl-buscar').value : '').trim();
+  var lista = document.getElementById('cl-lista');
+  var rows = lista.children;
+  var lastSep = null;
+  var lastSepTieneVisible = false;
+
+  Array.from(rows).forEach(function(row) {
+    if(row.getAttribute('data-sep') !== null) {
+      // Es separador
+      if(lastSep && !lastSepTieneVisible) lastSep.style.display = 'none';
+      lastSep = row;
+      lastSepTieneVisible = false;
+      row.style.display = '';
+    } else if(row.getAttribute('data-rp') !== null) {
+      // Es fila de vaca
+      var rp = row.getAttribute('data-rp');
+      var visible = !buscar || rp.startsWith(buscar);
+      row.style.display = visible ? '' : 'none';
+      if(visible) lastSepTieneVisible = true;
+    }
+    // header y otros elementos siempre visibles
   });
+  if(lastSep && !lastSepTieneVisible) lastSep.style.display = 'none';
 }
 
 // ============================================================
