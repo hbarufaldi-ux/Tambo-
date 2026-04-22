@@ -3303,15 +3303,10 @@ function limpiarCacheControl() {
 }
 
 function abrirControlLechero() {
-  // Intentar recuperar sesión guardada
+  // Recuperar sesión guardada automáticamente
   var cached = cargarCacheControl();
   if(cached && cached.data && Object.keys(cached.data).length > 0) {
-    if(confirm('Hay un control del ' + (cached.fecha||'') + ' sin guardar. ¿Continuar desde donde dejaste?')) {
-      _controlLecheroData = cached.data;
-    } else {
-      _controlLecheroData = {};
-      limpiarCacheControl();
-    }
+    _controlLecheroData = cached.data;
   } else {
     _controlLecheroData = {};
   }
