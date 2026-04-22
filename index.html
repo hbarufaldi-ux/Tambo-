@@ -1045,7 +1045,27 @@ function renderDashboard() {
         var row=document.createElement('div');
         row.style.cssText='display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-bottom:0.5px solid rgba(0,0,0,0.06);cursor:pointer;';
         row.innerHTML='<span style="font-size:14px;font-weight:600;color:#fff;">RP '+a.rp+'</span><span style="font-size:13px;color:rgba(255,255,255,0.7);">'+a.detalle+' ›</span>';
-        row.onclick=function(){ abrirFicha(a.rp); };
+        row.onclick=(function(al){return function(){
+          if(al.cat==='parto') {
+            goTo('parto');
+            setTimeout(function(){
+              var sel=document.getElementById('p-madre');
+              if(sel){ sel.value=String(al.rp); }
+            },150);
+          } else if(al.cat==='tacto') {
+            abrirTactoMasivo();
+          } else if(al.cat==='secar') {
+            goTo('secado');
+            setTimeout(function(){
+              var sel=document.getElementById('s-animal');
+              if(sel){ sel.value=String(al.rp); onAnimalSecado(); }
+            },150);
+          } else if(al.cat==='produccion' || al.cat==='servicios') {
+            abrirFicha(al.rp);
+          } else {
+            abrirFicha(al.rp);
+          }
+        };})(a);
         body.appendChild(row);
       });
 
