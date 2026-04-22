@@ -3482,15 +3482,10 @@ async function guardarControlLechero() {
 
   // Mostrar resumen
   if(noPresentes.length > 0) {
-    var msg = '✓ ' + registrados + ' vacas registradas
-
-⚠️ ' + noPresentes.length + ' NP (no presentadas):
-';
-    msg += noPresentes.map(function(a){ return '· RP '+a.rp+' '+a.nombre; }).join('
-');
+    var msg = 'Guardado: ' + registrados + ' vacas. NP: ' + noPresentes.length + ' no presentadas: ' + noPresentes.map(function(a){ return 'RP '+a.rp; }).join(', ');
     alert(msg);
   } else {
-    showToast('Control completo ✓ — ' + registrados + ' vacas');
+    showToast('Control completo - ' + registrados + ' vacas');
   }
   goBack();
 }
