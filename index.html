@@ -772,7 +772,8 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
   <div style="display:flex;flex-direction:column;gap:8px;margin-top:10px;">
     <button class="btn-primary" onclick="guardarControlLechero()">💾 Guardar y subir a fichas</button>
     <button class="btn-secondary" onclick="exportarControlLechero()">📊 Exportar Excel para DIRSA</button>
-    <button class="btn-secondary" onclick="goBack()">Cancelar</button>
+    <button class="btn-secondary" onclick="pausarControlLechero()" style="background:#FFF8E1;color:#7A5500;border-color:#F0C040;">⏸ Pausar — continuar después</button>
+    <button class="btn-secondary" onclick="descartarControlLechero()" style="color:#A0200A;">✕ Descartar control</button>
   </div>
 </div>
 
@@ -2145,7 +2146,19 @@ function goToNav(screen) {
 
 function goTo(screen, btn) {
   if(screen==='reportes'){ setTimeout(function(){ renderResumenTambo(); }, 50); }
-  if(screen==='leche'){ cargarCacheLeche(); cargarProduccionDesdeSheets(); setTimeout(function(){ renderLeche(); }, 300); }
+  if(screen==='leche'){
+    cargarCacheLeche();
+    cargarProduccionDesdeSheets();
+    var cc = cargarCacheControl();
+    if(cc && cc.data && Object.keys(cc.data).length > 0) {
+      // Control en curso: mostrar screen-control-lechero directamente
+      document.querySelectorAll('.screen').forEach(function(s){s.classList.remove('active');});
+      document.getElementById('screen-control-lechero').classList.add('active');
+      setTimeout(function(){ abrirControlLechero(); }, 100);
+    } else {
+      setTimeout(function(){ renderLeche(); }, 300);
+    }
+  }
   document.querySelectorAll('.screen').forEach(function(s){s.classList.remove('active');});
   var sc=document.getElementById('screen-'+screen);
   if(sc) sc.classList.add('active');
@@ -3354,7 +3367,7 @@ function abrirControlLechero() {
 
         // Selector de rodeo
         var selR = document.createElement('select');
-        selR.style.cssText = 'width:100%;padding:4px;border:0.5px solid #C8C8CE;border-radius:6px;font-size:12px;background:#fff;';
+        selR.style.cssText = 'width:100%;padding:7px 4px;border:0.5px solid #C8C8CE;border-radius:8px;font-size:14px;background:#fff;margin-top:3px;';
         ['R1','R2','R3','R4','R5'].forEach(function(r){
           var opt = document.createElement('option');
           opt.value = r; opt.textContent = r;
@@ -3400,7 +3413,7 @@ function abrirControlLechero() {
           var tot = (cached_d.total||0);
           totSpan.textContent = tot > 0 ? tot.toFixed(1) : '—';
           var completa = cached_d.manana > 0 && cached_d.tarde > 0;
-          var color = completa ? '#F0FFF4' : '#FFFBEB';
+          var color = completa ? '#C6F6D5' : '#FEF08A';
           row.style.background = color;
           inpM.style.background = color;
           inpT.style.background = color;
@@ -3446,8 +3459,8 @@ function actualizarTotalCL(rp) {
   if(inpFila && inpFila.parentElement) {
     var rowEl = inpFila.parentElement;
     var color = '';
-    if(m > 0 && t > 0) color = '#F0FFF4';
-    else if(m > 0 || t > 0) color = '#FFFBEB';
+    if(m > 0 && t > 0) color = '#C6F6D5';
+    else if(m > 0 || t > 0) color = '#FEF08A';
     rowEl.style.background = color;
     // Pintar también los inputs y total
     var inpTFila = document.getElementById('cl-t-'+rp);
@@ -3505,6 +3518,20 @@ async function guardarControlLechero() {
   goBack();
 }
 
+
+function pausarControlLechero() {
+  // Guardar estado y volver a leche sin perder datos
+  guardarCacheControl();
+  goTo('leche', document.querySelectorAll('.nav-btn')[1]);
+}
+
+function descartarControlLechero() {
+  if(confirm('Descartar todo el control? Se perderan los datos no guardados.')) {
+    limpiarCacheControl();
+    _controlLecheroData = {};
+    goTo('leche', document.querySelectorAll('.nav-btn')[1]);
+  }
+}
 
 function exportarControlLechero() {
   var fecha = document.getElementById('cl-fecha').value || TODAY;
