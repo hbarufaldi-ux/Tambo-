@@ -102,6 +102,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 
 <div class="nav" id="main-nav">
   <button class="nav-btn active" onclick="goTo('dashboard',this)">Inicio</button>
+  <button class="nav-btn" onclick="goTo('leche',this)">Leche</button>
   <button class="nav-btn" onclick="goTo('rodeo',this)">Padrón</button>
   <button class="nav-btn" onclick="goTo('inseminacion',this)">Inseminación</button>
   <button class="nav-btn" onclick="goTo('parto',this)">Parto</button>
@@ -582,7 +583,103 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 </div>
 
 <!-- RODEO -->
-<div id="screen-rodeo" class="screen" style="padding-top:0;">
+<div <!-- LECHE -->
+<div id="screen-leche" class="screen">
+
+  <!-- HEADER CARD azul -->
+  <div style="background:linear-gradient(135deg,#1060C0,#063A8A);border-radius:18px;padding:16px;margin-bottom:10px;">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;">
+      <div>
+        <div style="font-size:11px;color:rgba(255,255,255,0.7);font-weight:700;text-transform:uppercase;letter-spacing:0.1em;">Producción hoy</div>
+        <div style="font-size:48px;font-weight:900;color:#fff;line-height:1;letter-spacing:-2px;" id="l-total-hoy">—</div>
+        <div style="font-size:13px;color:rgba(255,255,255,0.7);margin-top:2px;">litros totales</div>
+      </div>
+      <div style="text-align:right;">
+        <div style="font-size:11px;color:rgba(255,255,255,0.7);font-weight:700;text-transform:uppercase;letter-spacing:0.1em;">Prom/vaca</div>
+        <div style="font-size:32px;font-weight:900;color:#fff;line-height:1;" id="l-prom-vaca">—</div>
+        <div style="font-size:12px;color:rgba(255,255,255,0.7);">lts/vaca</div>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;">
+      <div style="flex:1;background:rgba(255,255,255,0.15);border-radius:12px;padding:10px;">
+        <div style="font-size:10px;color:rgba(255,255,255,0.65);font-weight:700;text-transform:uppercase;">Ucalac SA</div>
+        <div style="font-size:22px;font-weight:800;color:#fff;" id="l-ucalac-hoy">—</div>
+      </div>
+      <div style="flex:1;background:rgba(255,255,255,0.15);border-radius:12px;padding:10px;">
+        <div style="font-size:10px;color:rgba(255,255,255,0.65);font-weight:700;text-transform:uppercase;">Saputo</div>
+        <div style="font-size:22px;font-weight:800;color:#fff;" id="l-saputo-hoy">—</div>
+      </div>
+      <div style="flex:1;background:rgba(255,255,255,0.15);border-radius:12px;padding:10px;">
+        <div style="font-size:10px;color:rgba(255,255,255,0.65);font-weight:700;text-transform:uppercase;">vs ayer</div>
+        <div style="font-size:22px;font-weight:800;color:#fff;" id="l-vs-ayer">—</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MÉTRICAS DEL MES -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
+    <div style="background:#fff;border-radius:14px;padding:14px;">
+      <div style="font-size:11px;color:#8E8E93;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;">Acumulado mes</div>
+      <div style="font-size:28px;font-weight:800;color:#1060C0;line-height:1.1;" id="l-acum-mes">—</div>
+      <div style="font-size:12px;color:#8E8E93;">litros</div>
+    </div>
+    <div style="background:#fff;border-radius:14px;padding:14px;">
+      <div style="font-size:11px;color:#8E8E93;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;">Días registrados</div>
+      <div style="font-size:28px;font-weight:800;color:#1060C0;line-height:1.1;" id="l-dias-mes">—</div>
+      <div style="font-size:12px;color:#8E8E93;">este mes</div>
+    </div>
+  </div>
+
+  <!-- REGISTRO DIARIO -->
+  <div class="card">
+    <div class="section-title">Registrar producción</div>
+    <div class="field-row">
+      <div><label>Fecha</label><input type="date" id="l-fecha"></div>
+      <div><label>Vacas en ordeñe</label><input type="number" id="l-vacas" inputmode="numeric" placeholder="Auto"></div>
+    </div>
+    <div class="field-row">
+      <div><label>Litros Ucalac SA</label><input type="number" id="l-ucalac" inputmode="decimal" placeholder="0"></div>
+      <div><label>Litros Saputo</label><input type="number" id="l-saputo" inputmode="decimal" placeholder="0"></div>
+    </div>
+    <div class="field"><label>Observaciones</label><textarea id="l-obs" rows="2" placeholder="Opcional..."></textarea></div>
+    <button class="btn-primary" onclick="guardarProduccion()">Guardar producción</button>
+    <button class="btn-secondary" onclick="goBack()" style="margin-top:6px;">Cancelar</button>
+  </div>
+
+  <!-- CALIDAD DE LECHE -->
+  <div class="card" style="margin-top:8px;">
+    <div class="section-title">Registrar calidad</div>
+    <div class="field-row">
+      <div><label>Fecha</label><input type="date" id="l-cal-fecha"></div>
+      <div><label>Empresa</label>
+        <select id="l-cal-empresa">
+          <option value="">Seleccionar...</option>
+          <option>Ucalac SA</option>
+          <option>Saputo</option>
+        </select>
+      </div>
+    </div>
+    <div class="field-row">
+      <div><label>UFC</label><input type="number" id="l-ufc" inputmode="decimal" placeholder="0"></div>
+      <div><label>Células Somáticas</label><input type="number" id="l-cs" inputmode="decimal" placeholder="0"></div>
+    </div>
+    <div class="field-row">
+      <div><label>Grasa %</label><input type="number" id="l-grasa" inputmode="decimal" placeholder="0.00" step="0.01"></div>
+      <div><label>Proteína %</label><input type="number" id="l-proteina" inputmode="decimal" placeholder="0.00" step="0.01"></div>
+    </div>
+    <button class="btn-primary" onclick="guardarCalidad()">Guardar calidad</button>
+    <button class="btn-secondary" onclick="goBack()" style="margin-top:6px;">Cancelar</button>
+  </div>
+
+  <!-- HISTORIAL ÚLTIMOS 7 DÍAS -->
+  <div class="card" style="margin-top:8px;">
+    <div class="section-title">Últimos 7 días</div>
+    <div id="l-historial"></div>
+  </div>
+
+</div>
+
+id="screen-rodeo" class="screen" style="padding-top:0;">
   <div id="rodeo-search-bar" style="position:sticky;top:0;z-index:10;background:#F2F2F7;padding:8px 0 4px;">
   <div style="margin-bottom:6px;">
     <input type="text" id="rodeo-buscar" placeholder="Buscar por RP..." inputmode="numeric" oninput="renderRodeo()" style="width:100%;padding:11px 14px;border:0.5px solid #C8C8CE;border-radius:12px;font-size:17px;background:#fff;color:#1C1C1E;">
@@ -1996,6 +2093,7 @@ function goToNav(screen) {
 
 function goTo(screen, btn) {
   if(screen==='reportes'){ setTimeout(function(){ renderResumenTambo(); }, 50); }
+  if(screen==='leche'){ setTimeout(function(){ renderLeche(); }, 50); }
   document.querySelectorAll('.screen').forEach(function(s){s.classList.remove('active');});
   var sc=document.getElementById('screen-'+screen);
   if(sc) sc.classList.add('active');
@@ -2615,6 +2713,7 @@ function renderResumenTambo() {
 function init() {
   var dateFields=['p-fecha','i-fecha','t-fecha','pr-fecha','b-fecha','c-fecha','s-fecha','ab-fecha'];
   dateFields.forEach(function(id){var el=document.getElementById(id);if(el)el.value=TODAY;});
+  cargarCacheLeche();
   actualizarCats();
   poblarGuachera();
   poblarRecria();
@@ -2867,11 +2966,162 @@ async function guardarTactoMasivo() {
 }
 // ============ FIN TACTO MASIVO ============
 
+
+// ============================================================
+// LECHE - PRODUCCIÓN DIARIA Y CALIDAD
+// ============================================================
+var produccionDiaria = []; // {fecha, ucalac, saputo, total, vacas, obs}
+var calidadLeche = [];     // {fecha, empresa, ufc, cs, grasa, proteina}
+
+var CACHE_KEY_LECHE = 'tambo_leche_v1';
+var CACHE_KEY_CALIDAD = 'tambo_calidad_v1';
+
+function cargarCacheLeche() {
+  try {
+    var l = localStorage.getItem(CACHE_KEY_LECHE);
+    if(l) { produccionDiaria = JSON.parse(l); }
+    var q = localStorage.getItem(CACHE_KEY_CALIDAD);
+    if(q) { calidadLeche = JSON.parse(q); }
+  } catch(e) {}
+}
+
+function guardarCacheLeche() {
+  try {
+    localStorage.setItem(CACHE_KEY_LECHE, JSON.stringify(produccionDiaria));
+    localStorage.setItem(CACHE_KEY_CALIDAD, JSON.stringify(calidadLeche));
+  } catch(e) {}
+}
+
+function renderLeche() {
+  // Inicializar fecha
+  var fEl = document.getElementById('l-fecha');
+  if(fEl && !fEl.value) fEl.value = TODAY;
+  var fcEl = document.getElementById('l-cal-fecha');
+  if(fcEl && !fcEl.value) fcEl.value = TODAY;
+
+  // Producción de hoy
+  var hoy = produccionDiaria.find(function(r){ return r.fecha === TODAY; });
+  var ayer = produccionDiaria.find(function(r){ return r.fecha === sumarDias(TODAY,-1); });
+
+  var nOrdene = rodeo.filter(function(a){ return a.estadoProd==='En Ordeñe'; }).length;
+  document.getElementById('l-vacas').placeholder = nOrdene ? nOrdene+' (auto)' : '0';
+
+  if(hoy) {
+    document.getElementById('l-total-hoy').textContent = hoy.total;
+    document.getElementById('l-ucalac-hoy').textContent = hoy.ucalac || 0;
+    document.getElementById('l-saputo-hoy').textContent = hoy.saputo || 0;
+    var vacas = hoy.vacas || nOrdene || 1;
+    document.getElementById('l-prom-vaca').textContent = vacas > 0 ? (hoy.total/vacas).toFixed(1) : '—';
+    if(ayer) {
+      var diff = hoy.total - ayer.total;
+      var vsEl = document.getElementById('l-vs-ayer');
+      vsEl.textContent = (diff >= 0 ? '+' : '') + diff;
+      vsEl.style.color = diff >= 0 ? '#7FFFB0' : '#FFB0B0';
+    } else {
+      document.getElementById('l-vs-ayer').textContent = '—';
+    }
+  } else {
+    ['l-total-hoy','l-ucalac-hoy','l-saputo-hoy','l-prom-vaca','l-vs-ayer'].forEach(function(id){
+      document.getElementById(id).textContent = '—';
+    });
+  }
+
+  // Acumulado del mes
+  var mesActual = TODAY.substring(0,7); // YYYY-MM
+  var delMes = produccionDiaria.filter(function(r){ return r.fecha.startsWith(mesActual); });
+  var acumMes = delMes.reduce(function(s,r){ return s + (r.total||0); }, 0);
+  document.getElementById('l-acum-mes').textContent = acumMes.toFixed(0);
+  document.getElementById('l-dias-mes').textContent = delMes.length;
+
+  // Historial últimos 7 días
+  var hist = document.getElementById('l-historial');
+  hist.innerHTML = '';
+  var ultimos = produccionDiaria
+    .filter(function(r){ return r.fecha >= sumarDias(TODAY,-7); })
+    .sort(function(a,b){ return b.fecha.localeCompare(a.fecha); });
+
+  if(ultimos.length === 0) {
+    hist.innerHTML = '<div style="color:#8E8E93;font-size:14px;text-align:center;padding:8px 0;">Sin registros</div>';
+    return;
+  }
+
+  ultimos.forEach(function(r) {
+    var row = document.createElement('div');
+    row.style.cssText = 'display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:0.5px solid #F2F2F7;';
+    var esHoy = r.fecha === TODAY;
+    row.innerHTML = '<div>'
+      + '<div style="font-size:15px;font-weight:700;color:#1C1C1E;">' + (esHoy?'Hoy':fmtFecha(r.fecha)) + '</div>'
+      + '<div style="font-size:12px;color:#8E8E93;">Ucalac: '+( r.ucalac||0)+' · Saputo: '+(r.saputo||0)+'</div>'
+      + '</div>'
+      + '<div style="text-align:right;">'
+      + '<div style="font-size:20px;font-weight:800;color:#1060C0;">'+(r.total||0)+'</div>'
+      + '<div style="font-size:11px;color:#8E8E93;">lts</div>'
+      + '</div>';
+    hist.appendChild(row);
+  });
+}
+
+async function guardarProduccion() {
+  var fecha = document.getElementById('l-fecha').value || TODAY;
+  var ucalac = parseFloat(document.getElementById('l-ucalac').value) || 0;
+  var saputo = parseFloat(document.getElementById('l-saputo').value) || 0;
+  var total = ucalac + saputo;
+  var vacas = parseInt(document.getElementById('l-vacas').value) || rodeo.filter(function(a){ return a.estadoProd==='En Ordeñe'; }).length;
+  var obs = document.getElementById('l-obs').value || '';
+
+  if(total === 0) { showToast('Ingresá al menos un valor', true); return; }
+
+  // Actualizar o agregar
+  var idx = produccionDiaria.findIndex(function(r){ return r.fecha === fecha; });
+  var reg = {fecha:fecha, ucalac:ucalac, saputo:saputo, total:total, vacas:vacas, obs:obs};
+  if(idx >= 0) produccionDiaria[idx] = reg;
+  else produccionDiaria.push(reg);
+
+  guardarCacheLeche();
+
+  // Enviar a Sheets
+  var fila = [generarID('Prod',0), fecha, ucalac, saputo, total, vacas, obs];
+  await enviarASheets('Reg_Produccion_Tambo', fila);
+
+  // Limpiar form
+  document.getElementById('l-ucalac').value = '';
+  document.getElementById('l-saputo').value = '';
+  document.getElementById('l-obs').value = '';
+
+  showToast('Producción guardada ✓');
+  renderLeche();
+}
+
+async function guardarCalidad() {
+  var fecha = document.getElementById('l-cal-fecha').value || TODAY;
+  var empresa = document.getElementById('l-cal-empresa').value;
+  var ufc = parseFloat(document.getElementById('l-ufc').value) || 0;
+  var cs = parseFloat(document.getElementById('l-cs').value) || 0;
+  var grasa = parseFloat(document.getElementById('l-grasa').value) || 0;
+  var proteina = parseFloat(document.getElementById('l-proteina').value) || 0;
+
+  if(!empresa) { showToast('Seleccioná una empresa', true); return; }
+
+  calidadLeche.push({fecha:fecha, empresa:empresa, ufc:ufc, cs:cs, grasa:grasa, proteina:proteina});
+  guardarCacheLeche();
+
+  var fila = [generarID('Cal',0), fecha, empresa, ufc, cs, grasa, proteina];
+  await enviarASheets('Calidad_Leche', fila);
+
+  // Limpiar
+  ['l-ufc','l-cs','l-grasa','l-proteina'].forEach(function(id){
+    document.getElementById(id).value = '';
+  });
+  document.getElementById('l-cal-empresa').value = '';
+
+  showToast('Calidad guardada ✓');
+}
+
 // ============================================================
 // SWIPE NAVIGATION
 // ============================================================
 (function(){
-  var SCREENS = ['dashboard','rodeo','inseminacion','parto','guachera','recria','reportes'];
+  var SCREENS = ['dashboard','leche','rodeo','inseminacion','parto','guachera','recria','reportes'];
   var touchStartX = 0, touchStartY = 0;
   var touchEndX = 0, touchEndY = 0;
   var MIN_SWIPE_X = 60;  // mínimo px horizontal
