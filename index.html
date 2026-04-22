@@ -746,7 +746,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
     </div>
     <input type="date" id="cl-fecha" style="padding:8px 10px;border:0.5px solid #C8C8CE;border-radius:10px;font-size:14px;">
   </div>
-  <input type="search" id="cl-buscar" placeholder="Buscar por RP o nombre..." oninput="filtrarControlLechero()" style="width:100%;padding:10px 14px;border:0.5px solid #C8C8CE;border-radius:12px;font-size:16px;background:#fff;margin-bottom:8px;box-sizing:border-box;">
+  <input type="search" id="cl-buscar" placeholder="Buscar por RP..." inputmode="numeric" oninput="filtrarControlLechero()" style="width:100%;padding:10px 14px;border:0.5px solid #C8C8CE;border-radius:12px;font-size:16px;background:#fff;margin-bottom:8px;box-sizing:border-box;">
 
   <!-- Totales -->
   <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:10px;">
@@ -783,8 +783,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
   <div id="ficha-contenido"></div>
 </div>
 
-<script src="https://accounts.google.com/gsi/client" async defer></script>
-<script>
+<script src="https://accounts.google.com/gsi/client" async defer>
 function drawDonut(id,pct,color){
   var svg=document.getElementById(id);
   if(!svg)return;
@@ -3505,7 +3504,12 @@ async function guardarControlLechero() {
 
   // Mostrar resumen
   if(noPresentes.length > 0) {
-    var msg = '✓ ' + registrados + ' vacas registradas\n\n⚠️ ' + noPresentes.length + ' NP (no presentadas):\n' + noPresentes.map(function(a){ return '· RP '+a.rp+' '+a.nombre; }).join('\n');
+    var msg = '✓ ' + registrados + ' vacas registradas
+
+⚠️ ' + noPresentes.length + ' NP (no presentadas):
+';
+    msg += noPresentes.map(function(a){ return '· RP '+a.rp+' '+a.nombre; }).join('
+');
     alert(msg);
   } else {
     showToast('Control completo ✓ — ' + registrados + ' vacas');
@@ -3550,15 +3554,35 @@ function exportarControlLechero() {
 
 
 function filtrarControlLechero() {
-  var buscar = (document.getElementById('cl-buscar') ? document.getElementById('cl-buscar').value : '').toLowerCase();
-  var filas = document.getElementById('cl-lista').querySelectorAll('div[id^="cl-fila-"]');
-  // Como no tenemos IDs en las filas, filtramos por el texto del RP
+  var buscar = (document.getElementById('cl-buscar') ? document.getElementById('cl-buscar').value : '').trim();
   var rows = document.getElementById('cl-lista').children;
+  var lastSep = null;
+  var lastSepTieneVisible = false;
+
   Array.from(rows).forEach(function(row, i) {
-    if(i === 0) return; // saltar header
-    var texto = row.textContent.toLowerCase();
-    row.style.display = (!buscar || texto.includes(buscar)) ? '' : 'none';
+    if(i === 0) { return; } // header siempre visible
+
+    // Es separador de rodeo (fondo azul)
+    if(row.style.background && row.style.background.includes('rgb(16, 96, 192)') || 
+       row.style.cssText && row.style.cssText.includes('background:#1060C0')) {
+      // Guardar referencia al separador anterior
+      if(lastSep && !lastSepTieneVisible) lastSep.style.display = 'none';
+      lastSep = row;
+      lastSepTieneVisible = false;
+      row.style.display = '';
+      return;
+    }
+
+    // Es fila de vaca - filtrar por RP
+    var rpEl = row.children[0];
+    var rp = rpEl ? rpEl.textContent.trim() : '';
+    var visible = !buscar || rp.startsWith(buscar);
+    row.style.display = visible ? '' : 'none';
+    if(visible && lastSep) lastSepTieneVisible = true;
   });
+
+  // Ocultar último separador si no tiene vacas visibles
+  if(lastSep && !lastSepTieneVisible) lastSep.style.display = 'none';
 }
 
 // ============================================================
