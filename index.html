@@ -3122,6 +3122,9 @@ function renderLeche() {
   // Cards métricas
   document.getElementById('l-acum-mes').textContent = acumMes > 0 ? acumMes : '—';
   document.getElementById('l-dias-mes').textContent = diasMes;
+  // Inicializar estado botones
+  validarProduccion();
+  validarCalidad();
 
   // Historial últimos 7 días
   var hist = document.getElementById('l-historial');
@@ -3154,8 +3157,13 @@ function renderLeche() {
 function validarProduccion() {
   var btn = document.getElementById('btn-guardar-prod');
   if(!btn) return;
-  var entregas = leerEntregasEmpresa();
-  var total = Object.values(entregas).reduce(function(s,v){return s+v;},0);
+  // Buscar cualquier input de litros con valor
+  var total = 0;
+  var idx = 1;
+  while(document.getElementById('l-lts-'+idx)) {
+    total += parseFloat(document.getElementById('l-lts-'+idx).value) || 0;
+    idx++;
+  }
   var ok = total > 0;
   btn.disabled = !ok;
   btn.style.opacity = ok ? '1' : '0.5';
@@ -3166,8 +3174,7 @@ function validarCalidad() {
   var btn = document.getElementById('btn-guardar-cal');
   if(!btn) return;
   var empresa = document.getElementById('l-cal-empresa') ? document.getElementById('l-cal-empresa').value : '';
-  var ufc = document.getElementById('l-ufc') ? document.getElementById('l-ufc').value : '';
-  var ok = empresa && ufc;
+  var ok = empresa && empresa !== '';
   btn.disabled = !ok;
   btn.style.opacity = ok ? '1' : '0.5';
   btn.style.cursor = ok ? 'pointer' : 'not-allowed';
