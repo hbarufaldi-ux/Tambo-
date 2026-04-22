@@ -2097,7 +2097,7 @@ function goToNav(screen) {
 
 function goTo(screen, btn) {
   if(screen==='reportes'){ setTimeout(function(){ renderResumenTambo(); }, 50); }
-  if(screen==='leche'){ setTimeout(function(){ renderLeche(); }, 100); }
+  if(screen==='leche'){ cargarCacheLeche(); cargarProduccionDesdeSheets(); setTimeout(function(){ renderLeche(); }, 300); }
   document.querySelectorAll('.screen').forEach(function(s){s.classList.remove('active');});
   var sc=document.getElementById('screen-'+screen);
   if(sc) sc.classList.add('active');
@@ -2719,6 +2719,7 @@ function init() {
   var dateFields=['p-fecha','i-fecha','t-fecha','pr-fecha','b-fecha','c-fecha','s-fecha','ab-fecha'];
   dateFields.forEach(function(id){var el=document.getElementById(id);if(el)el.value=TODAY;});
   cargarCacheLeche();
+  cargarProduccionDesdeSheets();
   actualizarCats();
   poblarGuachera();
   poblarRecria();
@@ -3210,6 +3211,58 @@ function exportarReporteMensual() {
   showToast('Reporte descargado ✓');
 }
 
+
+
+// ============================================================
+// LECHE - CARGAR DESDE SHEETS
+// ============================================================
+function cargarProduccionDesdeSheets() {
+  fetch(SCRIPT_URL + '?accion=produccion')
+    .then(function(r){ return r.json(); })
+    .then(function(data) {
+      if(!data.ok || !data.datos || data.datos.length === 0) return;
+      var filas = data.datos;
+      produccionDiaria = [];
+      filas.forEach(function(f) {
+        if(!f[0] || f[0]==='ID') return; // saltar header si existe
+        var fecha = f[1] ? String(f[1]).substring(0,10) : null;
+        if(!fecha) return;
+        var ucalac = parseFloat(f[2]) || 0;
+        var saputo = parseFloat(f[3]) || 0;
+        var total = parseFloat(f[4]) || (ucalac + saputo);
+        var vacas = parseInt(f[5]) || 0;
+        var obs = f[6] || '';
+        // Evitar duplicados por fecha
+        var existe = produccionDiaria.find(function(r){ return r.fecha === fecha; });
+        if(!existe) {
+          produccionDiaria.push({fecha:fecha, ucalac:ucalac, saputo:saputo, total:total, vacas:vacas, obs:obs});
+        }
+      });
+      guardarCacheLeche();
+      // Refrescar si estamos en leche
+      var active = document.querySelector('.screen.active');
+      if(active && active.id === 'screen-leche') renderLeche();
+    })
+    .catch(function(e){ console.log('Error cargando producción:', e); });
+
+  fetch(SCRIPT_URL + '?accion=calidad')
+    .then(function(r){ return r.json(); })
+    .then(function(data) {
+      if(!data.ok || !data.datos || data.datos.length === 0) return;
+      calidadLeche = [];
+      data.datos.forEach(function(f) {
+        if(!f[0] || f[0]==='ID') return;
+        var fecha = f[1] ? String(f[1]).substring(0,10) : null;
+        if(!fecha) return;
+        calidadLeche.push({
+          fecha:fecha, empresa:f[2]||'', ufc:parseFloat(f[3])||0,
+          cs:parseFloat(f[4])||0, grasa:parseFloat(f[5])||0, proteina:parseFloat(f[6])||0
+        });
+      });
+      guardarCacheLeche();
+    })
+    .catch(function(e){ console.log('Error cargando calidad:', e); });
+}
 
 // ============================================================
 // LECHE - EMPRESAS DINÁMICAS
