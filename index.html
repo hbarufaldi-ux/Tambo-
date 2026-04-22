@@ -1209,7 +1209,7 @@ function renderRecria() {
     if(buscar && !a.nombre.toLowerCase().includes(buscar) && !String(a.rp).includes(buscar)) return false;
     if(_filtroRecria==='Ternera') return (a.rodeoManual==='R11'||a.cat==='Ternera') && a.sexo==='H';
     if(_filtroRecria==='Ternero') return (a.rodeoManual==='R11'||a.cat==='Ternero') && a.sexo==='M';
-    if(_filtroRecria==='vaq-pre') return a.rodeoManual==='R10' || a.estadoRepro==='Preservicio';
+    if(_filtroRecria==='vaq-pre') return a.rodeoManual==='R10' || a.estadoRepro==='Preservicio' || (a.cat==='Vaquillona' && (!a.estadoRepro||a.estadoRepro===''||a.estadoRepro==='Vaquillona') && a.rodeoManual!=='R8' && a.rodeoManual!=='R9');
     if(_filtroRecria==='Inseminada') return a.rodeoManual==='R9' || a.estadoRepro==='Inseminada';
     if(_filtroRecria==='Preñada') return a.rodeoManual==='R8' || a.estadoRepro==='Preñada';
     return true;
