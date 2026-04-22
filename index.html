@@ -307,23 +307,24 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
     <div class="card">
       <div class="section-title">Datos de la cría</div>
       <div class="field-row">
-        <div><label>Sexo</label><div class="radio-group"><span class="radio-opt selected" onclick="sel(this,'sexo');onSexoCria()">Hembra</span><span class="radio-opt" onclick="sel(this,'sexo');onSexoCria()">Macho</span></div></div>
-        <div><label>Cría viva</label><div class="radio-group"><span class="radio-opt selected" onclick="sel(this,'viva')">Sí</span><span class="radio-opt" onclick="sel(this,'viva')">No</span></div></div>
+        <div><label>Sexo</label><div class="radio-group"><span class="radio-opt" onclick="sel(this,'sexo');onSexoCria()">Hembra</span><span class="radio-opt" onclick="sel(this,'sexo');onSexoCria()">Macho</span></div></div>
+        <div><label>Cría viva</label><div class="radio-group"><span class="radio-opt" onclick="sel(this,'viva')">Sí</span><span class="radio-opt" onclick="sel(this,'viva')">No</span></div></div>
       </div>
       <div id="macho-entero-row" style="display:none;" class="field">
         <label>¿Se deja entero?</label>
-        <div class="radio-group"><span class="radio-opt" onclick="sel(this,'entero')">Sí (Torito)</span><span class="radio-opt selected" onclick="sel(this,'entero')">No (Ternero)</span></div>
+        <div class="radio-group"><span class="radio-opt" onclick="sel(this,'entero')">Sí (Torito)</span><span class="radio-opt" onclick="sel(this,'entero')">No (Ternero)</span></div>
       </div>
       <div class="field-row">
         <div><label>RP Cría <span style="color:#8E8E93;font-size:11px;">(sugerido)</span></label><input type="number" id="p-rp-cria" inputmode="numeric"></div>
         <div><label>Nombre cría</label><input type="text" id="p-nombre-cria" placeholder="Opcional"></div>
       </div>
       <div class="field-row">
-        <div><label>Mellizo</label><div class="radio-group"><span class="radio-opt selected" onclick="sel(this,'mellizo')">No</span><span class="radio-opt" onclick="sel(this,'mellizo')">Sí</span></div></div>
-        <div><label>Ret. placenta</label><div class="radio-group"><span class="radio-opt selected" onclick="sel(this,'placenta')">No</span><span class="radio-opt" onclick="sel(this,'placenta')">Sí</span></div></div>
+        <div><label>Mellizo</label><div class="radio-group"><span class="radio-opt" onclick="sel(this,'mellizo')">No</span><span class="radio-opt" onclick="sel(this,'mellizo')">Sí</span></div></div>
+        <div><label>Ret. placenta</label><div class="radio-group"><span class="radio-opt" onclick="sel(this,'placenta')">No</span><span class="radio-opt" onclick="sel(this,'placenta')">Sí</span></div></div>
       </div>
       <div class="field"><label>Observaciones</label><textarea id="p-obs" rows="2" placeholder="Opcional..."></textarea></div>
       <button class="btn-primary" onclick="guardarParto()">Guardar parto</button>
+    <button class="btn-secondary" onclick="goBack()" style="margin-top:6px;">Cancelar</button>
     </div>
   </div>
 
@@ -356,11 +357,12 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
       </div>
       <div class="field-row">
         <div><label>Inseminador</label><input type="text" id="i-inseminador" value="Héctor Acosta"></div>
-        <div><label>Celo detectado</label><div class="radio-group" style="margin-top:4px;"><span class="radio-opt selected" onclick="sel(this,'celo')">Sí</span><span class="radio-opt" onclick="sel(this,'celo')">No</span></div></div>
+        <div><label>Celo detectado</label><div class="radio-group" style="margin-top:4px;"><span class="radio-opt" onclick="sel(this,'celo')">Sí</span><span class="radio-opt" onclick="sel(this,'celo')">No</span></div></div>
       </div>
       <div id="i-nro-servicios" class="info-box" style="display:none;"></div>
       <div class="field"><label>Observaciones</label><textarea id="i-obs" rows="2" placeholder="Opcional..."></textarea></div>
       <button class="btn-primary" onclick="guardarInsem()">Guardar inseminación</button>
+    <button class="btn-secondary" onclick="goBack()" style="margin-top:6px;">Cancelar</button>
     </div>
   </div>
 
@@ -389,6 +391,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
       <div id="c-alerta"></div>
       <div class="field"><label>Observaciones</label><textarea id="c-obs" rows="2" placeholder="Opcional..."></textarea></div>
       <button class="btn-primary" onclick="guardarCelo()">Registrar celo</button>
+    <button class="btn-secondary" onclick="goBack()" style="margin-top:6px;">Cancelar</button>
     </div>
   </div>
 
@@ -417,7 +420,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
       <div id="t-info"></div>
       <div class="field">
         <label>Resultado</label>
-        <div class="radio-group"><span class="radio-opt selected" onclick="sel(this,'tacto-res');onTactoRes()">Preñada</span><span class="radio-opt" onclick="sel(this,'tacto-res');onTactoRes()">Vacía</span><span class="radio-opt" onclick="sel(this,'tacto-res');onTactoRes()">Dudoso</span></div>
+        <div class="radio-group"><span class="radio-opt" onclick="sel(this,'tacto-res');onTactoRes()">Preñada</span><span class="radio-opt" onclick="sel(this,'tacto-res');onTactoRes()">Vacía</span><span class="radio-opt" onclick="sel(this,'tacto-res');onTactoRes()">Dudoso</span></div>
       </div>
       <div id="t-prenada-fields">
         <div class="field-row">
@@ -433,6 +436,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
       <div class="field"><label>Veterinario</label><input type="text" id="t-vet" value="Diego Pipino"></div>
       <div class="field"><label>Observaciones</label><textarea id="t-obs" rows="2" placeholder="Opcional..."></textarea></div>
       <button class="btn-primary" onclick="guardarTacto()">Guardar tacto</button>
+    <button class="btn-secondary" onclick="goBack()" style="margin-top:6px;">Cancelar</button>
     </div>
   </div>
   <div id="tacto-ok" style="display:none;" class="card success-screen">
@@ -456,6 +460,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
       <div id="s-info"></div>
       <div class="field"><label>Observaciones</label><textarea id="s-obs" rows="2" placeholder="Opcional..."></textarea></div>
       <button class="btn-primary" onclick="guardarSecado()">Registrar secado</button>
+    <button class="btn-secondary" onclick="goBack()" style="margin-top:6px;">Cancelar</button>
     </div>
   </div>
   <div id="secado-ok" style="display:none;" class="card success-screen">
@@ -489,6 +494,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
       </div>
       <div class="field"><label>Observaciones</label><textarea id="ab-obs" rows="2" placeholder="Opcional..."></textarea></div>
       <button class="btn-primary" onclick="guardarAborto()">Registrar aborto</button>
+    <button class="btn-secondary" onclick="goBack()" style="margin-top:6px;">Cancelar</button>
     </div>
   </div>
   <div id="aborto-ok" style="display:none;" class="card success-screen">
@@ -519,6 +525,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
       </div>
       <div class="field"><label>Observaciones</label><textarea id="b-obs" rows="2" placeholder="Motivo detallado..."></textarea></div>
       <button class="btn-primary" onclick="guardarBaja()">Registrar baja</button>
+    <button class="btn-secondary" onclick="goBack()" style="margin-top:6px;">Cancelar</button>
     </div>
   </div>
   <div id="baja-ok" style="display:none;" class="card success-screen">
