@@ -590,9 +590,9 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
   <div style="background:linear-gradient(135deg,#1060C0,#063A8A);border-radius:18px;padding:16px;margin-bottom:10px;">
     <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;">
       <div>
-        <div style="font-size:11px;color:rgba(255,255,255,0.7);font-weight:700;text-transform:uppercase;letter-spacing:0.1em;">Producción hoy</div>
+        <div style="font-size:11px;color:rgba(255,255,255,0.7);font-weight:700;text-transform:uppercase;letter-spacing:0.1em;">Producción del mes</div>
         <div style="font-size:48px;font-weight:900;color:#fff;line-height:1;letter-spacing:-2px;" id="l-total-hoy">—</div>
-        <div style="font-size:13px;color:rgba(255,255,255,0.7);margin-top:2px;">litros totales</div>
+        <div style="font-size:13px;color:rgba(255,255,255,0.7);margin-top:2px;">litros acumulados</div>
       </div>
       <div style="text-align:right;">
         <div style="font-size:11px;color:rgba(255,255,255,0.7);font-weight:700;text-transform:uppercase;letter-spacing:0.1em;">Prom/vaca</div>
@@ -610,7 +610,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
         <div style="font-size:22px;font-weight:800;color:#fff;" id="l-saputo-hoy">—</div>
       </div>
       <div style="flex:1;background:rgba(255,255,255,0.15);border-radius:12px;padding:10px;">
-        <div style="font-size:10px;color:rgba(255,255,255,0.65);font-weight:700;text-transform:uppercase;">vs ayer</div>
+        <div style="font-size:10px;color:rgba(255,255,255,0.65);font-weight:700;text-transform:uppercase;">vs día ant.</div>
         <div style="font-size:22px;font-weight:800;color:#fff;" id="l-vs-ayer">—</div>
       </div>
     </div>
@@ -637,9 +637,24 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
       <div><label>Fecha</label><input type="date" id="l-fecha"></div>
       <div><label>Vacas en ordeñe</label><input type="number" id="l-vacas" inputmode="numeric" placeholder="Auto"></div>
     </div>
-    <div class="field-row">
-      <div><label>Litros Ucalac SA</label><input type="number" id="l-ucalac" inputmode="decimal" placeholder="0"></div>
-      <div><label>Litros Saputo</label><input type="number" id="l-saputo" inputmode="decimal" placeholder="0"></div>
+    <div id="l-entregas-container">
+      <label style="font-size:13px;font-weight:600;color:#3C3C43;display:block;margin-bottom:6px;">Entregas por empresa</label>
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:6px;">
+        <select style="flex:1.5;padding:10px;border:0.5px solid #C8C8CE;border-radius:10px;font-size:15px;background:#fff;" id="l-emp-1">
+          <option value="">Empresa...</option>
+          <option>Ucalac SA</option>
+          <option>Saputo</option>
+        </select>
+        <input type="number" inputmode="decimal" placeholder="Litros" id="l-lts-1" style="flex:1;padding:10px;border:0.5px solid #C8C8CE;border-radius:10px;font-size:15px;">
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:6px;">
+        <select style="flex:1.5;padding:10px;border:0.5px solid #C8C8CE;border-radius:10px;font-size:15px;background:#fff;" id="l-emp-2">
+          <option value="">Empresa...</option>
+          <option>Ucalac SA</option>
+          <option>Saputo</option>
+        </select>
+        <input type="number" inputmode="decimal" placeholder="Litros" id="l-lts-2" style="flex:1;padding:10px;border:0.5px solid #C8C8CE;border-radius:10px;font-size:15px;">
+      </div>
     </div>
     <div class="field"><label>Observaciones</label><textarea id="l-obs" rows="2" placeholder="Opcional..."></textarea></div>
     <button class="btn-primary" onclick="guardarProduccion()">Guardar producción</button>
@@ -679,7 +694,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 
 </div>
 
-id="screen-rodeo" class="screen" style="padding-top:0;">
+<div id="screen-rodeo" class="screen" style="padding-top:0;">
   <div id="rodeo-search-bar" style="position:sticky;top:0;z-index:10;background:#F2F2F7;padding:8px 0 4px;">
   <div style="margin-bottom:6px;">
     <input type="text" id="rodeo-buscar" placeholder="Buscar por RP..." inputmode="numeric" oninput="renderRodeo()" style="width:100%;padding:11px 14px;border:0.5px solid #C8C8CE;border-radius:12px;font-size:17px;background:#fff;color:#1C1C1E;">
@@ -720,6 +735,7 @@ id="screen-rodeo" class="screen" style="padding-top:0;">
       <button class="btn-secondary" onclick="exportar('guachera')">Guachera</button>
       <button class="btn-secondary" onclick="exportar('recria')">Recría</button>
       <button class="btn-secondary" onclick="exportar('alertas')" style="background:#FFF3CC;color:#7A5500;border-color:#F0C040;">Alertas para veterinario</button>
+      <button class="btn-secondary" onclick="exportarReporteMensual()" style="background:#EEE0FF;color:#6B35D4;border-color:#D4B0FF;">📊 Reporte mensual leche</button>
       <button class="btn-secondary" onclick="limpiarCache()" style="color:#8E8E93;">Forzar recarga desde Sheets</button>
     </div>
   </div>
@@ -2093,10 +2109,11 @@ function goToNav(screen) {
 
 function goTo(screen, btn) {
   if(screen==='reportes'){ setTimeout(function(){ renderResumenTambo(); }, 50); }
-  if(screen==='leche'){ setTimeout(function(){ renderLeche(); }, 50); }
+  if(screen==='leche'){ setTimeout(function(){ renderLeche(); }, 100); }
   document.querySelectorAll('.screen').forEach(function(s){s.classList.remove('active');});
   var sc=document.getElementById('screen-'+screen);
   if(sc) sc.classList.add('active');
+  window.scrollTo(0,0);
   if(screen==='dashboard'){setTimeout(function(){renderDashboard&&renderDashboard();},80);}
   if(btn){document.querySelectorAll('.nav-btn').forEach(function(b){b.classList.remove('active');});btn.classList.add('active');}
   _navStack = []; // limpiar stack al navegar por menú principal
@@ -2999,39 +3016,42 @@ function renderLeche() {
   var fcEl = document.getElementById('l-cal-fecha');
   if(fcEl && !fcEl.value) fcEl.value = TODAY;
 
-  // Producción de hoy
-  var hoy = produccionDiaria.find(function(r){ return r.fecha === TODAY; });
-  var ayer = produccionDiaria.find(function(r){ return r.fecha === sumarDias(TODAY,-1); });
-
   var nOrdene = rodeo.filter(function(a){ return a.estadoProd==='En Ordeñe'; }).length;
   document.getElementById('l-vacas').placeholder = nOrdene ? nOrdene+' (auto)' : '0';
 
-  if(hoy) {
-    document.getElementById('l-total-hoy').textContent = hoy.total;
-    document.getElementById('l-ucalac-hoy').textContent = hoy.ucalac || 0;
-    document.getElementById('l-saputo-hoy').textContent = hoy.saputo || 0;
-    var vacas = hoy.vacas || nOrdene || 1;
-    document.getElementById('l-prom-vaca').textContent = vacas > 0 ? (hoy.total/vacas).toFixed(1) : '—';
-    if(ayer) {
-      var diff = hoy.total - ayer.total;
-      var vsEl = document.getElementById('l-vs-ayer');
-      vsEl.textContent = (diff >= 0 ? '+' : '') + diff;
-      vsEl.style.color = diff >= 0 ? '#7FFFB0' : '#FFB0B0';
-    } else {
-      document.getElementById('l-vs-ayer').textContent = '—';
-    }
-  } else {
-    ['l-total-hoy','l-ucalac-hoy','l-saputo-hoy','l-prom-vaca','l-vs-ayer'].forEach(function(id){
-      document.getElementById(id).textContent = '—';
-    });
+  // Acumulado del mes
+  var mesActual = TODAY.substring(0,7);
+  var delMes = produccionDiaria.filter(function(r){ return r.fecha.startsWith(mesActual); });
+  var acumMes = delMes.reduce(function(s,r){ return s+(r.total||0); }, 0);
+  var acumUcalac = delMes.reduce(function(s,r){ return s+(r.ucalac||0); }, 0);
+  var acumSaputo = delMes.reduce(function(s,r){ return s+(r.saputo||0); }, 0);
+  var diasMes = delMes.length;
+
+  // Promedio diario por vaca
+  var totalVacasDias = delMes.reduce(function(s,r){ return s+(r.vacas||nOrdene||1); }, 0);
+  var promVaca = diasMes > 0 && totalVacasDias > 0 ? (acumMes / totalVacasDias).toFixed(1) : '—';
+
+  // vs ayer (comparar último día con el anterior)
+  var ultimos = delMes.slice().sort(function(a,b){ return b.fecha.localeCompare(a.fecha); });
+  var vsAyer = '—';
+  var vsColor = '#fff';
+  if(ultimos.length >= 2) {
+    var diff = (ultimos[0].total||0) - (ultimos[1].total||0);
+    vsAyer = (diff >= 0 ? '+' : '') + diff;
+    vsColor = diff >= 0 ? '#7FFFB0' : '#FFB0B0';
   }
 
-  // Acumulado del mes
-  var mesActual = TODAY.substring(0,7); // YYYY-MM
-  var delMes = produccionDiaria.filter(function(r){ return r.fecha.startsWith(mesActual); });
-  var acumMes = delMes.reduce(function(s,r){ return s + (r.total||0); }, 0);
-  document.getElementById('l-acum-mes').textContent = acumMes.toFixed(0);
-  document.getElementById('l-dias-mes').textContent = delMes.length;
+  // Actualizar header
+  document.getElementById('l-total-hoy').textContent = acumMes > 0 ? acumMes : '—';
+  document.getElementById('l-ucalac-hoy').textContent = acumUcalac > 0 ? acumUcalac : '—';
+  document.getElementById('l-saputo-hoy').textContent = acumSaputo > 0 ? acumSaputo : '—';
+  document.getElementById('l-prom-vaca').textContent = promVaca;
+  var vsEl = document.getElementById('l-vs-ayer');
+  vsEl.textContent = vsAyer;
+  vsEl.style.color = vsColor;
+
+  document.getElementById('l-acum-mes').textContent = acumMes > 0 ? acumMes : '—';
+  document.getElementById('l-dias-mes').textContent = diasMes;
 
   // Historial últimos 7 días
   var hist = document.getElementById('l-historial');
@@ -3063,9 +3083,16 @@ function renderLeche() {
 
 async function guardarProduccion() {
   var fecha = document.getElementById('l-fecha').value || TODAY;
-  var ucalac = parseFloat(document.getElementById('l-ucalac').value) || 0;
-  var saputo = parseFloat(document.getElementById('l-saputo').value) || 0;
-  var total = ucalac + saputo;
+  // Leer entregas por empresa
+  var entregas = {};
+  for(var i=1;i<=2;i++){
+    var emp = document.getElementById('l-emp-'+i) ? document.getElementById('l-emp-'+i).value : '';
+    var lts = document.getElementById('l-lts-'+i) ? parseFloat(document.getElementById('l-lts-'+i).value)||0 : 0;
+    if(emp && lts > 0) entregas[emp] = (entregas[emp]||0) + lts;
+  }
+  var ucalac = entregas['Ucalac SA'] || 0;
+  var saputo = entregas['Saputo'] || 0;
+  var total = Object.values(entregas).reduce(function(s,v){return s+v;},0);
   var vacas = parseInt(document.getElementById('l-vacas').value) || rodeo.filter(function(a){ return a.estadoProd==='En Ordeñe'; }).length;
   var obs = document.getElementById('l-obs').value || '';
 
@@ -3084,8 +3111,10 @@ async function guardarProduccion() {
   await enviarASheets('Reg_Produccion_Tambo', fila);
 
   // Limpiar form
-  document.getElementById('l-ucalac').value = '';
-  document.getElementById('l-saputo').value = '';
+  for(var i=1;i<=2;i++){
+    if(document.getElementById('l-emp-'+i)) document.getElementById('l-emp-'+i).value='';
+    if(document.getElementById('l-lts-'+i)) document.getElementById('l-lts-'+i).value='';
+  }
   document.getElementById('l-obs').value = '';
 
   showToast('Producción guardada ✓');
@@ -3115,6 +3144,66 @@ async function guardarCalidad() {
   document.getElementById('l-cal-empresa').value = '';
 
   showToast('Calidad guardada ✓');
+}
+
+
+// ============================================================
+// REPORTE MENSUAL LECHE
+// ============================================================
+function exportarReporteMensual() {
+  // Pedir mes a exportar
+  var mes = prompt('¿Qué mes exportar? (YYYY-MM)', TODAY.substring(0,7));
+  if(!mes || !mes.match(/^\d{4}-\d{2}$/)) return;
+
+  var delMes = produccionDiaria.filter(function(r){ return r.fecha.startsWith(mes); });
+  var calMes = calidadLeche.filter(function(r){ return r.fecha.startsWith(mes); });
+
+  if(delMes.length === 0 && calMes.length === 0) {
+    showToast('Sin datos para ese mes', true);
+    return;
+  }
+
+  var total = delMes.reduce(function(s,r){return s+(r.total||0);},0);
+  var ucalacT = delMes.reduce(function(s,r){return s+(r.ucalac||0);},0);
+  var saputoT = delMes.reduce(function(s,r){return s+(r.saputo||0);},0);
+  var nOrdene = rodeo.filter(function(a){return a.estadoProd==='En Ordeñe';}).length;
+
+  // Construir CSV
+  var rows = [];
+  rows.push(['REPORTE MENSUAL LECHE - ' + mes]);
+  rows.push([]);
+  rows.push(['PRODUCCIÓN']);
+  rows.push(['Total litros', total]);
+  rows.push(['Ucalac SA', ucalacT]);
+  rows.push(['Saputo', saputoT]);
+  rows.push(['Días registrados', delMes.length]);
+  rows.push(['Promedio diario', delMes.length > 0 ? (total/delMes.length).toFixed(1) : 0]);
+  rows.push(['Promedio/vaca/día', (nOrdene > 0 && delMes.length > 0) ? (total/nOrdene/delMes.length).toFixed(1) : 0]);
+  rows.push([]);
+  rows.push(['DETALLE DIARIO']);
+  rows.push(['Fecha','Ucalac SA','Saputo','Total','Vacas','Obs']);
+  delMes.sort(function(a,b){return a.fecha.localeCompare(b.fecha);}).forEach(function(r){
+    rows.push([r.fecha, r.ucalac||0, r.saputo||0, r.total||0, r.vacas||'', r.obs||'']);
+  });
+  rows.push([]);
+  rows.push(['CALIDAD DE LECHE']);
+  rows.push(['Fecha','Empresa','UFC','Células Som.','Grasa %','Proteína %']);
+  calMes.sort(function(a,b){return a.fecha.localeCompare(b.fecha);}).forEach(function(r){
+    rows.push([r.fecha, r.empresa, r.ufc||0, r.cs||0, r.grasa||0, r.proteina||0]);
+  });
+
+  var csv = rows.map(function(r){
+    return r.map(function(v){ return '"'+String(v||'').replace(/"/g,'""')+'"'; }).join(',');
+  }).join('\n');
+
+  var blob = new Blob(['\uFEFF'+csv], {type:'text/csv;charset=utf-8;'});
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url;
+  a.download = 'leche_'+mes+'.csv';
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('Reporte descargado ✓');
 }
 
 // ============================================================
