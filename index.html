@@ -1209,7 +1209,7 @@ function renderRecria() {
     if(buscar && !a.nombre.toLowerCase().includes(buscar) && !String(a.rp).includes(buscar)) return false;
     if(_filtroRecria==='Ternera') return (a.rodeoManual==='R11'||a.cat==='Ternera') && a.sexo==='H';
     if(_filtroRecria==='Ternero') return (a.rodeoManual==='R11'||a.cat==='Ternero') && a.sexo==='M';
-    if(_filtroRecria==='vaq-pre') return a.rodeoManual==='R10' || a.estadoRepro==='Preservicio' || (a.cat==='Vaquillona' && (!a.estadoRepro||a.estadoRepro===''||a.estadoRepro==='Vaquillona') && a.rodeoManual!=='R8' && a.rodeoManual!=='R9');
+    if(_filtroRecria==='vaq-pre') return a.rodeoManual==='R10' || a.estadoRepro==='Preservicio' || (a.sexo==='H' && (a.cat==='Vaquillona'||a.cat==='Ternera') && (!a.estadoRepro||a.estadoRepro===''||a.estadoRepro==='Vaquillona'||a.estadoRepro==='Ternera') && a.rodeoManual!=='R8' && a.rodeoManual!=='R9');
     if(_filtroRecria==='Inseminada') return a.rodeoManual==='R9' || a.estadoRepro==='Inseminada';
     if(_filtroRecria==='Preñada') return a.rodeoManual==='R8' || a.estadoRepro==='Preñada';
     return true;
@@ -2439,12 +2439,14 @@ function _fetchPadronBackground(callback) {
         else if(rodeoVal === 'R8') cat = 'Vaquillona';
         else if(rodeoVal === 'R9') cat = 'Vaquillona';
         else if(rodeoVal === 'R10') cat = 'Vaquillona';
-        else if(rodeoVal === 'R11') cat = meses < 8 ? 'Ternera' : 'Vaquillona';
+        else if(rodeoVal === 'R11') cat = meses < 8 ? (sexo==='M'?'Ternero':'Ternera') : 'Vaquillona';
         else if(meses >= 24) cat = 'Vaca';
-        else if(meses >= 8) cat = 'Vaquillona';
-        else cat = 'Ternera';
+        else if(meses >= 8) cat = sexo==='M' ? 'Ternero' : 'Vaquillona';
+        else cat = sexo==='M' ? 'Ternero' : 'Ternera';
+        var sexo = String(row['Sexo'] || row['sexo'] || 'H').trim();
+        if(sexo !== 'M') sexo = 'H';
         var animal = {
-          rp: rp, nombre: String(row['Nombre'] || '').trim(), sexo: 'H',
+          rp: rp, nombre: String(row['Nombre'] || '').trim(), sexo: sexo,
           raza: String(row['Raza'] || 'Holando').trim(), cat: cat,
           estadoRepro: estadoRepro, estadoProd: estadoProd, fechaNac: fechaNac,
           ultimoParto: ultimoParto, ultimaInsem: ultimaInsem,
