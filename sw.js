@@ -1,4 +1,4 @@
-const CACHE = 'tambo-v24';
+const CACHE = 'tambo-v25';
 
 // Recursos a cachear al instalar
 const PRECACHE = [
