@@ -661,7 +661,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
       <button type="button" onclick="agregarFilaEmpresa()" style="width:100%;padding:10px;border:0.5px dashed #C8C8CE;border-radius:10px;background:#F8F8F8;font-size:14px;color:#3C3C43;cursor:pointer;margin-top:4px;">+ Agregar empresa</button>
     </div>
     <div class="field"><label>Observaciones</label><textarea id="l-obs" rows="2" placeholder="Opcional..."></textarea></div>
-    <button class="btn-primary" id="btn-guardar-prod" onclick="guardarProduccion()" disabled style="opacity:0.5;cursor:not-allowed;">Guardar producción</button>
+    <button class="btn-primary" id="btn-guardar-prod" onclick="guardarProduccion()">Guardar producción</button>
     <button class="btn-secondary" onclick="goBack()" style="margin-top:6px;">Cancelar</button>
   </div>
 
@@ -686,7 +686,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
       <div><label>Grasa %</label><input type="number" id="l-grasa" inputmode="decimal" placeholder="0.00" step="0.01"></div>
       <div><label>Proteína %</label><input type="number" id="l-proteina" inputmode="decimal" placeholder="0.00" step="0.01"></div>
     </div>
-    <button class="btn-primary" id="btn-guardar-cal" onclick="guardarCalidad()" disabled style="opacity:0.5;cursor:not-allowed;">Guardar calidad</button>
+    <button class="btn-primary" id="btn-guardar-cal" onclick="guardarCalidad()">Guardar calidad</button>
     <button class="btn-secondary" onclick="goBack()" style="margin-top:6px;">Cancelar</button>
   </div>
 
@@ -3189,7 +3189,7 @@ async function guardarProduccion() {
   var vacas = parseInt(document.getElementById('l-vacas').value) || rodeo.filter(function(a){ return a.estadoProd==='En Ordeñe'; }).length;
   var obs = document.getElementById('l-obs').value || '';
 
-  if(total === 0) { showToast('Ingresá al menos un valor', true); return; }
+  if(total === 0) { showToast('Seleccioná empresa e ingresá litros', true); return; }
 
   // Actualizar o agregar
   var idx = produccionDiaria.findIndex(function(r){ return r.fecha === fecha; });
@@ -3713,7 +3713,11 @@ function agregarFilaEmpresa() {
   // Select de empresa
   var sel = document.createElement('select');
   sel.id = 'l-emp-'+idx;
-  sel.style.cssText = 'flex:1.5;padding:8px 10px;border:0.5px solid #C8C8CE;border-radius:10px;font-size:15px;background:#fff;';
+  sel.style.cssText = 'flex:1.5;padding:12px 10px;border:1px solid #C8C8CE;border-radius:10px;font-size:16px;background:#fff;transition:border-color 0.15s,background 0.15s;box-sizing:border-box;';
+  sel.addEventListener('change', function(){
+    if(sel.value && sel.value !== '__nueva__'){ sel.style.background='#EEF4FF'; sel.style.borderColor='#1060C0'; }
+    else { sel.style.background='#fff'; sel.style.borderColor='#C8C8CE'; }
+  });
   sel.innerHTML = '<option value="">Empresa...</option>';
   _empresasLeche.forEach(function(e){
     sel.innerHTML += '<option>'+e+'</option>';
@@ -3746,7 +3750,14 @@ function agregarFilaEmpresa() {
   inp.inputMode = 'decimal';
   inp.placeholder = 'Litros';
   inp.id = 'l-lts-'+idx;
-  inp.style.cssText = 'flex:1;padding:8px 10px;border:0.5px solid #C8C8CE;border-radius:10px;font-size:15px;';
+  inp.style.cssText = 'flex:1;padding:12px 10px;border:1px solid #C8C8CE;border-radius:10px;font-size:16px;transition:border-color 0.15s,background 0.15s;box-sizing:border-box;';
+  inp.onfocus = function(){ this.style.borderColor='#1060C0'; this.style.background='#EEF4FF'; };
+  inp.onblur = function(){ if(!this.value){ this.style.borderColor='#C8C8CE'; this.style.background=''; } };
+  inp.oninput = function(){
+    if(this.value){ this.style.background='#EEF4FF'; this.style.borderColor='#1060C0'; }
+    else { this.style.background=''; this.style.borderColor='#C8C8CE'; }
+    validarProduccion();
+  };
 
   // Botón eliminar (solo si no es la primera)
   if(idx > 1) {
