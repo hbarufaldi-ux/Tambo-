@@ -853,6 +853,8 @@ function diasHasta(f) {
   return Math.round((new Date(f)-hoy)/86400000);
 }
 function diasDeVida(f) { return f ? -diasHasta(f) : null; }
+function fmtNum(n){if(n===null||n===undefined||n===''||n==='—'||isNaN(Number(n)))return'—';return Math.round(Number(n)).toString().replace(/(\d)(?=(\d{3})+$)/g,'$1.');}
+
 function fmtFecha(f) {
   if(!f) return '—';
   var p=f.split('-'); return p[2]+'/'+p[1]+'/'+p[0];
