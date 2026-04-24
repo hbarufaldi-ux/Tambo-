@@ -12,7 +12,7 @@
 <title>Tambo Cañada Negra</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;}
-html{scrollbar-gutter:stable;}body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#F2F2F7;color:#1C1C1E;min-height:100vh;padding-bottom:32px;padding-top:156px;}
+html{scrollbar-gutter:stable;}body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#D8E0E8;color:#1C1C1E;min-height:100vh;padding-bottom:32px;padding-top:156px;}
 .topbar{display:none;background:rgba(255,255,255,0.95);border-bottom:0.5px solid rgba(0,0,0,0.1);padding:10px 16px;display:flex;align-items:center;justify-content:space-between;position:fixed;top:0;left:0;right:0;z-index:100;min-height:80px;}
 .topbar-title{font-size:20px;font-weight:700;letter-spacing:-0.4px;}
 .topbar-sub{font-size:11px;color:#8E8E93;margin-top:1px;}
@@ -22,8 +22,8 @@ html{scrollbar-gutter:stable;}body{font-family:-apple-system,BlinkMacSystemFont,
 .nav-btn.active{background:#1C1C1E;color:#fff;border-color:#1C1C1E;}
 .screen{display:none;padding:16px;}
 .screen.active{display:block;}
-.card{background:#fff;border-radius:16px;padding:16px;margin-bottom:12px;box-shadow:0 1px 0 rgba(0,0,0,0.05),0 2px 8px rgba(0,0,0,0.04);}
-.input-fill:focus,.input-fill:not(:placeholder-shown){border-color:#1060C0 !important;background:#EEF4FF !important;}
+.card{background:#fff;border-radius:16px;padding:16px;margin-bottom:0;box-shadow:0 4px 14px rgba(0,0,0,0.12),0 1px 3px rgba(0,0,0,0.08);}
+.input-fill:focus,.input-fill:not(:placeholder-shown){border-color:#1060C0 !important;background:#FFF8E8 !important;}
 .input-fill{transition:border-color 0.15s,background 0.15s;}
 .rf-btn{padding:6px 12px;border:1px solid #C8C8CE;border-radius:20px;background:#fff;font-size:13px;font-weight:600;color:#3C3C43;cursor:pointer;white-space:nowrap;}
 .rf-btn.rf-active{background:#1C1C1E;color:#fff;border-color:#1C1C1E;}
@@ -34,12 +34,12 @@ html{scrollbar-gutter:stable;}body{font-family:-apple-system,BlinkMacSystemFont,
 label{display:block;font-size:16px;color:#6C6C70;margin-bottom:5px;font-weight:500;}
 input,select,textarea{width:100%;padding:13px 14px;border:0.5px solid #C8C8CE;border-radius:12px;font-size:19px;background:#FAFAFA;color:#1C1C1E;font-family:inherit;-webkit-appearance:none;appearance:none;}
 input:focus,select:focus,textarea:focus{outline:none;border-color:#1C1C1E;background:#fff;}
-input[readonly]{background:#F2F2F7;color:#8E8E93;}
+input[readonly]{background:#D8E0E8;color:#8E8E93;}
 select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23999' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;padding-right:32px;}
 .btn-primary{width:100%;padding:16px;background:#1C1C1E;color:#fff;border:none;border-radius:14px;font-size:19px;font-weight:600;cursor:pointer;margin-top:4px;}
 .btn-primary:active{opacity:0.75;}
 .btn-secondary{width:100%;padding:14px;background:#fff;color:#1C1C1E;border:0.5px solid #C8C8CE;border-radius:14px;font-size:19px;font-weight:500;cursor:pointer;margin-top:8px;}
-.btn-secondary:active{background:#F2F2F7;}
+.btn-secondary:active{background:#D8E0E8;}
 .radio-group{display:flex;gap:8px;flex-wrap:wrap;margin-top:4px;}
 .radio-opt{padding:10px 18px;border:0.5px solid #C8C8CE;border-radius:20px;font-size:18px;cursor:pointer;color:#3C3C43;font-weight:500;}
 .radio-opt.selected{border-color:#1C1C1E;background:#1C1C1E;color:#fff;}
@@ -76,8 +76,8 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 .dot-warn{background:#E0A000;}
 .dot-danger{background:#C03030;}
 .dot-info{background:#1060C0;}
-.total-box{padding:13px 14px;background:#F2F2F7;border-radius:12px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;}
-.info-box{background:#F2F2F7;border-radius:12px;padding:12px;margin-bottom:12px;font-size:17px;color:#3C3C43;}
+.total-box{padding:13px 14px;background:#D8E0E8;border-radius:12px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;}
+.info-box{background:#D8E0E8;border-radius:12px;padding:12px;margin-bottom:12px;font-size:17px;color:#3C3C43;}
 .info-box strong{color:#1C1C1E;}
 .warn-block{background:#FFF8E0;border-radius:12px;padding:12px;margin-bottom:12px;font-size:17px;color:#7A5500;font-weight:500;}
 .danger-block{background:#FFE8E8;border-radius:12px;padding:12px;margin-bottom:12px;font-size:17px;color:#A0200A;font-weight:600;}
@@ -120,7 +120,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 
 
 <!-- LOGIN -->
-<div id="screen-login" style="display:flex;align-items:center;justify-content:center;min-height:100vh;background:#F2F2F7;position:fixed;inset:0;z-index:500;transition:opacity 0.3s;">
+<div id="screen-login" style="display:flex;align-items:center;justify-content:center;min-height:100vh;background:#D8E0E8;position:fixed;inset:0;z-index:500;transition:opacity 0.3s;">
   <div style="background:#fff;border-radius:24px;padding:40px 32px;width:90%;max-width:380px;text-align:center;box-shadow:0 4px 32px rgba(0,0,0,0.10);">
     <div id="login-logo" style="margin-bottom:20px;"></div>
     <div style="font-size:22px;font-weight:700;letter-spacing:-0.3px;margin-bottom:6px;">Tambo Cañada Negra</div>
@@ -226,12 +226,12 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
   <div style="background:#fff;border-radius:18px;padding:14px;margin-bottom:10px;">
     <div style="font-size:18px;font-weight:800;color:#1C1C1E;margin-bottom:12px;">Ciclo de Cría</div>
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:9px;">
-      <div style="background:#F2F2F7;border-radius:14px;padding:20px 14px;text-align:center;min-height:110px;">
+      <div style="background:#D8E0E8;border-radius:14px;padding:20px 14px;text-align:center;min-height:110px;">
         <div style="font-size:22px;margin-bottom:4px;">🍼</div>
         <div style="font-size:38px;font-weight:900;color:#6B35D4;line-height:1;letter-spacing:-0.5px;" id="m-guachera">—</div>
         <div style="font-size:13px;color:#8E8E93;font-weight:700;margin-top:4px;">Guachera</div>
       </div>
-      <div style="background:#F2F2F7;border-radius:14px;padding:20px 14px;text-align:center;min-height:110px;">
+      <div style="background:#D8E0E8;border-radius:14px;padding:20px 14px;text-align:center;min-height:110px;">
         <div style="font-size:22px;margin-bottom:4px;">🐄</div>
         <div style="font-size:38px;font-weight:900;color:#1C1C1E;line-height:1;letter-spacing:-0.5px;" id="m-recria-total">—</div>
         <div style="font-size:13px;color:#8E8E93;font-weight:700;margin-top:4px;">Recría</div>
@@ -652,8 +652,8 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
   <div class="card">
     <div class="section-title">Registrar producción</div>
     <div class="field-row">
-      <div><label>Fecha</label><input type="date" id="l-fecha" style="width:100%;padding:12px 14px;border:1px solid #C8C8CE;border-radius:12px;font-size:16px;box-sizing:border-box;transition:border-color 0.15s,background 0.15s;" onfocus="this.style.borderColor='#1060C0';this.style.background='#EEF4FF';" onblur="if(!this.value){this.style.borderColor='#C8C8CE';this.style.background='';}" oninput="if(this.value){this.style.background='#EEF4FF';this.style.borderColor='#1060C0';}else{this.style.background='';this.style.borderColor='#C8C8CE';}"></div>
-      <div><label>Vacas en ordeñe</label><input type="number" id="l-vacas" inputmode="numeric" placeholder="Auto" style="width:100%;padding:12px 14px;border:1px solid #C8C8CE;border-radius:12px;font-size:16px;box-sizing:border-box;transition:border-color 0.15s,background 0.15s;" onfocus="this.style.borderColor='#1060C0';this.style.background='#EEF4FF';" onblur="if(!this.value){this.style.borderColor='#C8C8CE';this.style.background='';}" oninput="if(this.value){this.style.background='#EEF4FF';this.style.borderColor='#1060C0';}else{this.style.background='';this.style.borderColor='#C8C8CE';}"></div>
+      <div><label>Fecha</label><input type="date" id="l-fecha" style="width:100%;padding:12px 14px;border:1px solid #C8C8CE;border-radius:12px;font-size:16px;box-sizing:border-box;transition:border-color 0.15s,background 0.15s;" onfocus="this.style.borderColor='#E8A020';this.style.background='#FFF8E8';" onblur="if(!this.value){this.style.borderColor='#C8C8CE';this.style.background='';}" oninput="if(this.value){this.style.background='#FFF8E8';this.style.borderColor='#E8A020';}else{this.style.background='';this.style.borderColor='#C8C8CE';}"></div>
+      <div><label>Vacas en ordeñe</label><input type="number" id="l-vacas" inputmode="numeric" placeholder="Auto" style="width:100%;padding:12px 14px;border:1px solid #C8C8CE;border-radius:12px;font-size:16px;box-sizing:border-box;transition:border-color 0.15s,background 0.15s;" onfocus="this.style.borderColor='#E8A020';this.style.background='#FFF8E8';" onblur="if(!this.value){this.style.borderColor='#C8C8CE';this.style.background='';}" oninput="if(this.value){this.style.background='#FFF8E8';this.style.borderColor='#E8A020';}else{this.style.background='';this.style.borderColor='#C8C8CE';}"></div>
     </div>
     <div id="l-entregas-container">
       <label style="font-size:13px;font-weight:600;color:#3C3C43;display:block;margin-bottom:6px;">Entregas por empresa</label>
@@ -681,12 +681,12 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
       </div>
     </div>
     <div class="field-row">
-      <div><label>UFC</label><input type="number" id="l-ufc" inputmode="decimal" placeholder="0" style="width:100%;padding:12px 14px;border:1px solid #C8C8CE;border-radius:12px;font-size:16px;box-sizing:border-box;transition:border-color 0.15s,background 0.15s;" onfocus="this.style.borderColor='#1060C0';this.style.background='#EEF4FF';" onblur="if(!this.value){this.style.borderColor='#C8C8CE';this.style.background='';}" oninput="if(this.value){this.style.background='#EEF4FF';this.style.borderColor='#1060C0';}else{this.style.background='';this.style.borderColor='#C8C8CE';}" oninput="validarCalidad();"></div>
-      <div><label>Células Somáticas</label><input type="number" id="l-cs" inputmode="decimal" placeholder="0" style="width:100%;padding:12px 14px;border:1px solid #C8C8CE;border-radius:12px;font-size:16px;box-sizing:border-box;transition:border-color 0.15s,background 0.15s;" onfocus="this.style.borderColor='#1060C0';this.style.background='#EEF4FF';" onblur="if(!this.value){this.style.borderColor='#C8C8CE';this.style.background='';}" oninput="if(this.value){this.style.background='#EEF4FF';this.style.borderColor='#1060C0';}else{this.style.background='';this.style.borderColor='#C8C8CE';}" oninput="validarCalidad();"></div>
+      <div><label>UFC</label><input type="number" id="l-ufc" inputmode="decimal" placeholder="0" style="width:100%;padding:12px 14px;border:1px solid #C8C8CE;border-radius:12px;font-size:16px;box-sizing:border-box;transition:border-color 0.15s,background 0.15s;" onfocus="this.style.borderColor='#E8A020';this.style.background='#FFF8E8';" onblur="if(!this.value){this.style.borderColor='#C8C8CE';this.style.background='';}" oninput="if(this.value){this.style.background='#FFF8E8';this.style.borderColor='#E8A020';}else{this.style.background='';this.style.borderColor='#C8C8CE';}" oninput="validarCalidad();"></div>
+      <div><label>Células Somáticas</label><input type="number" id="l-cs" inputmode="decimal" placeholder="0" style="width:100%;padding:12px 14px;border:1px solid #C8C8CE;border-radius:12px;font-size:16px;box-sizing:border-box;transition:border-color 0.15s,background 0.15s;" onfocus="this.style.borderColor='#E8A020';this.style.background='#FFF8E8';" onblur="if(!this.value){this.style.borderColor='#C8C8CE';this.style.background='';}" oninput="if(this.value){this.style.background='#FFF8E8';this.style.borderColor='#E8A020';}else{this.style.background='';this.style.borderColor='#C8C8CE';}" oninput="validarCalidad();"></div>
     </div>
     <div class="field-row">
-      <div><label>Grasa %</label><input type="number" id="l-grasa" inputmode="decimal" placeholder="0" style="width:100%;padding:12px 14px;border:1px solid #C8C8CE;border-radius:12px;font-size:16px;box-sizing:border-box;transition:border-color 0.15s,background 0.15s;" onfocus="this.style.borderColor='#1060C0';this.style.background='#EEF4FF';" onblur="if(!this.value){this.style.borderColor='#C8C8CE';this.style.background='';}" oninput="if(this.value){this.style.background='#EEF4FF';this.style.borderColor='#1060C0';}else{this.style.background='';this.style.borderColor='#C8C8CE';}" oninput="validarCalidad();"></div>
-      <div><label>Proteína %</label><input type="number" id="l-proteina" inputmode="decimal" placeholder="0" style="width:100%;padding:12px 14px;border:1px solid #C8C8CE;border-radius:12px;font-size:16px;box-sizing:border-box;transition:border-color 0.15s,background 0.15s;" onfocus="this.style.borderColor='#1060C0';this.style.background='#EEF4FF';" onblur="if(!this.value){this.style.borderColor='#C8C8CE';this.style.background='';}" oninput="if(this.value){this.style.background='#EEF4FF';this.style.borderColor='#1060C0';}else{this.style.background='';this.style.borderColor='#C8C8CE';}" oninput="validarCalidad();"></div>
+      <div><label>Grasa %</label><input type="number" id="l-grasa" inputmode="decimal" placeholder="0" style="width:100%;padding:12px 14px;border:1px solid #C8C8CE;border-radius:12px;font-size:16px;box-sizing:border-box;transition:border-color 0.15s,background 0.15s;" onfocus="this.style.borderColor='#E8A020';this.style.background='#FFF8E8';" onblur="if(!this.value){this.style.borderColor='#C8C8CE';this.style.background='';}" oninput="if(this.value){this.style.background='#FFF8E8';this.style.borderColor='#E8A020';}else{this.style.background='';this.style.borderColor='#C8C8CE';}" oninput="validarCalidad();"></div>
+      <div><label>Proteína %</label><input type="number" id="l-proteina" inputmode="decimal" placeholder="0" style="width:100%;padding:12px 14px;border:1px solid #C8C8CE;border-radius:12px;font-size:16px;box-sizing:border-box;transition:border-color 0.15s,background 0.15s;" onfocus="this.style.borderColor='#E8A020';this.style.background='#FFF8E8';" onblur="if(!this.value){this.style.borderColor='#C8C8CE';this.style.background='';}" oninput="if(this.value){this.style.background='#FFF8E8';this.style.borderColor='#E8A020';}else{this.style.background='';this.style.borderColor='#C8C8CE';}" oninput="validarCalidad();"></div>
     </div>
     <button class="btn-primary" id="btn-guardar-cal" onclick="guardarCalidad()">Guardar calidad</button>
     <button class="btn-secondary" onclick="goBack()" style="margin-top:6px;">Cancelar</button>
@@ -708,7 +708,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 </div>
 
 <div id="screen-rodeo" class="screen" style="padding-top:0;">
-  <div id="rodeo-search-bar" style="position:sticky;top:0;z-index:10;background:#F2F2F7;padding:8px 0 4px;">
+  <div id="rodeo-search-bar" style="position:sticky;top:0;z-index:10;background:#D8E0E8;padding:8px 0 4px;">
   <div style="margin-bottom:6px;">
     <input type="text" id="rodeo-buscar" placeholder="Buscar por RP..." inputmode="numeric" oninput="renderRodeo()" style="width:100%;padding:11px 14px;border:0.5px solid #C8C8CE;border-radius:12px;font-size:17px;background:#fff;color:#1C1C1E;">
   </div>
@@ -1474,7 +1474,7 @@ function abrirFicha(rp) {
   var navEl = document.getElementById('main-nav');
   var navBottom = navEl ? navEl.getBoundingClientRect().bottom : 112;
   var stickyTop = navEl ? navEl.offsetTop + navEl.offsetHeight : 112;
-  stickyHdr.style.cssText = 'position:sticky;top:130px;z-index:98;background:#F2F2F7;padding:8px 16px 10px;margin:-16px -16px 8px;border-bottom:0.5px solid rgba(0,0,0,0.08);';
+  stickyHdr.style.cssText = 'position:sticky;top:130px;z-index:98;background:#D8E0E8;padding:8px 16px 10px;margin:-16px -16px 8px;border-bottom:0.5px solid rgba(0,0,0,0.08);';
   var volverBtn = document.createElement('button');
   volverBtn.style.cssText = 'background:none;border:none;color:#1C1C1E;font-size:14px;font-weight:600;cursor:pointer;padding:0 0 8px;display:block;';
   volverBtn.textContent = '← Volver al Padrón';
@@ -1603,7 +1603,7 @@ function abrirFichaJoven(rp) {
   }
 
   var hdr=document.createElement('div'); hdr.style.cssText='display:flex;align-items:center;gap:14px;margin-bottom:16px;';
-  var icon=document.createElement('div'); icon.style.cssText='width:52px;height:52px;border-radius:50%;background:#F2F2F7;display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0;'; icon.textContent=a.sexo==='H'?'🐄':'🐂';
+  var icon=document.createElement('div'); icon.style.cssText='width:52px;height:52px;border-radius:50%;background:#D8E0E8;display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0;'; icon.textContent=a.sexo==='H'?'🐄':'🐂';
   var info=document.createElement('div'); info.style.flex='1';
   info.innerHTML='<div style="font-size:20px;font-weight:700;">RP '+a.rp+'</div><div style="font-size:15px;font-weight:500;color:#3C3C43;">'+a.nombre+'</div><div style="font-size:13px;color:#8E8E93;">'+(a.cat||'')+' · '+edadStr(a.fechaNac)+(enG&&!enG.salio?' · En guachera':'')+'</div>';
   hdr.appendChild(icon); hdr.appendChild(info); cont.appendChild(hdr);
@@ -2297,7 +2297,7 @@ function abrirModalEventoVaca(a) {
   }
   opcionesVisibles.forEach(function(o) {
     var b=document.createElement('button');
-    b.style.cssText='width:100%;padding:13px;border-radius:14px;font-size:15px;font-weight:500;cursor:pointer;text-align:left;'+(o.danger?'background:#fff;color:#A0200A;border:0.5px solid #FFD6D6;':'background:#F2F2F7;color:#1C1C1E;border:none;');
+    b.style.cssText='width:100%;padding:13px;border-radius:14px;font-size:15px;font-weight:500;cursor:pointer;text-align:left;'+(o.danger?'background:#fff;color:#A0200A;border:0.5px solid #FFD6D6;':'background:#D8E0E8;color:#1C1C1E;border:none;');
     b.textContent=o.label;
     b.onclick=o.fn;
     cont.appendChild(b);
@@ -3201,16 +3201,16 @@ function editarProduccion(fecha) {
   if(reg.ucalac > 0) {
     var emp1 = document.getElementById('l-emp-1');
     var lts1 = document.getElementById('l-lts-1');
-    if(emp1) { emp1.value = 'Ucalac SA'; emp1.style.background='#EEF4FF'; emp1.style.borderColor='#1060C0'; }
-    if(lts1) { lts1.value = reg.ucalac; lts1.style.background='#EEF4FF'; lts1.style.borderColor='#1060C0'; }
+    if(emp1) { emp1.value = 'Ucalac SA'; emp1.style.background='#FFF8E8'; emp1.style.borderColor='#E8A020'; }
+    if(lts1) { lts1.value = reg.ucalac; lts1.style.background='#FFF8E8'; lts1.style.borderColor='#E8A020'; }
   }
   // Precargar Saputo si hay
   if(reg.saputo > 0) {
     agregarFilaEmpresa();
     var emp2 = document.getElementById('l-emp-2');
     var lts2 = document.getElementById('l-lts-2');
-    if(emp2) { emp2.value = 'Saputo'; emp2.style.background='#EEF4FF'; emp2.style.borderColor='#1060C0'; }
-    if(lts2) { lts2.value = reg.saputo; lts2.style.background='#EEF4FF'; lts2.style.borderColor='#1060C0'; }
+    if(emp2) { emp2.value = 'Saputo'; emp2.style.background='#FFF8E8'; emp2.style.borderColor='#E8A020'; }
+    if(lts2) { lts2.value = reg.saputo; lts2.style.background='#FFF8E8'; lts2.style.borderColor='#E8A020'; }
   }
   // Scroll al formulario
   var form = document.querySelector('#screen-leche .card');
@@ -3471,7 +3471,7 @@ function abrirControlLechero() {
         inpM.type = 'number'; inpM.inputMode = 'decimal';
         inpM.placeholder = '0'; inpM.id = 'cl-m-'+a.rp;
         inpM.style.cssText = 'width:100%;padding:10px 4px;border:1.5px solid #C8C8CE;border-radius:8px;font-size:20px;font-weight:700;text-align:center;box-sizing:border-box;transition:border-color 0.15s;';
-        inpM.onfocus = function(){ this.style.borderColor='#1060C0'; this.style.background='#EEF4FF'; };
+        inpM.onfocus = function(){ this.style.borderColor='#E8A020'; this.style.background='#FFF8E8'; };
         inpM.onblur = function(){ this.style.borderColor='#C8C8CE'; this.style.background=''; };
         inpM.oninput = function(){ actualizarTotalCL(a.rp); };
 
@@ -3480,7 +3480,7 @@ function abrirControlLechero() {
         inpT.type = 'number'; inpT.inputMode = 'decimal';
         inpT.placeholder = '0'; inpT.id = 'cl-t-'+a.rp;
         inpT.style.cssText = 'width:100%;padding:10px 4px;border:1.5px solid #C8C8CE;border-radius:8px;font-size:20px;font-weight:700;text-align:center;box-sizing:border-box;transition:border-color 0.15s;';
-        inpT.onfocus = function(){ this.style.borderColor='#1060C0'; this.style.background='#EEF4FF'; };
+        inpT.onfocus = function(){ this.style.borderColor='#E8A020'; this.style.background='#FFF8E8'; };
         inpT.onblur = function(){ this.style.borderColor='#C8C8CE'; this.style.background=''; };
         inpT.oninput = function(){ actualizarTotalCL(a.rp); };
 
@@ -3764,7 +3764,7 @@ function agregarFilaEmpresa() {
   sel.id = 'l-emp-'+idx;
   sel.style.cssText = 'flex:1.5;padding:12px 10px;border:1px solid #C8C8CE;border-radius:10px;font-size:16px;background:#fff;transition:border-color 0.15s,background 0.15s;box-sizing:border-box;';
   sel.addEventListener('change', function(){
-    if(sel.value && sel.value !== '__nueva__'){ sel.style.background='#EEF4FF'; sel.style.borderColor='#1060C0'; }
+    if(sel.value && sel.value !== '__nueva__'){ sel.style.background='#FFF8E8'; sel.style.borderColor='#E8A020'; }
     else { sel.style.background='#fff'; sel.style.borderColor='#C8C8CE'; }
   });
   sel.innerHTML = '<option value="">Empresa...</option>';
@@ -3800,10 +3800,10 @@ function agregarFilaEmpresa() {
   inp.placeholder = 'Litros';
   inp.id = 'l-lts-'+idx;
   inp.style.cssText = 'flex:1;padding:12px 10px;border:1px solid #C8C8CE;border-radius:10px;font-size:16px;transition:border-color 0.15s,background 0.15s;box-sizing:border-box;';
-  inp.onfocus = function(){ this.style.borderColor='#1060C0'; this.style.background='#EEF4FF'; };
+  inp.onfocus = function(){ this.style.borderColor='#E8A020'; this.style.background='#FFF8E8'; };
   inp.onblur = function(){ if(!this.value){ this.style.borderColor='#C8C8CE'; this.style.background=''; } };
   inp.oninput = function(){
-    if(this.value){ this.style.background='#EEF4FF'; this.style.borderColor='#1060C0'; }
+    if(this.value){ this.style.background='#FFF8E8'; this.style.borderColor='#E8A020'; }
     else { this.style.background=''; this.style.borderColor='#C8C8CE'; }
     validarProduccion();
   };
