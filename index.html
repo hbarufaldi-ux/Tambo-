@@ -4299,22 +4299,22 @@ function limpiarFilasEmpresa() {
 <div id="modal-rechazo" style="display:none;position:fixed;inset:0;z-index:500;background:rgba(0,0,0,0.5);align-items:flex-end;justify-content:center;">
   <div style="background:#fff;border-radius:24px 24px 0 0;padding:24px 20px 36px;width:100%;max-width:480px;">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
-      <div style="font-size:18px;font-weight:800;color:#1C1C1E;">Evaluar rechazo</div>
+      <div style="font-size:19px;font-weight:800;color:#1C1C1E;">Evaluar rechazo</div>
       <button onclick="cerrarModalRechazo()" style="background:none;border:none;font-size:24px;color:#8E8E93;cursor:pointer;">✕</button>
     </div>
-    <div id="modal-rechazo-rp" style="font-size:14px;color:#8E8E93;margin-bottom:16px;"></div>
+    <div id="modal-rechazo-rp" style="font-size:15px;color:#8E8E93;margin-bottom:16px;"></div>
     <div style="display:flex;flex-direction:column;gap:10px;">
       <button onclick="accionRechazo('seguir')" style="padding:14px;border:1px solid #D0D5DC;border-radius:14px;background:#F2F2F7;font-size:15px;font-weight:600;cursor:pointer;text-align:left;">
         🔄 Seguir inseminando
-        <div style="font-size:12px;color:#8E8E93;font-weight:400;margin-top:2px;">Continuar con el protocolo actual</div>
+        <div style="font-size:13px;color:#8E8E93;font-weight:400;margin-top:2px;">Continuar con el protocolo actual</div>
       </button>
       <button onclick="accionRechazo('aprobar1')" style="padding:14px;border:1px solid #F0C040;border-radius:14px;background:#FFF3CC;font-size:15px;font-weight:600;cursor:pointer;text-align:left;color:#7A5500;">
         ⚠️ Aprobar 1 servicio más
-        <div style="font-size:12px;color:#7A5500;font-weight:400;margin-top:2px;">Último intento antes de decidir</div>
+        <div style="font-size:13px;color:#7A5500;font-weight:400;margin-top:2px;">Último intento antes de decidir</div>
       </button>
       <button onclick="accionRechazo('rechazo')" style="padding:14px;border:1px solid #FFB3B3;border-radius:14px;background:#FFE8E8;font-size:15px;font-weight:600;cursor:pointer;text-align:left;color:#A0200A;">
         ❌ Marcar como rechazo
-        <div style="font-size:12px;color:#A0200A;font-weight:400;margin-top:2px;">Se venderá cuando produzca ≤ <span id="modal-rechazo-litros"></span> lts</div>
+        <div style="font-size:13px;color:#A0200A;font-weight:400;margin-top:2px;">Se venderá cuando produzca ≤ <span id="modal-rechazo-litros"></span> lts</div>
       </button>
     </div>
   </div>
@@ -4324,22 +4324,22 @@ function limpiarFilasEmpresa() {
 <div id="modal-baja-prod" style="display:none;position:fixed;inset:0;z-index:500;background:rgba(0,0,0,0.5);align-items:flex-end;justify-content:center;">
   <div style="background:#fff;border-radius:24px 24px 0 0;padding:24px 20px 36px;width:100%;max-width:480px;">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
-      <div style="font-size:18px;font-weight:800;color:#1C1C1E;">Producción baja</div>
+      <div style="font-size:19px;font-weight:800;color:#1C1C1E;">Producción baja</div>
       <button onclick="cerrarModalBajaProd()" style="background:none;border:none;font-size:24px;color:#8E8E93;cursor:pointer;">✕</button>
     </div>
-    <div id="modal-baja-rp" style="font-size:14px;color:#8E8E93;margin-bottom:4px;"></div>
-    <div id="modal-baja-prod-val" style="font-size:32px;font-weight:900;color:#A0200A;margin-bottom:16px;"></div>
+    <div id="modal-baja-rp" style="font-size:15px;color:#8E8E93;margin-bottom:4px;"></div>
+    <div id="modal-baja-prod-val" style="font-size:34px;font-weight:900;color:#A0200A;margin-bottom:16px;"></div>
     <div style="display:flex;flex-direction:column;gap:10px;">
       <button onclick="abrirFicha(modalAlertaRp);cerrarModalBajaProd();" style="padding:14px;border:1px solid #D0D5DC;border-radius:14px;background:#F2F2F7;font-size:15px;font-weight:600;cursor:pointer;text-align:left;">
         📋 Ver ficha del animal
-        <div style="font-size:12px;color:#8E8E93;font-weight:400;margin-top:2px;">Revisar historial y registrar evento</div>
+        <div style="font-size:13px;color:#8E8E93;font-weight:400;margin-top:2px;">Revisar historial y registrar evento</div>
       </button>
       <button onclick="accionBajaProd('rechazo')" style="padding:14px;border:1px solid #FFB3B3;border-radius:14px;background:#FFE8E8;font-size:15px;font-weight:600;cursor:pointer;text-align:left;color:#A0200A;">
         ❌ Marcar como rechazo
-        <div style="font-size:12px;color:#A0200A;font-weight:400;margin-top:2px;">Producción por debajo del umbral de venta</div>
+        <div style="font-size:13px;color:#A0200A;font-weight:400;margin-top:2px;">Producción por debajo del umbral de venta</div>
       </button>
       <button onclick="cerrarModalBajaProd()" style="padding:14px;border:1px solid #D0D5DC;border-radius:14px;background:#fff;font-size:15px;font-weight:600;cursor:pointer;text-align:left;color:#8E8E93;">
-        Ignorar por ahora
+        👌 OK, ignorar por ahora
       </button>
     </div>
   </div>
