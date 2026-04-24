@@ -934,7 +934,20 @@ function showToast(msg, err) {
   setTimeout(function(){t.className='toast';},3000);
 }
 function showSaving(v) { document.getElementById('saving-overlay').style.display=v?'flex':'none'; }
-function setSyncStatus(msg) { var el=document.getElementById('sync-status'); if(el) el.textContent=msg; }
+function setSyncStatus(msg) {
+  var el=document.getElementById('sync-status');
+  if(!el) return;
+  el.textContent=msg;
+  if(msg.startsWith('⟳') || msg.includes('actualizando') || msg.includes('Cargando') || msg.includes('Sincronizando') || msg.includes('Guardando')) {
+    el.style.color='#F0A500'; // amarillo
+  } else if(msg.startsWith('⚠') || msg.startsWith('✕')) {
+    el.style.color='#FF453A'; // rojo
+  } else if(msg.includes('animales') || msg === '● Sincronizado') {
+    el.style.color='#30D158'; // verde
+  } else {
+    el.style.color='#555'; // gris default
+  }
+}
 function generarID(pre, rp) { return pre+'_'+rp+'_'+Date.now(); }
 
 // ---- CATEGORIAS ----
@@ -2137,7 +2150,7 @@ async function enviarASheets(hoja, fila, datosExtra) {
   try {
     var payload = {hoja:hoja, fila:fila, rp:String(fila[2]||''), datos:datosExtra||{}};
     await fetch(SCRIPT_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
-    setSyncStatus('● '+(usuarioActual&&usuarioActual.nombre?usuarioActual.nombre:'Sincronizado')); showSaving(false); return true;
+    setSyncStatus('● '+rodeo.length+' animales'); showSaving(false); return true;
   } catch(e) {
     agregarPendiente(hoja, fila);
     var nPend = leerPendientes().length;
@@ -2630,7 +2643,7 @@ function handleCredentialResponse(response) {
   document.querySelector('.topbar').style.display='flex';
   document.getElementById('main-nav').style.display='flex';
   aplicarRol(usuario.rol);
-  setSyncStatus('● '+usuario.nombre); var tn=document.getElementById('topbar-nombre'); if(tn) tn.textContent=CONFIG.nombreTambo;
+  setSyncStatus('⟳ Cargando padrón...'); var tn=document.getElementById('topbar-nombre'); if(tn) tn.textContent=CONFIG.nombreTambo;
   setTimeout(function(){
     init();
     var topbar = document.querySelector('.topbar');
@@ -2961,7 +2974,7 @@ window.addEventListener('load', function() {
       document.querySelector('.topbar').style.display = 'flex';
       document.getElementById('main-nav').style.display = 'flex';
       aplicarRol(s.rol);
-      setSyncStatus('● ' + s.nombre);
+      setSyncStatus('⟳ Cargando padrón...');
       // Actualizar timestamp
       s.ts = Date.now();
       localStorage.setItem('tambo_sesion', JSON.stringify(s));
