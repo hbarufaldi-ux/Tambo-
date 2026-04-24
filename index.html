@@ -29,7 +29,7 @@ html{scrollbar-gutter:stable;}body{font-family:-apple-system,BlinkMacSystemFont,
 .rf-btn.rf-active{background:#1C1C1E;color:#fff;border-color:#1C1C1E;}
 input[type=text]:not([style]),input[type=number]:not([style]),input[type=date]:not([style]),select:not([style]),textarea:not([style]){background:#EBF0F5;border:1px solid #B0BCC8;}
 input[type=text]:focus,input[type=number]:focus,input[type=date]:focus,select:focus,textarea:focus{background:#FFF8E8;border-color:#E8A020;outline:none;}
-.section-title{font-size:16px;font-weight:800;color:#1C1C1E;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:12px;}
+.section-title{font-size:16px;font-weight:800;color:#1C1C1E;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:12px;}.form-row{margin-bottom:14px;}.form-label{display:block;font-size:13px;font-weight:600;color:#6B6B75;margin-bottom:5px;text-transform:uppercase;letter-spacing:0.04em;}.form-input{width:100%;padding:11px 14px;border:1px solid #D0D5DC;border-radius:12px;font-size:16px;color:#1C1C1E;background:#FAFAFA;-webkit-appearance:none;}
 .field{margin-bottom:12px;}
 .field-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;}
 .field-row.three{grid-template-columns:1fr 1fr 1fr;}
@@ -94,9 +94,12 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 <body>
 
 <div class="topbar">
-  <div style="display:flex;flex-direction:column;line-height:1.2;">
-    <div class="topbar-title">Cañada Negra</div>
-    <div id="sync-status" style="font-size:15px;color:#555;font-weight:600;">● Listo</div>
+  <div style="display:flex;align-items:center;gap:10px;">
+    <div style="display:flex;flex-direction:column;line-height:1.2;">
+      <div class="topbar-title" id="topbar-nombre">Cañada Negra</div>
+      <div id="sync-status" style="font-size:15px;color:#555;font-weight:600;">● Listo</div>
+    </div>
+    <button onclick="goTo('config')" style="background:none;border:none;font-size:22px;cursor:pointer;padding:4px 6px;color:#555;line-height:1;" title="Configuración">⚙</button>
   </div>
   <div style="display:flex;align-items:center;gap:10px;">
     <button onclick="cerrarSesion()" style="font-size:15px;font-weight:700;color:#1C1C1E;background:none;border:1px solid #C0C0C0;border-radius:8px;cursor:pointer;padding:4px 12px;">Salir</button>
@@ -820,10 +823,45 @@ function drawDonut(id,pct,color){
 <script>
 var SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxPT8TP7gpxNsVBXTbNIjW70SQtJdIu2iYOiBvvFKbxtQCPXZZ0DEUMfz241U7tVrEPEQ/exec';
 var TODAY = new Date().toISOString().split('T')[0];
-var CONFIG = {
+var CONFIG_DEFAULT = {
+  // General
+  nombreTambo: 'Cañada Negra',
+  superficie: '',
+  ubicacion: '',
+  // Producción
+  unidad: 'litros',
   litrosR1: 23,
+  umbralBajaProduccion: 10,
+  litrosVentaRechazo: 10,
+  // Reproducción
+  diasEsperaPosparto: 45,
+  umbralServicios: 5,
+  // Secado
+  diasAntesPartoSecar: 60,
+  diasAlertaSecado: 10,
+  // Padrón
   diasR4: 7,
 };
+
+var CONFIG = Object.assign({}, CONFIG_DEFAULT);
+
+function cargarConfig() {
+  try {
+    var s = localStorage.getItem('tambo_config');
+    if (s) {
+      var saved = JSON.parse(s);
+      Object.keys(CONFIG_DEFAULT).forEach(function(k) {
+        if (saved[k] !== undefined) CONFIG[k] = saved[k];
+      });
+    }
+  } catch(e) {}
+}
+
+function guardarConfig() {
+  try { localStorage.setItem('tambo_config', JSON.stringify(CONFIG)); } catch(e) {}
+}
+
+cargarConfig();
 var filtroRodeo = {prod: null, repro: null};
 var _navStack = []; // historial de pantallas
 var registrosRecientes = {celo:[], insem:[], parto:[], prod:[]};
@@ -1310,6 +1348,70 @@ function ajustarMarginPadron(){
   if(!bar||!card) return;
   var mt=148+bar.offsetHeight-156+8;
   card.style.marginTop=mt+'px';
+}
+
+
+// ---- CONFIGURACIÓN UI ----
+function renderConfig() {
+  var fields = ['nombreTambo','superficie','ubicacion','unidad','litrosR1',
+    'umbralBajaProduccion','litrosVentaRechazo','diasEsperaPosparto',
+    'umbralServicios','diasAntesPartoSecar','diasAlertaSecado'];
+  fields.forEach(function(k) {
+    var el = document.getElementById('cfg-' + k);
+    if (el) el.value = CONFIG[k] !== undefined ? CONFIG[k] : '';
+  });
+  actualizarUnidadesConfig();
+  actualizarAlertaPreview();
+  // event listeners para preview en vivo
+  var secar = document.getElementById('cfg-diasAntesPartoSecar');
+  var alerta = document.getElementById('cfg-diasAlertaSecado');
+  if (secar) secar.oninput = actualizarAlertaPreview;
+  if (alerta) alerta.oninput = actualizarAlertaPreview;
+  var unidad = document.getElementById('cfg-unidad');
+  if (unidad) unidad.onchange = actualizarUnidadesConfig;
+}
+
+function actualizarUnidadesConfig() {
+  var u = (document.getElementById('cfg-unidad') || {}).value || CONFIG.unidad;
+  ['cfg-litrosR1-unit','cfg-umbralBaja-unit','cfg-litrosVenta-unit'].forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) el.textContent = u;
+  });
+}
+
+function actualizarAlertaPreview() {
+  var secar = parseInt((document.getElementById('cfg-diasAntesPartoSecar') || {}).value) || CONFIG.diasAntesPartoSecar;
+  var alerta = parseInt((document.getElementById('cfg-diasAlertaSecado') || {}).value) || CONFIG.diasAlertaSecado;
+  var el = document.getElementById('cfg-alerta-preview');
+  if (el) el.textContent = (secar + alerta);
+}
+
+function guardarConfigUI() {
+  CONFIG.nombreTambo        = document.getElementById('cfg-nombreTambo').value.trim() || CONFIG_DEFAULT.nombreTambo;
+  CONFIG.superficie         = document.getElementById('cfg-superficie').value;
+  CONFIG.ubicacion          = document.getElementById('cfg-ubicacion').value.trim();
+  CONFIG.unidad             = document.getElementById('cfg-unidad').value;
+  CONFIG.litrosR1           = parseFloat(document.getElementById('cfg-litrosR1').value) || CONFIG_DEFAULT.litrosR1;
+  CONFIG.umbralBajaProduccion = parseFloat(document.getElementById('cfg-umbralBajaProduccion').value) || CONFIG_DEFAULT.umbralBajaProduccion;
+  CONFIG.litrosVentaRechazo = parseFloat(document.getElementById('cfg-litrosVentaRechazo').value) || CONFIG_DEFAULT.litrosVentaRechazo;
+  CONFIG.diasEsperaPosparto = parseInt(document.getElementById('cfg-diasEsperaPosparto').value) || CONFIG_DEFAULT.diasEsperaPosparto;
+  CONFIG.umbralServicios    = parseInt(document.getElementById('cfg-umbralServicios').value) || CONFIG_DEFAULT.umbralServicios;
+  CONFIG.diasAntesPartoSecar= parseInt(document.getElementById('cfg-diasAntesPartoSecar').value) || CONFIG_DEFAULT.diasAntesPartoSecar;
+  CONFIG.diasAlertaSecado   = parseInt(document.getElementById('cfg-diasAlertaSecado').value) || CONFIG_DEFAULT.diasAlertaSecado;
+  guardarConfig();
+  // Actualizar nombre en topbar
+  var el = document.getElementById('topbar-nombre');
+  if (el) el.textContent = CONFIG.nombreTambo;
+  showToast('Configuración guardada ✓');
+  goTo('dashboard');
+}
+
+function resetConfig() {
+  if (!confirm('¿Restaurar todos los valores por defecto?')) return;
+  Object.keys(CONFIG_DEFAULT).forEach(function(k) { CONFIG[k] = CONFIG_DEFAULT[k]; });
+  guardarConfig();
+  renderConfig();
+  showToast('Valores restaurados');
 }
 
 function renderRodeo() {
@@ -2215,6 +2317,7 @@ function goTo(screen, btn) {
   if(screen==='produccion') renderRecientes('prod');
   if(screen==='recria') renderRecria();
   if(screen==='dashboard') renderDashboard();
+  if(screen==='config') renderConfig();
   window.scrollTo(0,0);
 
 }
@@ -2527,7 +2630,7 @@ function handleCredentialResponse(response) {
   document.querySelector('.topbar').style.display='flex';
   document.getElementById('main-nav').style.display='flex';
   aplicarRol(usuario.rol);
-  setSyncStatus('● '+usuario.nombre);
+  setSyncStatus('● '+usuario.nombre); var tn=document.getElementById('topbar-nombre'); if(tn) tn.textContent=CONFIG.nombreTambo;
   setTimeout(function(){
     init();
     var topbar = document.querySelector('.topbar');
@@ -4006,5 +4109,108 @@ function limpiarFilasEmpresa() {
     </div>
   </div>
 </div>
+
+<!-- ============================================================ -->
+<!-- CONFIGURACIÓN                                                 -->
+<!-- ============================================================ -->
+<div id="screen-config" class="screen">
+
+  <!-- GENERAL -->
+  <div class="card">
+    <div class="section-title">🏠 General</div>
+    <div class="form-row">
+      <label class="form-label">Nombre del tambo</label>
+      <input type="text" id="cfg-nombreTambo" class="form-input" placeholder="Cañada Negra">
+    </div>
+    <div class="form-row">
+      <label class="form-label">Superficie (ha)</label>
+      <input type="number" id="cfg-superficie" class="form-input" placeholder="ej: 350" inputmode="decimal">
+    </div>
+    <div class="form-row">
+      <label class="form-label">Ubicación</label>
+      <input type="text" id="cfg-ubicacion" class="form-input" placeholder="ej: Villa María, Córdoba">
+    </div>
+  </div>
+
+  <!-- PRODUCCIÓN -->
+  <div class="card">
+    <div class="section-title">🥛 Producción</div>
+    <div class="form-row">
+      <label class="form-label">Unidad de medida</label>
+      <select id="cfg-unidad" class="form-input">
+        <option value="litros">Litros</option>
+        <option value="kg">Kilogramos</option>
+      </select>
+    </div>
+    <div class="form-row">
+      <label class="form-label">Umbral alta producción (R1)</label>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <input type="number" id="cfg-litrosR1" class="form-input" inputmode="decimal" style="flex:1;">
+        <span id="cfg-litrosR1-unit" style="font-size:13px;color:#8E8E93;flex-shrink:0;">litros</span>
+      </div>
+    </div>
+    <div class="form-row">
+      <label class="form-label">Umbral baja producción (alerta)</label>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <input type="number" id="cfg-umbralBajaProduccion" class="form-input" inputmode="decimal" style="flex:1;">
+        <span id="cfg-umbralBaja-unit" style="font-size:13px;color:#8E8E93;flex-shrink:0;">litros</span>
+      </div>
+    </div>
+    <div class="form-row">
+      <label class="form-label">Litros mínimos para vender rechazo</label>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <input type="number" id="cfg-litrosVentaRechazo" class="form-input" inputmode="decimal" style="flex:1;">
+        <span id="cfg-litrosVenta-unit" style="font-size:13px;color:#8E8E93;flex-shrink:0;">litros</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- REPRODUCCIÓN -->
+  <div class="card">
+    <div class="section-title">🐄 Reproducción</div>
+    <div class="form-row">
+      <label class="form-label">Días espera posparto (1ra insem.)</label>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <input type="number" id="cfg-diasEsperaPosparto" class="form-input" inputmode="numeric" style="flex:1;">
+        <span style="font-size:13px;color:#8E8E93;flex-shrink:0;">días</span>
+      </div>
+    </div>
+    <div class="form-row">
+      <label class="form-label">Servicios para alerta de rechazo</label>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <input type="number" id="cfg-umbralServicios" class="form-input" inputmode="numeric" style="flex:1;">
+        <span style="font-size:13px;color:#8E8E93;flex-shrink:0;">servicios</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- SECADO -->
+  <div class="card">
+    <div class="section-title">💤 Secado</div>
+    <div class="form-row">
+      <label class="form-label">Días antes del parto para secar</label>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <input type="number" id="cfg-diasAntesPartoSecar" class="form-input" inputmode="numeric" style="flex:1;">
+        <span style="font-size:13px;color:#8E8E93;flex-shrink:0;">días</span>
+      </div>
+    </div>
+    <div class="form-row">
+      <label class="form-label">Anticipación para alertar secado</label>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <input type="number" id="cfg-diasAlertaSecado" class="form-input" inputmode="numeric" style="flex:1;">
+        <span style="font-size:13px;color:#8E8E93;flex-shrink:0;">días antes</span>
+      </div>
+      <div style="font-size:12px;color:#8E8E93;margin-top:4px;">La alerta aparece cuando faltan <span id="cfg-alerta-preview">70</span> días para el parto</div>
+    </div>
+  </div>
+
+  <!-- BOTONES -->
+  <div style="display:flex;gap:10px;padding:0 0 16px;">
+    <button onclick="resetConfig()" style="flex:1;padding:14px;border:1px solid #E0E0E5;border-radius:12px;background:#fff;font-size:15px;font-weight:600;cursor:pointer;color:#8E8E93;">Restaurar</button>
+    <button onclick="guardarConfigUI()" style="flex:2;padding:14px;border:none;border-radius:12px;background:#1C1C1E;color:#fff;font-size:15px;font-weight:700;cursor:pointer;">Guardar cambios</button>
+  </div>
+
+</div>
+
 </body>
 </html>
