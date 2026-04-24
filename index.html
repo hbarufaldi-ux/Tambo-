@@ -1331,8 +1331,8 @@ function renderDashboard() {
 
       // Header
       var hdr = document.createElement('div');
-      hdr.style.cssText='display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;cursor:pointer;';
-      hdr.innerHTML='<div style="display:flex;align-items:center;gap:8px;"><div style="width:8px;height:8px;border-radius:50%;background:'+cfg.dot+';flex-shrink:0;"></div><span style="font-size:14px;font-weight:700;color:#fff;">'+cfg.label+'</span></div><div style="display:flex;align-items:center;gap:8px;"><span style="font-size:13px;font-weight:600;color:rgba(255,255,255,0.7);">'+grupos[cat].length+' animales</span>'+(cat==='tacto'?'<button onclick="event.stopPropagation();abrirTactoMasivo()" style="background:#E07000;color:#fff;border:none;border-radius:10px;padding:4px 10px;font-size:12px;font-weight:700;cursor:pointer;">📋 Lista</button>':'')+' ›</div>';
+      hdr.style.cssText='display:flex;align-items:baseline;justify-content:space-between;margin-bottom:8px;cursor:pointer;';
+      hdr.innerHTML='<div style="display:flex;align-items:baseline;gap:8px;flex:1;"><span style="display:inline-flex;align-items:center;height:1em;flex-shrink:0;"><span style="width:8px;height:8px;border-radius:50%;background:'+cfg.dot+';display:inline-block;"></span></span><span style="font-size:14px;font-weight:700;color:#fff;">'+cfg.label+'</span></div><span style="font-size:13px;font-weight:600;color:rgba(255,255,255,0.7);white-space:nowrap;">'+grupos[cat].length+' animales'+(cat==='tacto'?' <button onclick="event.stopPropagation();abrirTactoMasivo()" style="background:#E07000;color:#fff;border:none;border-radius:10px;padding:4px 10px;font-size:12px;font-weight:700;cursor:pointer;">📋 Lista</button>':'')+' ›</span>';
 
       var body = document.createElement('div');
       body.style.display='none';
@@ -1340,7 +1340,7 @@ function renderDashboard() {
 
       grupos[cat].forEach(function(a) {
         var row=document.createElement('div');
-        row.style.cssText='display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-bottom:0.5px solid rgba(0,0,0,0.06);cursor:pointer;';
+        row.style.cssText='display:flex;align-items:baseline;justify-content:space-between;padding:7px 0;border-bottom:0.5px solid rgba(0,0,0,0.06);cursor:pointer;padding-left:16px;';
         row.innerHTML='<span style="font-size:14px;font-weight:600;color:#fff;">RP '+a.rp+'</span><span style="font-size:13px;color:rgba(255,255,255,0.7);">'+a.detalle+' ›</span>';
         row.onclick=(function(al){return function(){
           if(al.cat==='parto') {
