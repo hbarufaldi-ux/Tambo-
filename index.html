@@ -181,7 +181,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
     <div style="font-size:18px;font-weight:800;color:#1C1C1E;margin-bottom:12px;">Estado Reproductivo</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px;">
       <div style="background:#B5D5F5;border-radius:14px;padding:20px 14px;min-height:110px;">
-        <div style="font-size:15px;color:#1060C0;font-weight:700;margin-bottom:8px;">Preñadas</div>
+        <div style="font-size:15px;color:#1060C0;font-weight:700;margin-bottom:8px;">PREÑADAS</div>
         <div style="display:flex;align-items:center;gap:8px;">
           <div style="font-size:38px;font-weight:900;color:#1060C0;line-height:1;" id="m-prenadas">—</div>
           <svg id="donut-prenadas" width="44" height="44" viewBox="0 0 44 44" style="flex-shrink:0;transform:rotate(-90deg)">
@@ -192,7 +192,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
         </div>
       </div>
       <div style="background:#F0D878;border-radius:14px;padding:20px 14px;min-height:110px;">
-        <div style="font-size:15px;color:#7A5500;font-weight:700;margin-bottom:8px;">Vacías</div>
+        <div style="font-size:15px;color:#7A5500;font-weight:700;margin-bottom:8px;">VACÍAS</div>
         <div style="display:flex;align-items:center;gap:8px;">
           <div style="font-size:38px;font-weight:900;color:#7A5500;line-height:1;" id="m-vacias">—</div>
           <svg id="donut-vacias" width="44" height="44" viewBox="0 0 44 44" style="flex-shrink:0;transform:rotate(-90deg)">
@@ -203,7 +203,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
         </div>
       </div>
       <div style="background:#D8C0FF;border-radius:14px;padding:20px 14px;min-height:110px;">
-        <div style="font-size:15px;color:#6B35D4;font-weight:700;margin-bottom:8px;">Inseminadas</div>
+        <div style="font-size:15px;color:#6B35D4;font-weight:700;margin-bottom:8px;">INSEMINADAS</div>
         <div style="display:flex;align-items:center;gap:8px;">
           <div style="font-size:38px;font-weight:900;color:#6B35D4;line-height:1;" id="m-inseminadas">—</div>
           <svg id="donut-inseminadas" width="44" height="44" viewBox="0 0 44 44" style="flex-shrink:0;transform:rotate(-90deg)">
@@ -214,7 +214,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
         </div>
       </div>
       <div style="background:#F5AAAA;border-radius:14px;padding:20px 14px;min-height:110px;">
-        <div style="font-size:15px;color:#A0200A;font-weight:700;margin-bottom:8px;">Rechazo</div>
+        <div style="font-size:15px;color:#A0200A;font-weight:700;margin-bottom:8px;">RECHAZO</div>
         <div style="display:flex;align-items:center;gap:8px;">
           <div style="font-size:38px;font-weight:900;color:#A0200A;line-height:1;" id="m-rechazo">—</div>
           <svg id="donut-rechazo" width="44" height="44" viewBox="0 0 44 44" style="flex-shrink:0;transform:rotate(-90deg)">
@@ -252,7 +252,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 
   <!-- ALERTAS -->
   <div style="background:#1C1C1E;border-radius:18px;padding:14px;margin-bottom:10px;">
-    <div style="font-size:13px;font-weight:700;color:#fff;margin-bottom:10px;">⚡ Alertas y Tareas</div>
+    <div style="font-size:16px;font-weight:700;color:#fff;margin-bottom:10px;">⚡ Alertas y Tareas</div>
     <div id="alertas-lista"></div>
   </div>
 
@@ -1332,7 +1332,7 @@ function renderDashboard() {
       // Header
       var hdr = document.createElement('div');
       hdr.style.cssText='display:flex;align-items:baseline;justify-content:space-between;margin-bottom:8px;cursor:pointer;';
-      hdr.innerHTML='<div style="display:flex;align-items:baseline;gap:8px;flex:1;"><span style="display:inline-flex;align-items:center;height:1em;flex-shrink:0;"><span style="width:8px;height:8px;border-radius:50%;background:'+cfg.dot+';display:inline-block;"></span></span><span style="font-size:14px;font-weight:700;color:#fff;">'+cfg.label+'</span></div><span style="font-size:13px;font-weight:600;color:rgba(255,255,255,0.7);white-space:nowrap;">'+grupos[cat].length+' animales'+(cat==='tacto'?' <button onclick="event.stopPropagation();abrirTactoMasivo()" style="background:#E07000;color:#fff;border:none;border-radius:10px;padding:4px 10px;font-size:12px;font-weight:700;cursor:pointer;">📋 Lista</button>':'')+' ›</span>';
+      hdr.innerHTML='<div style="display:flex;align-items:baseline;gap:8px;flex:1;"><span style="display:inline-flex;align-items:center;height:1em;flex-shrink:0;"><span style="width:8px;height:8px;border-radius:50%;background:'+cfg.dot+';display:inline-block;"></span></span><span style="font-size:16px;font-weight:700;color:#fff;">'+cfg.label+'</span></div><span style="font-size:15px;font-weight:600;color:rgba(255,255,255,0.7);white-space:nowrap;">'+grupos[cat].length+' animales'+(cat==='tacto'?' <button onclick="event.stopPropagation();abrirTactoMasivo()" style="background:#E07000;color:#fff;border:none;border-radius:10px;padding:4px 10px;font-size:12px;font-weight:700;cursor:pointer;">📋 Lista</button>':'')+' ›</span>';
 
       var body = document.createElement('div');
       body.style.display='none';
@@ -1341,7 +1341,7 @@ function renderDashboard() {
       grupos[cat].forEach(function(a) {
         var row=document.createElement('div');
         row.style.cssText='display:flex;align-items:baseline;justify-content:space-between;padding:7px 0;border-bottom:0.5px solid rgba(0,0,0,0.06);cursor:pointer;padding-left:16px;';
-        row.innerHTML='<span style="font-size:14px;font-weight:600;color:#fff;">RP '+a.rp+'</span><span style="font-size:13px;color:rgba(255,255,255,0.7);">'+a.detalle+' ›</span>';
+        row.innerHTML='<span style="font-size:15px;font-weight:600;color:#fff;">RP '+a.rp+'</span><span style="font-size:14px;color:rgba(255,255,255,0.7);">'+a.detalle+' ›</span>';
         row.onclick=(function(al){return function(){
           if(al.cat==='parto') {
             goTo('parto');
@@ -4296,47 +4296,42 @@ function limpiarFilasEmpresa() {
 
 
 <!-- MODAL EVALUAR RECHAZO -->
-<div id="modal-rechazo" style="display:none;position:fixed;inset:0;z-index:500;background:rgba(0,0,0,0.5);align-items:flex-end;justify-content:center;">
+<div id="modal-rechazo" style="display:none;position:fixed;inset:0;z-index:700;background:rgba(0,0,0,0.5);align-items:flex-end;justify-content:center;">
   <div style="background:#fff;border-radius:24px 24px 0 0;padding:24px 20px 36px;width:100%;max-width:480px;">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
       <div style="font-size:19px;font-weight:800;color:#1C1C1E;">Evaluar rechazo</div>
       <button onclick="cerrarModalRechazo()" style="background:none;border:none;font-size:24px;color:#8E8E93;cursor:pointer;">✕</button>
     </div>
-    <div id="modal-rechazo-rp" style="font-size:15px;color:#8E8E93;margin-bottom:16px;"></div>
+    <div id="modal-rechazo-rp" style="font-size:15px;color:#3C3C43;margin-bottom:16px;"></div>
     <div style="display:flex;flex-direction:column;gap:10px;">
-      <button onclick="accionRechazo('seguir')" style="padding:14px;border:1px solid #D0D5DC;border-radius:14px;background:#F2F2F7;font-size:15px;font-weight:600;cursor:pointer;text-align:left;">
-        🔄 Seguir inseminando
-        <div style="font-size:13px;color:#8E8E93;font-weight:400;margin-top:2px;">Continuar con el protocolo actual</div>
+      <button onclick="accionRechazo('seguir')" style="padding:14px;border:1px solid #D0D5DC;border-radius:14px;background:#F2F2F7;font-size:15px;font-weight:600;cursor:pointer;text-align:left;width:100%;">
+        <span style="display:flex;gap:8px;"><span>🔄</span><span>Seguir inseminando<span style="font-size:13px;color:#5C5C66;font-weight:400;display:block;margin-top:3px;">Continuar con el protocolo actual</span></span></span>
       </button>
-      <button onclick="accionRechazo('aprobar1')" style="padding:14px;border:1px solid #F0C040;border-radius:14px;background:#FFF3CC;font-size:15px;font-weight:600;cursor:pointer;text-align:left;color:#7A5500;">
-        ⚠️ Aprobar 1 servicio más
-        <div style="font-size:13px;color:#7A5500;font-weight:400;margin-top:2px;">Último intento antes de decidir</div>
+      <button onclick="accionRechazo('aprobar1')" style="padding:14px;border:1px solid #F0C040;border-radius:14px;background:#FFF3CC;font-size:15px;font-weight:600;cursor:pointer;text-align:left;color:#7A5500;width:100%;">
+        <span style="display:flex;gap:8px;"><span>⚠️</span><span>Aprobar 1 servicio más<span style="font-size:13px;color:#5C4400;font-weight:400;display:block;margin-top:3px;">Último intento antes de decidir</span></span></span>
       </button>
-      <button onclick="accionRechazo('rechazo')" style="padding:14px;border:1px solid #FFB3B3;border-radius:14px;background:#FFE8E8;font-size:15px;font-weight:600;cursor:pointer;text-align:left;color:#A0200A;">
-        ❌ Marcar como rechazo
-        <div style="font-size:13px;color:#A0200A;font-weight:400;margin-top:2px;">Se venderá cuando produzca ≤ <span id="modal-rechazo-litros"></span> lts</div>
+      <button onclick="accionRechazo('rechazo')" style="padding:14px;border:1px solid #FFB3B3;border-radius:14px;background:#FFE8E8;font-size:15px;font-weight:600;cursor:pointer;text-align:left;color:#A0200A;width:100%;">
+        <span style="display:flex;gap:8px;"><span>❌</span><span>Marcar como rechazo<span style="font-size:13px;color:#7A1608;font-weight:400;display:block;margin-top:3px;">Se venderá cuando produzca ≤ <span id="modal-rechazo-litros"></span> lts</span></span></span>
       </button>
     </div>
   </div>
 </div>
 
 <!-- MODAL BAJA PRODUCCIÓN -->
-<div id="modal-baja-prod" style="display:none;position:fixed;inset:0;z-index:500;background:rgba(0,0,0,0.5);align-items:flex-end;justify-content:center;">
+<div id="modal-baja-prod" style="display:none;position:fixed;inset:0;z-index:700;background:rgba(0,0,0,0.5);align-items:flex-end;justify-content:center;">
   <div style="background:#fff;border-radius:24px 24px 0 0;padding:24px 20px 36px;width:100%;max-width:480px;">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
       <div style="font-size:19px;font-weight:800;color:#1C1C1E;">Producción baja</div>
       <button onclick="cerrarModalBajaProd()" style="background:none;border:none;font-size:24px;color:#8E8E93;cursor:pointer;">✕</button>
     </div>
-    <div id="modal-baja-rp" style="font-size:15px;color:#8E8E93;margin-bottom:4px;"></div>
+    <div id="modal-baja-rp" style="font-size:15px;color:#3C3C43;margin-bottom:4px;"></div>
     <div id="modal-baja-prod-val" style="font-size:34px;font-weight:900;color:#A0200A;margin-bottom:16px;"></div>
     <div style="display:flex;flex-direction:column;gap:10px;">
-      <button onclick="abrirFicha(modalAlertaRp);cerrarModalBajaProd();" style="padding:14px;border:1px solid #D0D5DC;border-radius:14px;background:#F2F2F7;font-size:15px;font-weight:600;cursor:pointer;text-align:left;">
-        📋 Ver ficha del animal
-        <div style="font-size:13px;color:#8E8E93;font-weight:400;margin-top:2px;">Revisar historial y registrar evento</div>
+      <button onclick="abrirFicha(modalAlertaRp);cerrarModalBajaProd();" style="padding:14px;border:1px solid #D0D5DC;border-radius:14px;background:#F2F2F7;font-size:15px;font-weight:600;cursor:pointer;text-align:left;width:100%;">
+        <span style="display:flex;gap:8px;"><span>📋</span><span>Ver ficha del animal<span style="font-size:13px;color:#5C5C66;font-weight:400;display:block;margin-top:3px;">Revisar historial y registrar evento</span></span></span>
       </button>
-      <button onclick="accionBajaProd('rechazo')" style="padding:14px;border:1px solid #FFB3B3;border-radius:14px;background:#FFE8E8;font-size:15px;font-weight:600;cursor:pointer;text-align:left;color:#A0200A;">
-        ❌ Marcar como rechazo
-        <div style="font-size:13px;color:#A0200A;font-weight:400;margin-top:2px;">Producción por debajo del umbral de venta</div>
+      <button onclick="accionBajaProd('rechazo')" style="padding:14px;border:1px solid #FFB3B3;border-radius:14px;background:#FFE8E8;font-size:15px;font-weight:600;cursor:pointer;text-align:left;color:#A0200A;width:100%;">
+        <span style="display:flex;gap:8px;"><span>❌</span><span>Marcar como rechazo<span style="font-size:13px;color:#7A1608;font-weight:400;display:block;margin-top:3px;">Producción por debajo del umbral de venta</span></span></span>
       </button>
       <button onclick="cerrarModalBajaProd()" style="padding:14px;border:1px solid #D0D5DC;border-radius:14px;background:#fff;font-size:15px;font-weight:600;cursor:pointer;text-align:left;color:#8E8E93;">
         👌 OK, ignorar por ahora
