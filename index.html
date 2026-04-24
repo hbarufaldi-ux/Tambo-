@@ -1097,6 +1097,73 @@ var ALERT_CATS = {
   produccion:{label:'Producción baja',  color:'#D6EAFF', text:'#0A4FA6', dot:'#1060C0'},
 };
 
+
+var modalAlertaRp = null;
+
+function abrirModalRechazo(rp) {
+  modalAlertaRp = rp;
+  var a = rodeo.find(function(x){return x.rp===rp;});
+  if(!a) return;
+  var el = document.getElementById('modal-rechazo');
+  document.getElementById('modal-rechazo-rp').textContent = 'RP '+rp+' · '+a.nombre+' · '+a.nroServicios+' servicios sin preñez';
+  document.getElementById('modal-rechazo-litros').textContent = CONFIG.litrosVentaRechazo;
+  el.style.display = 'flex';
+}
+
+function cerrarModalRechazo() {
+  document.getElementById('modal-rechazo').style.display = 'none';
+}
+
+function accionRechazo(accion) {
+  var a = rodeo.find(function(x){return x.rp===modalAlertaRp;});
+  if(!a) return;
+  if(accion === 'seguir') {
+    showToast('RP '+a.rp+' · continuando inseminación');
+    cerrarModalRechazo();
+  } else if(accion === 'aprobar1') {
+    a._aprobadoExtra = (a._aprobadoExtra||0) + 1;
+    showToast('RP '+a.rp+' · 1 servicio más aprobado');
+    cerrarModalRechazo();
+    renderDashboard();
+  } else if(accion === 'rechazo') {
+    a.estadoRepro = 'Rechazo';
+    guardarLocal();
+    sincronizarAnimal(a);
+    showToast(a.nombre+' marcada como Rechazo');
+    cerrarModalRechazo();
+    renderDashboard();
+    renderRodeo();
+  }
+}
+
+function abrirModalBajaProd(rp) {
+  modalAlertaRp = rp;
+  var a = rodeo.find(function(x){return x.rp===rp;});
+  if(!a) return;
+  var el = document.getElementById('modal-baja-prod');
+  document.getElementById('modal-baja-rp').textContent = 'RP '+rp+' · '+a.nombre;
+  document.getElementById('modal-baja-prod-val').textContent = (a.produccionUltima||'—')+' '+CONFIG.unidad;
+  el.style.display = 'flex';
+}
+
+function cerrarModalBajaProd() {
+  document.getElementById('modal-baja-prod').style.display = 'none';
+}
+
+function accionBajaProd(accion) {
+  var a = rodeo.find(function(x){return x.rp===modalAlertaRp;});
+  if(!a) return;
+  if(accion === 'rechazo') {
+    a.estadoRepro = 'Rechazo';
+    guardarLocal();
+    sincronizarAnimal(a);
+    showToast(a.nombre+' marcada como Rechazo');
+    cerrarModalBajaProd();
+    renderDashboard();
+    renderRodeo();
+  }
+}
+
 function calcAlertas() {
   var alerts=[];
   rodeo.forEach(function(a) {
@@ -1107,8 +1174,8 @@ function calcAlertas() {
       var dp=diasHasta(a.partoEstimado);
       if(dp!==null&&dp<=0) {
         alerts.push({cat:'parto', rp:a.rp, detalle:'Hace '+Math.abs(dp)+' días', urgencia:Math.abs(dp)});
-      } else if(dp!==null&&dp<=60&&a.estadoProd!=='Seca') {
-        alerts.push({cat:'secar', rp:a.rp, detalle:'En '+dp+' días ('+fmtFecha(a.partoEstimado)+')', urgencia:60-dp});
+      } else if(dp!==null&&dp<=(CONFIG.diasAntesPartoSecar+CONFIG.diasAlertaSecado)&&a.estadoProd!=='Seca') {
+        alerts.push({cat:'secar', rp:a.rp, detalle:'En '+dp+' días ('+fmtFecha(a.partoEstimado)+')', urgencia:(CONFIG.diasAntesPartoSecar+CONFIG.diasAlertaSecado)-dp});
       }
     }
 
@@ -1122,13 +1189,13 @@ function calcAlertas() {
     }
 
     // Evaluar rechazo
-    if((a.nroServicios||0)>=5&&a.estadoRepro!=='Preñada') {
+    if((a.nroServicios||0)>=CONFIG.umbralServicios&&a.estadoRepro!=='Preñada') {
       alerts.push({cat:'servicios', rp:a.rp, detalle:a.nroServicios+' servicios sin preñez', urgencia:a.nroServicios});
     }
 
     // Producción baja
-    if(a.produccionUltima!==null&&a.produccionUltima<12&&a.estadoProd==='En Ordeñe') {
-      alerts.push({cat:'produccion', rp:a.rp, detalle:a.produccionUltima+' lts', urgencia:12-a.produccionUltima});
+    if(a.produccionUltima!==null&&a.produccionUltima<CONFIG.umbralBajaProduccion&&a.estadoProd==='En Ordeñe') {
+      alerts.push({cat:'produccion', rp:a.rp, detalle:a.produccionUltima+' '+CONFIG.unidad, urgencia:CONFIG.umbralBajaProduccion-a.produccionUltima});
     }
   });
 
@@ -1290,8 +1357,10 @@ function renderDashboard() {
               var sel=document.getElementById('s-animal');
               if(sel){ sel.value=String(al.rp); onAnimalSecado(); }
             },150);
-          } else if(al.cat==='produccion' || al.cat==='servicios') {
-            abrirFicha(al.rp);
+          } else if(al.cat==='servicios') {
+            abrirModalRechazo(al.rp);
+          } else if(al.cat==='produccion') {
+            abrirModalBajaProd(al.rp);
           } else {
             abrirFicha(al.rp);
           }
@@ -4223,6 +4292,57 @@ function limpiarFilasEmpresa() {
     <button onclick="guardarConfigUI()" style="flex:2;padding:14px;border:none;border-radius:12px;background:#1C1C1E;color:#fff;font-size:15px;font-weight:700;cursor:pointer;">Guardar cambios</button>
   </div>
 
+</div>
+
+
+<!-- MODAL EVALUAR RECHAZO -->
+<div id="modal-rechazo" style="display:none;position:fixed;inset:0;z-index:500;background:rgba(0,0,0,0.5);align-items:flex-end;justify-content:center;">
+  <div style="background:#fff;border-radius:24px 24px 0 0;padding:24px 20px 36px;width:100%;max-width:480px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+      <div style="font-size:18px;font-weight:800;color:#1C1C1E;">Evaluar rechazo</div>
+      <button onclick="cerrarModalRechazo()" style="background:none;border:none;font-size:24px;color:#8E8E93;cursor:pointer;">✕</button>
+    </div>
+    <div id="modal-rechazo-rp" style="font-size:14px;color:#8E8E93;margin-bottom:16px;"></div>
+    <div style="display:flex;flex-direction:column;gap:10px;">
+      <button onclick="accionRechazo('seguir')" style="padding:14px;border:1px solid #D0D5DC;border-radius:14px;background:#F2F2F7;font-size:15px;font-weight:600;cursor:pointer;text-align:left;">
+        🔄 Seguir inseminando
+        <div style="font-size:12px;color:#8E8E93;font-weight:400;margin-top:2px;">Continuar con el protocolo actual</div>
+      </button>
+      <button onclick="accionRechazo('aprobar1')" style="padding:14px;border:1px solid #F0C040;border-radius:14px;background:#FFF3CC;font-size:15px;font-weight:600;cursor:pointer;text-align:left;color:#7A5500;">
+        ⚠️ Aprobar 1 servicio más
+        <div style="font-size:12px;color:#7A5500;font-weight:400;margin-top:2px;">Último intento antes de decidir</div>
+      </button>
+      <button onclick="accionRechazo('rechazo')" style="padding:14px;border:1px solid #FFB3B3;border-radius:14px;background:#FFE8E8;font-size:15px;font-weight:600;cursor:pointer;text-align:left;color:#A0200A;">
+        ❌ Marcar como rechazo
+        <div style="font-size:12px;color:#A0200A;font-weight:400;margin-top:2px;">Se venderá cuando produzca ≤ <span id="modal-rechazo-litros"></span> lts</div>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL BAJA PRODUCCIÓN -->
+<div id="modal-baja-prod" style="display:none;position:fixed;inset:0;z-index:500;background:rgba(0,0,0,0.5);align-items:flex-end;justify-content:center;">
+  <div style="background:#fff;border-radius:24px 24px 0 0;padding:24px 20px 36px;width:100%;max-width:480px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+      <div style="font-size:18px;font-weight:800;color:#1C1C1E;">Producción baja</div>
+      <button onclick="cerrarModalBajaProd()" style="background:none;border:none;font-size:24px;color:#8E8E93;cursor:pointer;">✕</button>
+    </div>
+    <div id="modal-baja-rp" style="font-size:14px;color:#8E8E93;margin-bottom:4px;"></div>
+    <div id="modal-baja-prod-val" style="font-size:32px;font-weight:900;color:#A0200A;margin-bottom:16px;"></div>
+    <div style="display:flex;flex-direction:column;gap:10px;">
+      <button onclick="abrirFicha(modalAlertaRp);cerrarModalBajaProd();" style="padding:14px;border:1px solid #D0D5DC;border-radius:14px;background:#F2F2F7;font-size:15px;font-weight:600;cursor:pointer;text-align:left;">
+        📋 Ver ficha del animal
+        <div style="font-size:12px;color:#8E8E93;font-weight:400;margin-top:2px;">Revisar historial y registrar evento</div>
+      </button>
+      <button onclick="accionBajaProd('rechazo')" style="padding:14px;border:1px solid #FFB3B3;border-radius:14px;background:#FFE8E8;font-size:15px;font-weight:600;cursor:pointer;text-align:left;color:#A0200A;">
+        ❌ Marcar como rechazo
+        <div style="font-size:12px;color:#A0200A;font-weight:400;margin-top:2px;">Producción por debajo del umbral de venta</div>
+      </button>
+      <button onclick="cerrarModalBajaProd()" style="padding:14px;border:1px solid #D0D5DC;border-radius:14px;background:#fff;font-size:15px;font-weight:600;cursor:pointer;text-align:left;color:#8E8E93;">
+        Ignorar por ahora
+      </button>
+    </div>
+  </div>
 </div>
 
 </body>
