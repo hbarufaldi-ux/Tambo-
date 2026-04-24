@@ -710,11 +710,11 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 </div>
 
 <div id="screen-rodeo" class="screen" style="padding-top:0;">
-  <div id="rodeo-search-bar" style="position:fixed;top:140px;left:0;right:0;z-index:50;background:#D8E0E8;padding:8px 16px 10px;box-shadow:0 2px 8px rgba(0,0,0,0.08);">
+  <div id="rodeo-search-bar" style="position:fixed;top:148px;left:0;right:0;z-index:50;background:#D8E0E8;padding:10px 16px 14px;box-shadow:0 3px 10px rgba(0,0,0,0.10);">
   <div style="margin-bottom:6px;">
     <input type="text" id="rodeo-buscar" placeholder="Buscar por RP..." inputmode="numeric" oninput="renderRodeo()" style="width:100%;padding:11px 14px;border:1px solid #B0BCC8;border-radius:12px;font-size:17px;background:#fff;color:#1C1C1E;">
   </div>
-  <div style="display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;scrollbar-width:none;margin-bottom:4px;">
+  <div style="display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;scrollbar-width:none;margin-top:6px;margin-bottom:2px;">
     <button class="fchip active" id="fc-todos" onclick="limpiarFiltros()">Todas</button>
     <span style="width:1px;background:#E5E5EA;flex-shrink:0;margin:0 2px;"></span>
     <button class="fchip" id="fc-ordene" onclick="toggleFiltro('En Ordeñe','prod',this)">En ordeñe</button>
@@ -726,7 +726,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
   </div>
   <div id="filtro-activo-label" style="font-size:12px;color:#8E8E93;margin-bottom:10px;min-height:16px;"></div>
   </div><!-- end sticky -->
-  <div class="card" style="margin-top:90px;"><div id="lista-rodeo"></div></div>
+  <div class="card" style="margin-top:120px;"><div id="lista-rodeo"></div></div>
 </div>
 
 <!-- REPORTES -->
