@@ -49,7 +49,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 .metric{background:#fff;border-radius:16px;padding:14px;box-shadow:0 1px 0 rgba(0,0,0,0.05),0 2px 8px rgba(0,0,0,0.04);}
 .metric-label{font-size:11px;color:#8E8E93;margin-bottom:4px;font-weight:500;text-transform:uppercase;letter-spacing:0.3px;}
 .metric-val{font-size:28px;font-weight:700;letter-spacing:-0.5px;}
-.animal-row{display:flex;align-items:center;padding:12px 0;border-bottom:0.5px solid #F2F2F7;}
+.animal-row{display:flex;align-items:center;padding:12px 0;border-bottom:1px solid #C8D0D8;}
 .animal-row:last-child{border-bottom:none;}
 .animal-name{font-weight:600;font-size:19px;letter-spacing:-0.2px;}
 .animal-info{font-size:13px;color:#8E8E93;margin-top:2px;}
@@ -85,7 +85,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 .danger-block{background:#FFE8E8;border-radius:12px;padding:12px;margin-bottom:12px;font-size:17px;color:#A0200A;font-weight:600;}
 .fchip{flex-shrink:0;padding:9px 18px;border:1px solid #B0BCC8;border-radius:20px;background:#fff;color:#3C3C43;font-size:14px;font-weight:500;cursor:pointer;white-space:nowrap;}
 .fchip.active{background:#1C1C1E;color:#fff;border-color:#1C1C1E;}
-.ficha-row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:0.5px solid #F2F2F7;}
+.ficha-row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #C8D0D8;}
 .ficha-row:last-child{border-bottom:none;}
 .ficha-key{font-size:17px;color:#8E8E93;}
 .ficha-val{font-size:17px;font-weight:500;}
@@ -1184,7 +1184,7 @@ function renderDashboard() {
     var rows=[['En recría',enRecria.length,''],['Hembras',enRecria.filter(function(a){return a.sexo==='H';}).length,''],['Machos',enRecria.filter(function(a){return a.sexo==='M';}).length,''],['Listos para incorporar/vender',listos,listos>0?'ok':'']];
     rows.forEach(function(r) {
       var row=document.createElement('div');
-      row.style.cssText='display:flex;justify-content:space-between;padding:7px 0;border-bottom:0.5px solid #F2F2F7;';
+      row.style.cssText='display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid #C8D0D8;';
       var k=document.createElement('span'); k.style.cssText='font-size:13px;color:#8E8E93;'; k.textContent=r[0];
       var v=document.createElement('span'); v.style.cssText='font-size:13px;font-weight:600;color:'+(r[2]==='ok'?'#1A7A40':'#1C1C1E')+';'; v.textContent=r[1];
       row.appendChild(k); row.appendChild(v); drEl.appendChild(row);
@@ -1543,7 +1543,7 @@ function abrirFicha(rp) {
       partos.forEach(function(p,i) {
         var nro=partos.length-i;
         var esAct=i===0&&a.estadoProd==='En Ordeñe';
-        var pd2=document.createElement('div'); pd2.style.cssText='padding:10px 0;border-bottom:0.5px solid #F2F2F7;';
+        var pd2=document.createElement('div'); pd2.style.cssText='padding:10px 0;border-bottom:1px solid #C8D0D8;';
         var ph=document.createElement('div'); ph.style.cssText='display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;';
         ph.innerHTML='<span style="font-size:17px;font-weight:700;">Lactancia '+nro+'</span>'+(esAct?'<span class="badge badge-green">Actual</span>':'');
         var grid=document.createElement('div'); grid.style.cssText='display:grid;grid-template-columns:1fr 1fr;gap:4px;';
@@ -2708,7 +2708,7 @@ function renderRecientes(tipo) {
   lista.innerHTML = '';
   filtrados.forEach(function(r) {
     var row = document.createElement('div');
-    row.style.cssText = 'display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:0.5px solid #F2F2F7;cursor:pointer;';
+    row.style.cssText = 'display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid #C8D0D8;cursor:pointer;';
     var esHoy = r.fecha === hoy;
     var labelRP = 'RP '+r.rp;
     var labelFecha = esHoy ? 'Hoy' : fmtFecha(r.fecha);
@@ -2760,7 +2760,7 @@ function renderResumenTambo() {
   var rVaqPren = rActivos.filter(function(a){ return a.estadoRepro==='Preñada'; }).length;
 
   var row = function(label, val, color) {
-    return '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:0.5px solid #F2F2F7;">'
+    return '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #C8D0D8;">'
       +'<span style="font-size:14px;color:#3C3C43;">'+label+'</span>'
       +'<span style="font-size:18px;font-weight:700;color:'+(color||'#1C1C1E')+';">'+fmtNum(val)+'</span></div>';
   };
@@ -3145,7 +3145,7 @@ function renderLeche() {
   }
   ultimos7.forEach(function(r) {
     var row = document.createElement('div');
-    row.style.cssText = 'display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:0.5px solid #F2F2F7;cursor:pointer;';
+    row.style.cssText = 'display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid #C8D0D8;cursor:pointer;';
     row.onclick = function(){ editarProduccion(r.fecha); };
     var esHoy = r.fecha === TODAY;
     row.innerHTML = '<div>'
@@ -3450,7 +3450,7 @@ function abrirControlLechero() {
 
       grupos[rodeo].forEach(function(a) {
         var row = document.createElement('div');
-        row.style.cssText = 'display:grid;grid-template-columns:1fr 90px 90px 70px;gap:6px;align-items:center;padding:7px 0;border-bottom:0.5px solid #F2F2F7;';
+        row.style.cssText = 'display:grid;grid-template-columns:1fr 90px 90px 70px;gap:6px;align-items:center;padding:7px 0;border-bottom:1px solid #C8D0D8;';
 
         // Selector de rodeo
         var selR = document.createElement('select');
