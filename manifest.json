@@ -1,0 +1,23 @@
+{
+  "name": "Tambo Cañada Negra",
+  "short_name": "Cañada Negra",
+  "description": "Gestión del tambo Cañada Negra",
+  "start_url": "/Tambo-/",
+  "scope": "/Tambo-/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#D8E0E8",
+  "theme_color": "#1C1C1E",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
