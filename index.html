@@ -3143,7 +3143,8 @@ function renderLeche() {
   }
   ultimos7.forEach(function(r) {
     var row = document.createElement('div');
-    row.style.cssText = 'display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:0.5px solid #F2F2F7;';
+    row.style.cssText = 'display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:0.5px solid #F2F2F7;cursor:pointer;';
+    row.onclick = function(){ editarProduccion(r.fecha); };
     var esHoy = r.fecha === TODAY;
     row.innerHTML = '<div>'
       + '<div style="font-size:15px;font-weight:700;color:#1C1C1E;">'+(esHoy?'Hoy':fmtFecha(r.fecha))+'</div>'
@@ -3182,6 +3183,39 @@ function validarCalidad() {
   btn.disabled = !ok;
   btn.style.opacity = ok ? '1' : '0.5';
   btn.style.cursor = ok ? 'pointer' : 'not-allowed';
+}
+
+function editarProduccion(fecha) {
+  var reg = produccionDiaria.find(function(r){ return r.fecha === fecha; });
+  if(!reg) return;
+  // Precargar el formulario con los datos del registro
+  var fEl = document.getElementById('l-fecha');
+  if(fEl) fEl.value = fecha;
+  var vEl = document.getElementById('l-vacas');
+  if(vEl) vEl.value = reg.vacas || '';
+  var obsEl = document.getElementById('l-obs');
+  if(obsEl) obsEl.value = reg.obs || '';
+  // Limpiar filas y precargar empresas
+  iniciarFilasEmpresa();
+  // Precargar Ucalac si hay
+  if(reg.ucalac > 0) {
+    var emp1 = document.getElementById('l-emp-1');
+    var lts1 = document.getElementById('l-lts-1');
+    if(emp1) { emp1.value = 'Ucalac SA'; emp1.style.background='#EEF4FF'; emp1.style.borderColor='#1060C0'; }
+    if(lts1) { lts1.value = reg.ucalac; lts1.style.background='#EEF4FF'; lts1.style.borderColor='#1060C0'; }
+  }
+  // Precargar Saputo si hay
+  if(reg.saputo > 0) {
+    agregarFilaEmpresa();
+    var emp2 = document.getElementById('l-emp-2');
+    var lts2 = document.getElementById('l-lts-2');
+    if(emp2) { emp2.value = 'Saputo'; emp2.style.background='#EEF4FF'; emp2.style.borderColor='#1060C0'; }
+    if(lts2) { lts2.value = reg.saputo; lts2.style.background='#EEF4FF'; lts2.style.borderColor='#1060C0'; }
+  }
+  // Scroll al formulario
+  var form = document.querySelector('#screen-leche .card');
+  if(form) form.scrollIntoView({behavior:'smooth'});
+  showToast('Editando registro del ' + fmtFecha(fecha));
 }
 
 async function guardarProduccion() {
@@ -3659,22 +3693,26 @@ function cargarProduccionDesdeSheets() {
     .then(function(data) {
       if(!data.ok || !data.datos || data.datos.length === 0) return;
       var filas = data.datos;
-      produccionDiaria = [];
+      var porFecha = {};
       filas.forEach(function(f) {
-        if(!f[0] || f[0]==='ID') return; // saltar header si existe
+        if(!f[0] || f[0]==='ID') return;
         var fecha = f[1] ? String(f[1]).substring(0,10) : null;
         if(!fecha) return;
         var ucalac = parseFloat(f[2]) || 0;
         var saputo = parseFloat(f[3]) || 0;
         var total = parseFloat(f[4]) || (ucalac + saputo);
         var vacas = parseInt(f[5]) || 0;
-        var obs = f[6] || '';
-        // Evitar duplicados por fecha
-        var existe = produccionDiaria.find(function(r){ return r.fecha === fecha; });
-        if(!existe) {
-          produccionDiaria.push({fecha:fecha, ucalac:ucalac, saputo:saputo, total:total, vacas:vacas, obs:obs});
+        var obs = String(f[6] || '');
+        // Acumular por fecha (puede haber múltiples registros del mismo día)
+        if(!porFecha[fecha]) {
+          porFecha[fecha] = {fecha:fecha, ucalac:0, saputo:0, total:0, vacas:vacas, obs:obs};
         }
+        porFecha[fecha].ucalac += ucalac;
+        porFecha[fecha].saputo += saputo;
+        porFecha[fecha].total += total;
+        if(vacas > porFecha[fecha].vacas) porFecha[fecha].vacas = vacas;
       });
+      produccionDiaria = Object.values(porFecha);
       guardarCacheLeche();
       // Refrescar si estamos en leche
       var active = document.querySelector('.screen.active');
