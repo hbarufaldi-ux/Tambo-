@@ -1,4 +1,4 @@
-const CACHE = 'tambo-v89';
+const CACHE = 'tambo-v90';
 const PRECACHE = [
   '/Tambo-/',
   '/Tambo-/index.html',
