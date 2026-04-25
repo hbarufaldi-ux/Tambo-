@@ -234,17 +234,17 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
       <div style="background:#D8E0E8;border-radius:14px;padding:20px 14px;text-align:center;min-height:110px;">
         <div style="font-size:22px;margin-bottom:4px;">🍼</div>
         <div style="font-size:38px;font-weight:900;color:#6B35D4;line-height:1;letter-spacing:-0.5px;" id="m-guachera">—</div>
-        <div style="font-size:13px;color:#8E8E93;font-weight:700;margin-top:4px;">Guachera</div>
+        <div style="font-size:12px;color:#8E8E93;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;margin-top:4px;">Guachera</div>
       </div>
       <div style="background:#D8E0E8;border-radius:14px;padding:20px 14px;text-align:center;min-height:110px;">
         <div style="font-size:22px;margin-bottom:4px;">🐄</div>
         <div style="font-size:38px;font-weight:900;color:#1C1C1E;line-height:1;letter-spacing:-0.5px;" id="m-recria-total">—</div>
-        <div style="font-size:13px;color:#8E8E93;font-weight:700;margin-top:4px;">Recría</div>
+        <div style="font-size:12px;color:#8E8E93;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;margin-top:4px;">Recría</div>
       </div>
       <div id="m-mort-card" style="background:#D4F0E0;border-radius:14px;padding:20px 14px;text-align:center;min-height:110px;">
         <div style="font-size:22px;margin-bottom:4px;">📊</div>
         <div style="font-size:38px;font-weight:900;color:#0F6E56;line-height:1;letter-spacing:-0.5px;" id="m-mortandad">—</div>
-        <div style="font-size:13px;color:#0F6E56;font-weight:700;margin-top:4px;" id="m-mort-label">% mort.</div>
+        <div style="font-size:12px;color:#0F6E56;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;margin-top:4px;" id="m-mort-label">% mort.</div>
       </div>
     </div>
     <div id="dash-recria" style="margin-top:10px;"></div>
@@ -1303,8 +1303,8 @@ function renderDashboard() {
     rows.forEach(function(r) {
       var row=document.createElement('div');
       row.style.cssText='display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid #C8D0D8;';
-      var k=document.createElement('span'); k.style.cssText='font-size:13px;color:#8E8E93;'; k.textContent=r[0];
-      var v=document.createElement('span'); v.style.cssText='font-size:13px;font-weight:600;color:'+(r[2]==='ok'?'#1A7A40':'#1C1C1E')+';'; v.textContent=r[1];
+      var k=document.createElement('span'); k.style.cssText='font-size:14px;color:#8E8E93;'; k.textContent=r[0];
+      var v=document.createElement('span'); v.style.cssText='font-size:14px;font-weight:600;color:'+(r[2]==='ok'?'#1A7A40':'#1C1C1E')+';'; v.textContent=r[1];
       row.appendChild(k); row.appendChild(v); drEl.appendChild(row);
     });
   }
@@ -1340,7 +1340,7 @@ function renderDashboard() {
 
       grupos[cat].forEach(function(a) {
         var row=document.createElement('div');
-        row.style.cssText='display:flex;align-items:baseline;justify-content:space-between;padding:7px 0;border-bottom:0.5px solid rgba(0,0,0,0.06);cursor:pointer;padding-left:16px;';
+        row.style.cssText='display:flex;align-items:baseline;justify-content:space-between;padding:7px 0;border-bottom:0.5px solid rgba(255,255,255,0.15);cursor:pointer;padding-left:16px;';
         row.innerHTML='<span style="font-size:15px;font-weight:600;color:#fff;">RP '+a.rp+'</span><span style="font-size:14px;color:rgba(255,255,255,0.7);">'+a.detalle+' ›</span>';
         row.onclick=(function(al){return function(){
           if(al.cat==='parto') {
