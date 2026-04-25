@@ -1394,19 +1394,20 @@ function limpiarFiltros() {
 
 
 function irAlPadronFiltrado(tipo, valor, chipId) {
-  // Limpiar filtros previos del mismo tipo
+  // Setear filtro ANTES de navegar
+  filtroRodeo = {prod: null, repro: null};
+  filtroRodeo[tipo] = valor;
+  // Navegar al padrón — renderRodeo() se llama dentro de goTo
+  goTo('rodeo', document.querySelector('.nav-btn[onclick*="rodeo"]'));
+  // Activar el chip y label DESPUÉS de navegar (DOM ya está visible)
   var groupIds = tipo === 'prod' ? ['fc-ordene','fc-seca'] : ['fc-prenada','fc-inseminada','fc-vacia','fc-rechazo'];
   groupIds.forEach(function(id){ var el=document.getElementById(id); if(el) el.classList.remove('active'); });
-  // Activar el filtro
-  filtroRodeo[tipo] = valor;
   var chip = document.getElementById(chipId);
   if(chip) chip.classList.add('active');
-  // Actualizar todos
   var todosBtn = document.getElementById('fc-todos');
   if(todosBtn) todosBtn.classList.remove('active');
   actualizarLabelFiltro();
-  // Navegar al padrón
-  goTo('rodeo', document.querySelector('.nav-btn[onclick*="rodeo"]'));
+  renderRodeo();
 }
 
 function toggleFiltro(valor, tipo, btn) {
