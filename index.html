@@ -1393,21 +1393,22 @@ function limpiarFiltros() {
 }
 
 
+var _filtroRodeoDesdeDashboard = false;
+
 function irAlPadronFiltrado(tipo, valor, chipId) {
-  // Setear filtro ANTES de navegar
+  // Setear filtro y flag ANTES de navegar
   filtroRodeo = {prod: null, repro: null};
   filtroRodeo[tipo] = valor;
-  // Navegar al padrón — renderRodeo() se llama dentro de goTo
+  _filtroRodeoDesdeDashboard = true;
+  // Navegar — goTo NO reseteará filtroRodeo gracias al flag
   goTo('rodeo', document.querySelector('.nav-btn[onclick*="rodeo"]'));
-  // Activar el chip y label DESPUÉS de navegar (DOM ya está visible)
-  var groupIds = tipo === 'prod' ? ['fc-ordene','fc-seca'] : ['fc-prenada','fc-inseminada','fc-vacia','fc-rechazo'];
-  groupIds.forEach(function(id){ var el=document.getElementById(id); if(el) el.classList.remove('active'); });
+  // Activar chip visualmente
+  document.querySelectorAll('.fchip').forEach(function(c){c.classList.remove('active');});
   var chip = document.getElementById(chipId);
   if(chip) chip.classList.add('active');
   var todosBtn = document.getElementById('fc-todos');
   if(todosBtn) todosBtn.classList.remove('active');
   actualizarLabelFiltro();
-  renderRodeo();
 }
 
 function toggleFiltro(valor, tipo, btn) {
@@ -2403,13 +2404,15 @@ function goTo(screen, btn) {
   if(screen==='rodeo') {
     var buscarEl = document.getElementById('rodeo-buscar');
     if(buscarEl) buscarEl.value = '';
-    filtroRodeo = {prod: null, repro: null};
-    document.querySelectorAll('.fchip').forEach(function(c){c.classList.remove('active');});
-    var todosBtn = document.getElementById('fc-todos');
-    if(todosBtn) todosBtn.classList.add('active');
+    if(!_filtroRodeoDesdeDashboard) {
+      filtroRodeo = {prod: null, repro: null};
+      document.querySelectorAll('.fchip').forEach(function(c){c.classList.remove('active');});
+      var todosBtn = document.getElementById('fc-todos');
+      if(todosBtn) todosBtn.classList.add('active');
+    }
+    _filtroRodeoDesdeDashboard = false;
     actualizarLabelFiltro();
     renderRodeo();
-
   }
   if(screen==='guachera') renderGuachera();
   if(screen==='celo') renderRecientes('celo');
