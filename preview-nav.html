@@ -104,6 +104,29 @@ body{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display',sans-serif;ba
 #shell-d .more-overlay{position:fixed;inset:0;z-index:199;display:none;}
 #shell-d .more-overlay.open{display:block;}
 
+/* ====== OPCIÓN E: Tabs + Swipe ====== */
+#shell-e .bottom-bar{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:0.5px solid #C8D0D8;display:flex;padding-bottom:env(safe-area-inset-bottom,8px);z-index:100;}
+#shell-e .tab{flex:1;display:flex;flex-direction:column;align-items:center;padding:8px 4px 4px;gap:3px;cursor:pointer;border:none;background:none;position:relative;}
+#shell-e .tab .ico{font-size:22px;transition:transform 0.15s;}
+#shell-e .tab .lbl{font-size:10px;font-weight:600;color:#8E8E93;transition:color 0.15s;}
+#shell-e .tab.active .ico{transform:scale(1.1);}
+#shell-e .tab.active .lbl{color:#1D9E75;}
+#shell-e .tab-indicator{position:absolute;top:0;left:0;height:2.5px;background:#1D9E75;border-radius:0 0 3px 3px;transition:transform 0.25s cubic-bezier(.4,0,.2,1),width 0.25s cubic-bezier(.4,0,.2,1);}
+#shell-e .swipe-wrap{flex:1;overflow:hidden;position:relative;}
+#shell-e .swipe-pages{display:flex;height:100%;will-change:transform;transition:transform 0.32s cubic-bezier(.4,0,.2,1);}
+#shell-e .swipe-page{min-width:100vw;height:100%;overflow-y:auto;padding:14px 14px 90px;-webkit-overflow-scrolling:touch;}
+#shell-e .more-overlay{position:fixed;inset:0;z-index:199;display:none;}
+#shell-e .more-overlay.open{display:block;}
+#shell-e .more-sheet{position:fixed;bottom:-220px;left:0;right:0;background:#fff;border-radius:24px 24px 0 0;z-index:200;padding:16px 20px 40px;transition:bottom 0.35s cubic-bezier(.4,0,.2,1);box-shadow:0 -4px 24px rgba(0,0,0,0.12);}
+#shell-e .more-sheet.open{bottom:0;}
+#shell-e .more-sheet-handle{width:36px;height:4px;background:#D0D5DC;border-radius:2px;margin:0 auto 14px;}
+#shell-e .more-sheet-title{font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:#8E8E93;margin-bottom:12px;}
+#shell-e .more-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;}
+#shell-e .more-item{display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px 8px;background:#F5F5F7;border-radius:14px;cursor:pointer;border:none;}
+#shell-e .more-item .ico{font-size:26px;}
+#shell-e .more-item .lbl{font-size:12px;font-weight:600;color:#1C1C1E;}
+
+/* Animación entrada screens */
 /* Animación entrada screens */
 @keyframes fadeSlideIn{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);}}
 .screen-content.active{animation:fadeSlideIn 0.2s ease;}
@@ -130,6 +153,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display',sans-serif;ba
   <button class="sel-btn sel-d" onclick="activar('d')">
     <span class="ico">✨</span>
     <span class="txt">D — Bottom Bar + Más<span>5 tabs principales + hoja de accesos extra</span></span>
+  </button>
+  <button class="sel-btn" style="background:linear-gradient(135deg,#1D9E75,#3A3AFF);color:#fff;" onclick="activar('e')">
+    <span class="ico">⭐</span>
+    <span class="txt">E — Tabs + Swipe (recomendada)<span>Tocás el tab O deslizás — como Instagram</span></span>
   </button>
 </div>
 
@@ -253,12 +280,63 @@ body{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display',sans-serif;ba
   </div>
 </div>
 
+<!-- ===== OPCIÓN E: Tabs + Swipe ===== -->
+<div class="shell" id="shell-e">
+  <div class="topbar">
+    <div class="topbar-left">
+      <div><div class="topbar-title">Cañada Negra</div><div class="topbar-sub">● 301 animales</div></div>
+      <button class="topbar-dots">···</button>
+    </div>
+    <div class="topbar-right"><button class="btn-salir" onclick="volver()">Salir</button><div class="logo-circle">CN</div></div>
+  </div>
+  <div class="swipe-wrap" id="e-wrap">
+    <div class="swipe-pages" id="e-pages">
+      <!-- 0: Inicio -->
+      <div class="swipe-page">
+        <div class="card"><div class="card-title">Estado Reproductivo</div><div class="stat-grid"><div class="stat-box" style="background:#B5D5F5;"><div class="stat-label" style="color:#1060C0;">Preñadas</div><div class="stat-num" style="color:#1060C0;">98</div></div><div class="stat-box" style="background:#F0D878;"><div class="stat-label" style="color:#7A5500;">Vacías</div><div class="stat-num" style="color:#7A5500;">31</div></div><div class="stat-box" style="background:#D8C0FF;"><div class="stat-label" style="color:#6B35D4;">Inseminadas</div><div class="stat-num" style="color:#6B35D4;">44</div></div><div class="stat-box" style="background:#F5AAAA;"><div class="stat-label" style="color:#A0200A;">Rechazo</div><div class="stat-num" style="color:#A0200A;">14</div></div></div></div>
+        <div class="alert-box"><div class="alert-title">⚡ Alertas y Tareas</div><div class="alert-row"><span class="alert-dot" style="background:#FF9F0A;"></span><span class="alert-label">A secar</span><span class="alert-cnt">41 ›</span></div><div class="alert-row"><span class="alert-dot" style="background:#8040D0;"></span><span class="alert-label">Evaluar rechazo</span><span class="alert-cnt">14 ›</span></div></div>
+      </div>
+      <!-- 1: Leche -->
+      <div class="swipe-page"><div class="card"><div class="card-title">🥛 Leche</div><p style="color:#8E8E93;font-size:15px;margin-top:8px;">Registrá los litros del turno.</p></div></div>
+      <!-- 2: Padrón -->
+      <div class="swipe-page"><div class="card"><div class="card-title">📋 Padrón</div><p style="color:#8E8E93;font-size:15px;margin-top:8px;">301 animales. Buscá por RP.</p></div></div>
+      <!-- 3: Repro -->
+      <div class="swipe-page"><div class="card"><div class="card-title">💉 Inseminación</div><p style="color:#8E8E93;font-size:15px;margin-top:8px;">Registrá servicios y tactos.</p></div></div>
+      <!-- 4: Más (placeholder) -->
+      <div class="swipe-page"><div class="card"><div class="card-title">Más secciones</div><p style="color:#8E8E93;font-size:15px;margin-top:8px;">Tocá "Más" para ver Parto, Guachera y Recría.</p></div></div>
+    </div>
+  </div>
+
+  <!-- More sheet -->
+  <div class="more-overlay" id="e-overlay" onclick="eCloseMore()"></div>
+  <div class="more-sheet" id="e-more-sheet">
+    <div class="more-sheet-handle"></div>
+    <div class="more-sheet-title">Más secciones</div>
+    <div class="more-grid">
+      <button class="more-item" onclick="eCloseMore();"><span class="ico">🐮</span><span class="lbl">Parto</span></button>
+      <button class="more-item" onclick="eCloseMore();"><span class="ico">🍼</span><span class="lbl">Guachera</span></button>
+      <button class="more-item" onclick="eCloseMore();"><span class="ico">🐄</span><span class="lbl">Recría</span></button>
+    </div>
+  </div>
+
+  <!-- Bottom bar -->
+  <div class="bottom-bar" id="e-bar">
+    <div class="tab-indicator" id="e-indicator"></div>
+    <button class="tab active" id="e-tab-0" onclick="eGoTo(0)"><span class="ico">🏠</span><span class="lbl">Inicio</span></button>
+    <button class="tab" id="e-tab-1" onclick="eGoTo(1)"><span class="ico">🥛</span><span class="lbl">Leche</span></button>
+    <button class="tab" id="e-tab-2" onclick="eGoTo(2)"><span class="ico">📋</span><span class="lbl">Padrón</span></button>
+    <button class="tab" id="e-tab-3" onclick="eGoTo(3)"><span class="ico">💉</span><span class="lbl">Repro</span></button>
+    <button class="tab" id="e-tab-mas" onclick="eOpenMore()"><span class="ico">⋯</span><span class="lbl">Más</span></button>
+  </div>
+</div>
+
 <script>
 // ===== SELECTOR =====
 function activar(op){
   document.getElementById('selector').style.display='none';
   document.getElementById('shell-'+op).classList.add('active');
   if(op==='b') initSwipe();
+  if(op==='e') eInit();
   if(op==='a') updateIndicator();
 }
 function volver(){
@@ -347,6 +425,68 @@ function cNav(id,title){
   document.getElementById('c-item-'+id).classList.add('active');
   document.getElementById('c-title').textContent=title;
   toggleDrawer();
+}
+
+// ===== OPCIÓN E: Tabs + Swipe =====
+var ePage = 0, eTotal = 4;
+var eStartX = 0, eStartY = 0, eDragging = false, eDelta = 0;
+
+function eInit() {
+  var wrap = document.getElementById('e-wrap');
+  wrap.addEventListener('touchstart', function(ev) {
+    eStartX = ev.touches[0].clientX;
+    eStartY = ev.touches[0].clientY;
+    eDragging = true; eDelta = 0;
+    document.getElementById('e-pages').style.transition = 'none';
+  }, {passive: true});
+  wrap.addEventListener('touchmove', function(ev) {
+    if (!eDragging) return;
+    var dx = ev.touches[0].clientX - eStartX;
+    var dy = ev.touches[0].clientY - eStartY;
+    if (Math.abs(dy) > Math.abs(dx) && Math.abs(eDelta) < 5) return;
+    eDelta = dx;
+    var base = -ePage * 100;
+    var pct = base + (dx / window.innerWidth * 100) * 0.85;
+    document.getElementById('e-pages').style.transform = 'translateX(' + pct + 'vw)';
+  }, {passive: true});
+  wrap.addEventListener('touchend', function() {
+    if (!eDragging) return;
+    eDragging = false;
+    document.getElementById('e-pages').style.transition = 'transform 0.32s cubic-bezier(.4,0,.2,1)';
+    if (eDelta < -50 && ePage < eTotal - 1) ePage++;
+    else if (eDelta > 50 && ePage > 0) ePage--;
+    eGoTo(ePage);
+  });
+  eUpdateIndicator();
+}
+
+function eGoTo(p) {
+  ePage = p;
+  document.getElementById('e-pages').style.transition = 'transform 0.32s cubic-bezier(.4,0,.2,1)';
+  document.getElementById('e-pages').style.transform = 'translateX(-' + p * 100 + 'vw)';
+  document.querySelectorAll('#shell-e .tab').forEach(function(t) { t.classList.remove('active'); });
+  var tab = document.getElementById('e-tab-' + p);
+  if (tab) tab.classList.add('active');
+  eUpdateIndicator();
+}
+
+function eUpdateIndicator() {
+  var bar = document.getElementById('e-bar');
+  var active = bar.querySelector('.tab.active');
+  var ind = document.getElementById('e-indicator');
+  if (active && ind) {
+    ind.style.left = active.offsetLeft + 'px';
+    ind.style.width = active.offsetWidth + 'px';
+  }
+}
+
+function eOpenMore() {
+  document.getElementById('e-more-sheet').classList.add('open');
+  document.getElementById('e-overlay').classList.add('open');
+}
+function eCloseMore() {
+  document.getElementById('e-more-sheet').classList.remove('open');
+  document.getElementById('e-overlay').classList.remove('open');
 }
 
 // ===== OPCIÓN D: Bottom + More =====
