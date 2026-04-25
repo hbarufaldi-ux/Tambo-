@@ -147,7 +147,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
         <div style="font-size:50px;font-weight:900;color:#fff;line-height:1;letter-spacing:-2px;" id="m-vacas">—</div>
       </div>
       <div style="flex:1;display:flex;flex-direction:column;gap:8px;justify-content:center;">
-        <div style="background:rgba(255,255,255,0.18);border-radius:14px;padding:12px 14px;">
+        <div style="background:rgba(255,255,255,0.18);border-radius:14px;padding:12px 14px;cursor:pointer;" onclick="irAlPadronFiltrado('prod','En Ordeñe','fc-ordene')">
           <div style="display:flex;align-items:center;gap:4px;margin-bottom:3px;">
             <svg width="8" height="11" viewBox="0 0 8 11" fill="rgba(255,255,255,0.8)"><path d="M4 0C4 0 0 5 0 7.5C0 9.4 1.8 11 4 11C6.2 11 8 9.4 8 7.5C8 5 4 0 4 0Z"/></svg>
             <span style="font-size:12px;color:rgba(255,255,255,0.75);font-weight:700;text-transform:uppercase;letter-spacing:0.05em;">En ordeñe</span>
@@ -161,7 +161,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
             <span style="font-size:12px;font-weight:600;color:rgba(255,255,255,0.75);" id="m-ordene-pct"></span>
           </div>
         </div>
-        <div style="background:rgba(0,0,0,0.22);border-radius:14px;padding:12px 14px;">
+        <div style="background:rgba(0,0,0,0.22);border-radius:14px;padding:12px 14px;cursor:pointer;" onclick="irAlPadronFiltrado('prod','Seca','fc-seca')">
           <div style="font-size:12px;color:rgba(255,255,255,0.65);font-weight:700;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:3px;">Secas</div>
           <div style="display:flex;align-items:center;gap:6px;">
             <span style="font-size:38px;font-weight:900;color:#fff;line-height:1;letter-spacing:-1px;" id="m-secas-num">—</span>
@@ -180,7 +180,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
   <div style="background:#fff;border-radius:18px;padding:14px;margin-bottom:10px;">
     <div style="font-size:18px;font-weight:800;color:#1C1C1E;margin-bottom:12px;">Estado Reproductivo</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px;">
-      <div style="background:#B5D5F5;border-radius:14px;padding:20px 14px;min-height:110px;">
+      <div style="background:#B5D5F5;border-radius:14px;padding:20px 14px;min-height:110px;cursor:pointer;" onclick="irAlPadronFiltrado('repro','Preñada','fc-prenada')">
         <div style="font-size:12px;color:#1060C0;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px;">Preñadas</div>
         <div style="display:flex;align-items:center;gap:8px;">
           <div style="font-size:38px;font-weight:900;color:#1060C0;line-height:1;" id="m-prenadas">—</div>
@@ -191,7 +191,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
           <span style="font-size:13px;font-weight:700;color:#1060C0;" id="pct-prenadas"></span>
         </div>
       </div>
-      <div style="background:#F0D878;border-radius:14px;padding:20px 14px;min-height:110px;">
+      <div style="background:#F0D878;border-radius:14px;padding:20px 14px;min-height:110px;cursor:pointer;" onclick="irAlPadronFiltrado('repro','Vacía','fc-vacia')">
         <div style="font-size:12px;color:#7A5500;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px;">Vacías</div>
         <div style="display:flex;align-items:center;gap:8px;">
           <div style="font-size:38px;font-weight:900;color:#7A5500;line-height:1;" id="m-vacias">—</div>
@@ -202,7 +202,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
           <span style="font-size:13px;font-weight:700;color:#7A5500;" id="pct-vacias"></span>
         </div>
       </div>
-      <div style="background:#D8C0FF;border-radius:14px;padding:20px 14px;min-height:110px;">
+      <div style="background:#D8C0FF;border-radius:14px;padding:20px 14px;min-height:110px;cursor:pointer;" onclick="irAlPadronFiltrado('repro','Inseminada','fc-inseminada')">
         <div style="font-size:12px;color:#6B35D4;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px;">Inseminadas</div>
         <div style="display:flex;align-items:center;gap:8px;">
           <div style="font-size:38px;font-weight:900;color:#6B35D4;line-height:1;" id="m-inseminadas">—</div>
@@ -213,7 +213,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
           <span style="font-size:13px;font-weight:700;color:#6B35D4;" id="pct-inseminadas"></span>
         </div>
       </div>
-      <div style="background:#F5AAAA;border-radius:14px;padding:20px 14px;min-height:110px;">
+      <div style="background:#F5AAAA;border-radius:14px;padding:20px 14px;min-height:110px;cursor:pointer;" onclick="irAlPadronFiltrado('repro','Rechazo','fc-rechazo')">
         <div style="font-size:12px;color:#A0200A;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px;">Rechazo</div>
         <div style="display:flex;align-items:center;gap:8px;">
           <div style="font-size:38px;font-weight:900;color:#A0200A;line-height:1;" id="m-rechazo">—</div>
@@ -726,6 +726,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
     <button class="fchip" id="fc-prenada" onclick="toggleFiltro('Preñada','repro',this)">Preñadas</button>
     <button class="fchip" id="fc-inseminada" onclick="toggleFiltro('Inseminada','repro',this)">Inseminadas</button>
     <button class="fchip" id="fc-vacia" onclick="toggleFiltro('Vacía','repro',this)">Vacías</button>
+    <button class="fchip" id="fc-rechazo" onclick="toggleFiltro('Rechazo','repro',this)">Rechazo</button>
   </div>
   <div id="filtro-activo-label" style="font-size:12px;color:#8E8E93;margin-bottom:10px;min-height:16px;"></div>
   </div><!-- end sticky -->
@@ -1391,6 +1392,23 @@ function limpiarFiltros() {
   renderRodeo();
 }
 
+
+function irAlPadronFiltrado(tipo, valor, chipId) {
+  // Limpiar filtros previos del mismo tipo
+  var groupIds = tipo === 'prod' ? ['fc-ordene','fc-seca'] : ['fc-prenada','fc-inseminada','fc-vacia','fc-rechazo'];
+  groupIds.forEach(function(id){ var el=document.getElementById(id); if(el) el.classList.remove('active'); });
+  // Activar el filtro
+  filtroRodeo[tipo] = valor;
+  var chip = document.getElementById(chipId);
+  if(chip) chip.classList.add('active');
+  // Actualizar todos
+  var todosBtn = document.getElementById('fc-todos');
+  if(todosBtn) todosBtn.classList.remove('active');
+  actualizarLabelFiltro();
+  // Navegar al padrón
+  goTo('rodeo', document.querySelector('.nav-btn[onclick*="rodeo"]'));
+}
+
 function toggleFiltro(valor, tipo, btn) {
   // Si mismo valor activo, desactivar
   if(filtroRodeo[tipo] === valor) {
@@ -1398,7 +1416,7 @@ function toggleFiltro(valor, tipo, btn) {
     btn.classList.remove('active');
   } else {
     // Desactivar el otro del mismo grupo
-    var groupIds = tipo === 'prod' ? ['fc-ordene','fc-seca'] : ['fc-prenada','fc-inseminada','fc-vacia'];
+    var groupIds = tipo === 'prod' ? ['fc-ordene','fc-seca'] : ['fc-prenada','fc-inseminada','fc-vacia','fc-rechazo'];
     groupIds.forEach(function(id){var el=document.getElementById(id);if(el)el.classList.remove('active');});
     filtroRodeo[tipo] = valor;
     btn.classList.add('active');
