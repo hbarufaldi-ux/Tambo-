@@ -2627,14 +2627,23 @@ function importarPadronDIRSA(input) {
         r = String(r||'').trim();
         if(['R1','R2','R3','R4','R5'].includes(r)) return 'En Ordeñe';
         if(r==='R6') return 'Seca';
-        if(String(condicion||'').trim()==='Rechazo') return 'En Ordeñe';
-        return 'Seca';
+        // DIRSA: Est.Actual usa 'S' para seca, 'V' para vaca en ordeñe
+        var cond = String(condicion||'').trim();
+        if(cond==='S'||cond==='Seca') return 'Seca';
+        if(cond==='Rechazo') return 'En Ordeñe';
+        // Si no hay lote asignado y el estado es Activa/A, es En Ordeñe
+        if(cond==='A'||cond==='Activa') return 'En Ordeñe';
+        // Sin info suficiente — mirar si tiene lote anterior (llamador pasa Lote Ant como fallback)
+        return 'En Ordeñe';
       }
       function mapEstadoRepro(v) {
         var s = String(v||'').trim();
-        if(s==='Preñada') return 'Preñada';
-        if(s==='Vacia'||s==='Vacía') return 'Vacía';
-        if(s==='Inseminada') return 'Inseminada';
+        // Texto completo (listado propio / Ranking DIRSA)
+        if(s==='Preñada'||s==='P') return 'Preñada';
+        if(s==='Vacia'||s==='Vacía'||s==='V') return 'Vacía';
+        if(s==='Inseminada'||s==='I') return 'Inseminada';
+        if(s==='Seca'||s==='S') return 'Seca';
+        if(s==='Anestro'||s==='A') return 'Anestro';
         return 'Vacía';
       }
       function mapCat(condicion, fechaNac) {
@@ -2653,17 +2662,17 @@ function importarPadronDIRSA(input) {
       rows.forEach(function(row) {
         var rp = parseInt(getVal(row,['RP','rp','Rp']));
         if(!rp) { errores++; return; }
-        var fechaNac   = fmtDate(getVal(row,['Fecha Nacimiento','Fecha nacimiento','FechaNac','fecha_nac']));
-        var condicion  = String(getVal(row,['Condicion','Condición','Estado','condicion'])||'Activa').trim();
-        var rodeoVal   = String(getVal(row,['Rodeo','rodeo'])||'').trim();
-        var estadoRepro= mapEstadoRepro(getVal(row,['Estado Reproductivo','EstadoReproductivo','estado_reproductivo']));
-        var ultimoParto= fmtDate(getVal(row,['Inicio Lactancia','Ultimo Parto','UltimoParto','inicio_lactancia']));
-        var ultimaInsem= fmtDate(getVal(row,['Fecha Servicio','FechaServicio','Ultima Insem','ultima_insem']));
-        var produccion = parseFloat(getVal(row,['Leche Ultimo Control','Leche','leche','produccion'])||0)||null;
-        var nroLact    = parseInt(getVal(row,['Numero Lactancia','NroLactancia','lactancia'])||0)||0;
-        var padre      = String(getVal(row,['Padre','Nombre Padre','padre'])||'').trim();
+        var fechaNac   = fmtDate(getVal(row,['F_Nac','Fecha Nacimiento','Fecha nacimiento','FechaNac','fecha_nac']));
+        var condicion  = String(getVal(row,['Estado','Condicion','Condición','condicion'])||'Activa').trim();
+        var rodeoVal   = String(getVal(row,['Lote Act','Lote Ant','Rodeo','rodeo'])||'').trim();
+        var estadoRepro= mapEstadoRepro(getVal(row,['Tacto','Est.Actual','Estado Reproductivo','EstadoReproductivo','estado_reproductivo']));
+        var ultimoParto= fmtDate(getVal(row,['Ini.Lact','Inicio Lactancia','Ultimo Parto','UltimoParto','inicio_lactancia']));
+        var ultimaInsem= fmtDate(getVal(row,['Ult.Servicio','Fecha Servicio','FechaServicio','Ultima Insem','ultima_insem']));
+        var produccion = parseFloat(getVal(row,['Le.UC','Leche Ultimo Control','Leche','leche','produccion'])||0)||null;
+        var nroLact    = parseInt(getVal(row,['Nro.Lact','Numero Lactancia','NroLactancia','lactancia'])||0)||0;
+        var padre      = String(getVal(row,['ApodoPadre','Padre','Nombre Padre','padre'])||'').trim();
         var rpMadre    = getVal(row,['RP Madre','RPMadre','rp_madre']);
-        var diasParto  = parseInt(getVal(row,['Dias al Parto','DiasAlParto'])||0)||null;
+        var diasParto  = parseInt(getVal(row,['Dias al Parto','DiasAlParto','Prox.Parto'])||0)||null;
         var cat        = mapCat(condicion, fechaNac);
         var estadoProd = mapEstadoProd(rodeoVal, condicion);
         var partoEstimado = null;
