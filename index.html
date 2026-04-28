@@ -2698,7 +2698,17 @@ function importarPadronDIRSA(input) {
         var loteAct    = row['Lote Act'];
         var loteAnt    = row['Lote Ant'];
         var rodeoVal   = mapLoteArodeo(loteAct) || mapLoteArodeo(loteAnt) || '';
-        var estadoRepro= mapEstadoRepro(getVal(row,['Tacto','Estado Reproductivo','EstadoReproductivo','estado_reproductivo']));
+        // Estado reproductivo inferido desde Dias al Parto + Dias NR + Ult.Servicio
+        var diasParto2  = parseFloat(String(row['Dias al Parto']||'0').trim())||0;
+        var diasNR2     = parseFloat(String(row['Dias NR']||'0').trim())||0;
+        var tactoVal    = String(row['Tacto']||'').trim();
+        var estadoRepro;
+        if(tactoVal==='P') estadoRepro = 'Preñada';
+        else if(tactoVal==='V'||tactoVal==='Vacia'||tactoVal==='Vacía') estadoRepro = 'Vacía';
+        else if(estActual==='S') estadoRepro = 'Seca';
+        else if(diasParto2 > 0 && diasParto2 <= 290) estadoRepro = 'Preñada';
+        else if(ultimaInsem && diasNR2 > 0 && diasNR2 <= 30) estadoRepro = 'Inseminada';
+        else estadoRepro = 'Vacía';
         var ultimoParto= fmtDate(getVal(row,['Ini.Lact','Inicio Lactancia','Ultimo Parto','UltimoParto','inicio_lactancia']));
         var ultimaInsem= fmtDate(getVal(row,['Ult.Servicio','Fecha Servicio','FechaServicio','Ultima Insem','ultima_insem']));
         var produccion = parseLeche(getVal(row,['Le.UC','Leche Ultimo Control','Leche','leche','produccion']));
@@ -2706,22 +2716,28 @@ function importarPadronDIRSA(input) {
         var padre      = String(getVal(row,['ApodoPadre','Padre','Nombre Padre','padre'])||'').trim();
         var rpMadre    = getVal(row,['RP Madre','RPMadre','rp_madre']);
         var diasParto  = parseInt(getVal(row,['Dias al Parto','DiasAlParto'])||0)||0;
+        var proxParto  = getVal(row,['Prox.Parto','Prox Parto']);
         var cat        = mapCat(estActual, fechaNac);
         if(cat === 'Baja') { errores++; return; } // omitir animales dados de baja
         var estadoProd = mapEstadoProd(loteAct, loteAnt, estActual);
         var partoEstimado = null;
-        if(diasParto && diasParto > 0) partoEstimado = sumarDias(TODAY, diasParto);
-        else if(ultimaInsem) partoEstimado = sumarDias(ultimaInsem, 280);
+        if(proxParto && proxParto instanceof Date) partoEstimado = proxParto.toISOString().split('T')[0];
+        else if(diasParto && diasParto > 0) partoEstimado = sumarDias(TODAY, diasParto);
+        else if(ultimaInsem && estadoRepro==='Preñada') partoEstimado = sumarDias(ultimaInsem, 280);
         var animal = {
           rp:rp, nombre:String(getVal(row,['Nombre','nombre'])||'').trim(),
           sexo:'H', raza:String(getVal(row,['Raza','raza'])||'Holando').trim(),
           cat:cat, estadoRepro:estadoRepro,
           estadoProd:estadoProd, fechaNac:fechaNac, ultimoParto:ultimoParto,
           ultimaInsem:ultimaInsem, ultimaInsemToro:padre, partoEstimado:partoEstimado,
-          nroServicios:parseInt(getVal(row,['Nro.Servicio','NroServicio','nro_servicio'])||0)||0,
+          nroServicios:parseInt(String(getVal(row,['Nro.Servicio','Nro.Servicio','NroServicio','nro_servicio'])||0).trim())||0,
           produccionUltima:produccion, madre:rpMadre?parseInt(rpMadre):null, padre:padre,
           nroLactancia:nroLact, enSanitario:false,
           rodeoManual:rodeoVal||null,
+          // Campos para alertas
+          diasNR: diasNR2 || 0,
+          diasAcum: parseInt(String(getVal(row,['Dias ACU','DiasACU'])||0).trim())||0,
+          lecheAcum: parseLeche(getVal(row,['Le.ACU','LeACU'])) || 0,
         };
         _dirsaAnimalesParsed.push(animal);
         if(estadoProd==='Seca') secas++; else enOrdeñe++;
@@ -2803,24 +2819,159 @@ function importarPadronDIRSA(input) {
   reader.readAsArrayBuffer(file);
 }
 
+// ── Helpers de fecha para merge ──────────────────────────────
+function fechaMasReciente(f1, f2) {
+  // Devuelve la fecha más reciente entre dos strings YYYY-MM-DD
+  if(!f1 && !f2) return null;
+  if(!f1) return f2;
+  if(!f2) return f1;
+  return f1 >= f2 ? f1 : f2;
+}
+function appEsMasReciente(fechaApp, fechaDirsa) {
+  if(!fechaApp) return false;
+  if(!fechaDirsa) return true;
+  return fechaApp >= fechaDirsa;
+}
+
+// ── Merge inteligente animal por animal ──────────────────────
+function mergearConAppActual(dirsaAnimal) {
+  // Buscar si el animal ya existe en rodeo (cargado desde el Sheet)
+  var app = rodeo.find(function(r) { return r.rp === dirsaAnimal.rp; });
+  if(!app) return dirsaAnimal; // Animal nuevo — usar DIRSA completo
+
+  var merged = {};
+
+  // Campos donde DIRSA manda siempre (datos oficiales)
+  merged.rp          = dirsaAnimal.rp;
+  merged.raza        = dirsaAnimal.raza || app.raza || 'Holando';
+  merged.sexo        = 'H';
+  merged.cat         = dirsaAnimal.cat || app.cat || 'Vaca';
+  merged.estadoProd  = dirsaAnimal.estadoProd || app.estadoProd; // rodeo/lote es de DIRSA
+  merged.rodeoManual = dirsaAnimal.rodeoManual || app.rodeoManual;
+  merged.fechaNac    = dirsaAnimal.fechaNac || app.fechaNac;
+  merged.nroLactancia= Math.max(dirsaAnimal.nroLactancia||0, app.nroLactancia||0);
+  merged.enSanitario = app.enSanitario || false;
+
+  // Nombre: app gana si tiene dato
+  merged.nombre = (app.nombre && app.nombre.trim()) ? app.nombre : (dirsaAnimal.nombre||'');
+
+  // Último parto: el más reciente gana
+  merged.ultimoParto = fechaMasReciente(app.ultimoParto, dirsaAnimal.ultimoParto);
+
+  // Producción: DIRSA trae dato oficial del control, pero si la app tiene
+  // registro más reciente (cargado ese mismo día) la app gana
+  merged.produccionUltima = dirsaAnimal.produccionUltima !== null
+    ? dirsaAnimal.produccionUltima  // DIRSA trae el control oficial
+    : app.produccionUltima;
+
+  merged.diasAcum  = Math.max(dirsaAnimal.diasAcum||0, app.diasAcum||0);
+  merged.lecheAcum = Math.max(dirsaAnimal.lecheAcum||0, app.lecheAcum||0);
+
+  // Inseminación: la más reciente gana
+  var appTieneInsemMasReciente = appEsMasReciente(app.ultimaInsem, dirsaAnimal.ultimaInsem);
+  if(appTieneInsemMasReciente) {
+    merged.ultimaInsem      = app.ultimaInsem;
+    merged.ultimaInsemToro  = app.ultimaInsemToro;
+    merged.nroServicios     = app.nroServicios || dirsaAnimal.nroServicios || 0;
+  } else {
+    merged.ultimaInsem      = dirsaAnimal.ultimaInsem;
+    merged.ultimaInsemToro  = dirsaAnimal.ultimaInsemToro || app.ultimaInsemToro;
+    merged.nroServicios     = Math.max(dirsaAnimal.nroServicios||0, app.nroServicios||0);
+  }
+
+  // Estado reproductivo: gana el que tiene evento más reciente
+  // Comparamos fecha de último evento reproductivo de cada fuente
+  var fechaReproApp   = app.ultimaInsem || app.ultimoParto || null;
+  var fechaRepoDirsa  = dirsaAnimal.ultimaInsem || dirsaAnimal.ultimoParto || null;
+  if(appEsMasReciente(fechaReproApp, fechaRepoDirsa)) {
+    merged.estadoRepro   = app.estadoRepro || dirsaAnimal.estadoRepro || 'Vacía';
+    merged.partoEstimado = app.partoEstimado || dirsaAnimal.partoEstimado;
+  } else {
+    merged.estadoRepro   = dirsaAnimal.estadoRepro || app.estadoRepro || 'Vacía';
+    merged.partoEstimado = dirsaAnimal.partoEstimado || app.partoEstimado;
+  }
+
+  // diasNR: DIRSA es más confiable (calculado por sistema)
+  merged.diasNR = dirsaAnimal.diasNR || app.diasNR || 0;
+
+  // Padre/madre
+  merged.padre  = app.padre || dirsaAnimal.padre || '';
+  merged.madre  = app.madre || dirsaAnimal.madre || null;
+
+  return merged;
+}
+
 function confirmarImportDIRSA() {
   var btn = document.getElementById('btn-dirsa-importar');
   btn.disabled = true;
-  btn.textContent = 'Importando...';
+  btn.textContent = 'Preparando...';
   var progress = document.getElementById('dirsa-progress');
-  var total = _dirsaAnimalesParsed.length;
-  var i = 0;
-  var importados = 0, errores = 0;
+  progress.style.width = '5%';
 
-  // Vaciar listas
-  rodeo.length = 0;
-  guachera.length = 0;
-  recria.length = 0;
+  // PASO 1 — Merge inteligente con datos actuales de la app
+  var nuevos = 0, actualizados = 0;
+  var animalesMergeados = _dirsaAnimalesParsed.map(function(a) {
+    var existia = rodeo.find(function(r){ return r.rp === a.rp; });
+    var resultado = mergearConAppActual(a);
+    if(existia) actualizados++; else nuevos++;
+    return resultado;
+  });
 
-  function procesarLote() {
-    var fin = Math.min(i + 20, total);
-    for(; i < fin; i++) {
-      var a = _dirsaAnimalesParsed[i];
+  // PASO 2 — Convertir a filas del padrón (22 columnas para el Sheet)
+  var filasNuevas = animalesMergeados.map(function(a) {
+    return [
+      a.rp, a.nombre||'', a.raza||'Holando',
+      a.estadoProd==='Seca'?'Seca':'Activa',
+      a.fechaNac||'', '', '',
+      a.nroLactancia||0,
+      a.ultimoParto||'',
+      a.ultimaInsem||'',
+      a.nroServicios||0,
+      a.produccionUltima||'',
+      '',
+      a.diasAcum||0,
+      a.lecheAcum||0,
+      '', '',
+      a.estadoRepro||'Vacía',
+      '',
+      a.partoEstimado||'',
+      a.diasNR||0,
+      ''
+    ];
+  });
+
+  progress.style.width = '20%';
+  btn.textContent = 'Haciendo backup...';
+
+  // PASO 3 — Backup automático por POST
+  fetch(SCRIPT_URL, {
+    method: 'POST',
+    mode: 'no-cors',
+    headers: {'Content-Type': 'text/plain'},
+    body: JSON.stringify({accion: 'backup_padron'})
+  })
+  .then(function() {
+    progress.style.width = '40%';
+    btn.textContent = 'Guardando en Sheet...';
+
+    // PASO 4 — Escribir padrón mergeado en el Sheet
+    return fetch(SCRIPT_URL, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: {'Content-Type': 'text/plain'},
+      body: JSON.stringify({accion: 'reemplazar_padron', filas: filasNuevas})
+    });
+  })
+  .then(function() {
+    progress.style.width = '80%';
+    btn.textContent = 'Actualizando app...';
+
+    // PASO 5 — Cargar animales mergeados en memoria local
+    rodeo.length = 0;
+    guachera.length = 0;
+    recria.length = 0;
+
+    animalesMergeados.forEach(function(a) {
       var cat = a.cat;
       if(cat === 'Ternera' || cat === 'Ternero') {
         var d = a.fechaNac ? -diasHasta(a.fechaNac) : null;
@@ -2830,22 +2981,33 @@ function confirmarImportDIRSA() {
         recria.push({rp:a.rp,nombre:a.nombre,sexo:'H',cat:cat,fechaNac:a.fechaNac,padre:a.padre,madre:'',eventos:[],activo:true});
       }
       rodeo.push(a);
-      importados++;
-    }
-    progress.style.width = Math.round((i/total)*100)+'%';
-    if(i < total) { setTimeout(procesarLote, 10); }
-    else {
-      actualizarCats(); poblarSelects(); renderDashboard(); renderRodeo();
-      document.getElementById('card-dirsa-confirmar').style.display  = 'none';
-      document.getElementById('card-dirsa-preview').style.display    = 'none';
-      document.getElementById('card-dirsa-conflictos').style.display = 'none';
-      mostrarResultadoImport('ok', importados+' animales importados correctamente.'+(errores>0?' ('+errores+' con error)':''));
-      btn.disabled = false;
-      btn.textContent = 'Importar ahora';
-      document.getElementById('import-file').value = '';
-    }
-  }
-  procesarLote();
+    });
+
+    actualizarCats(); poblarSelects(); renderDashboard(); renderRodeo();
+    progress.style.width = '100%';
+
+    // Ocultar cards
+    document.getElementById('card-dirsa-confirmar').style.display  = 'none';
+    document.getElementById('card-dirsa-preview').style.display    = 'none';
+    document.getElementById('card-dirsa-conflictos').style.display = 'none';
+
+    // Resumen final
+    mostrarResultadoImport('ok',
+      '✅ Importación completada — ' +
+      (nuevos > 0 ? '<strong>' + nuevos + ' nuevos</strong> · ' : '') +
+      '<strong>' + actualizados + ' actualizados</strong><br>' +
+      '<span style="font-size:12px;color:#5A8E6A;">✓ Backup automático guardado · ✓ Datos de la app conservados</span>'
+    );
+    btn.disabled = false;
+    btn.textContent = 'Importar ahora';
+    document.getElementById('import-file').value = '';
+    _dirsaAnimalesParsed = [];
+  })
+  .catch(function(err) {
+    mostrarResultadoImport('error', 'Error en la importación: ' + err.message);
+    btn.disabled = false;
+    btn.textContent = 'Importar ahora';
+  });
 }
 
 function resetearImportDIRSA() {
