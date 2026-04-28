@@ -2658,11 +2658,11 @@ function importarPadronDIRSA(input) {
         return null;
       }
       function mapEstadoProd(loteAct, loteAnt, estActual) {
-        var rodeo = mapLoteArodeo(loteAct) || mapLoteArodeo(loteAnt);
-        if(rodeo) return rodeo==='R6' ? 'Seca' : 'En Ordeñe';
-        // Sin lote — usar Est.Actual: O=Ordeñe, S=Seca, V=dado de baja
+        // Est.Actual S=Seca tiene prioridad sobre el lote
         var e = String(estActual||'').trim();
         if(e==='S') return 'Seca';
+        var rodeo = mapLoteArodeo(loteAct) || mapLoteArodeo(loteAnt);
+        if(rodeo) return rodeo==='R6' ? 'Seca' : 'En Ordeñe';
         if(e==='O') return 'En Ordeñe';
         return 'En Ordeñe';
       }
@@ -2676,9 +2676,10 @@ function importarPadronDIRSA(input) {
         return 'Vacía';
       }
       function mapCat(estActual, fechaNac) {
-        // En DIRSA Est.Actual: O=Ordeñe (vaca), S=Seca, V=dado de baja
+        // En DIRSA Est.Actual: O=Ordeñe, S=Seca, V=dado de baja
         var e = String(estActual||'').trim();
-        if(e==='V') return 'Baja'; // dado de baja — no importar
+        if(e==='V') return 'Baja'; // dado de baja — omitir
+        // O y S son vacas activas/secas — clasificar por edad
         if(!fechaNac) return 'Vaca';
         var meses = Math.round((new Date()-new Date(fechaNac))/2628000000);
         if(meses < 8) return 'Ternera';
