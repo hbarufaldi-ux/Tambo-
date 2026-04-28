@@ -735,12 +735,81 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 
 <!-- REPORTES -->
 <div id="screen-reportes" class="screen">
-  <div class="card">
-    <div class="section-title">Importar padrón</div>
-    <p style="font-size:13px;color:#8E8E93;margin-bottom:12px;">Cargá un Excel con el listado de animales. Reemplaza el padrón actual.</p>
-    <input type="file" id="import-file" accept=".xlsx,.xls" style="display:none;" onchange="importarPadron(this)">
-    <button class="btn-primary" onclick="document.getElementById('import-file').click()">Seleccionar archivo Excel</button>
+  <!-- IMPORTAR DIRSA -->
+  <div class="card" id="card-dirsa-upload">
+    <div class="section-title">Importar desde DIRSA</div>
+    <div style="margin-bottom:14px;">
+      <div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:10px;">
+        <div style="width:22px;height:22px;min-width:22px;background:#1C1C1E;color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;">1</div>
+        <div style="font-size:13px;color:#3C3C43;line-height:1.4;">Exportá el padrón desde DIRSA como <strong>Excel (.xlsx)</strong> — elegí "Vacas y Vaquillonas"</div>
+      </div>
+      <div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:10px;">
+        <div style="width:22px;height:22px;min-width:22px;background:#1C1C1E;color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;">2</div>
+        <div style="font-size:13px;color:#3C3C43;line-height:1.4;">Seleccioná el archivo acá abajo</div>
+      </div>
+      <div style="display:flex;align-items:flex-start;gap:10px;">
+        <div style="width:22px;height:22px;min-width:22px;background:#1C1C1E;color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;">3</div>
+        <div style="font-size:13px;color:#3C3C43;line-height:1.4;">Revisá el resumen y confirmá la importación</div>
+      </div>
+    </div>
+    <div id="dirsa-drop-zone" style="border:2px dashed #C7CDD6;border-radius:14px;padding:22px 16px;text-align:center;background:#F7F9FB;margin-bottom:12px;">
+      <div style="font-size:28px;margin-bottom:6px;">📂</div>
+      <div style="font-size:15px;font-weight:600;color:#1C1C1E;margin-bottom:3px;">Seleccionar archivo Excel</div>
+      <div style="font-size:12px;color:#8E8E93;">.xlsx exportado de DIRSA</div>
+    </div>
+    <input type="file" id="import-file" accept=".xlsx,.xls" style="display:none;" onchange="importarPadronDIRSA(this)">
+    <button class="btn-primary" onclick="document.getElementById('import-file').click()">Seleccionar archivo</button>
     <div id="import-resultado" style="margin-top:12px;"></div>
+  </div>
+
+  <!-- PREVIEW DIRSA -->
+  <div class="card" id="card-dirsa-preview" style="display:none;">
+    <div class="section-title">Previsualización</div>
+    <div style="display:flex;gap:8px;margin-bottom:12px;">
+      <div style="flex:1;background:#F7F9FB;border-radius:12px;padding:10px 12px;text-align:center;">
+        <div id="dirsa-stat-total" style="font-size:22px;font-weight:700;color:#1C1C1E;">0</div>
+        <div style="font-size:11px;color:#8E8E93;font-weight:600;text-transform:uppercase;letter-spacing:0.04em;margin-top:2px;">Animales</div>
+      </div>
+      <div style="flex:1;background:#F7F9FB;border-radius:12px;padding:10px 12px;text-align:center;">
+        <div id="dirsa-stat-activas" style="font-size:22px;font-weight:700;color:#0A6B35;">0</div>
+        <div style="font-size:11px;color:#8E8E93;font-weight:600;text-transform:uppercase;letter-spacing:0.04em;margin-top:2px;">En ordeñe</div>
+      </div>
+      <div style="flex:1;background:#F7F9FB;border-radius:12px;padding:10px 12px;text-align:center;">
+        <div id="dirsa-stat-secas" style="font-size:22px;font-weight:700;color:#7A5500;">0</div>
+        <div style="font-size:11px;color:#8E8E93;font-weight:600;text-transform:uppercase;letter-spacing:0.04em;margin-top:2px;">Secas</div>
+      </div>
+    </div>
+    <div style="overflow-x:auto;">
+      <table style="width:100%;border-collapse:collapse;font-size:12px;">
+        <thead>
+          <tr style="background:#F2F2F7;">
+            <th style="padding:6px 8px;text-align:left;color:#8E8E93;font-weight:600;">RP</th>
+            <th style="padding:6px 8px;text-align:left;color:#8E8E93;font-weight:600;">Nombre</th>
+            <th style="padding:6px 8px;text-align:left;color:#8E8E93;font-weight:600;">Estado</th>
+            <th style="padding:6px 8px;text-align:left;color:#8E8E93;font-weight:600;">Rodeo</th>
+          </tr>
+        </thead>
+        <tbody id="dirsa-preview-body"></tbody>
+      </table>
+    </div>
+    <div style="font-size:12px;color:#8E8E93;margin-top:8px;text-align:center;" id="dirsa-preview-info"></div>
+  </div>
+
+  <!-- CONFLICTOS DIRSA -->
+  <div class="card" id="card-dirsa-conflictos" style="display:none;">
+    <div class="section-title" id="dirsa-conflictos-titulo">Conflictos detectados</div>
+    <div id="dirsa-conflictos-lista"></div>
+  </div>
+
+  <!-- CONFIRMAR DIRSA -->
+  <div class="card" id="card-dirsa-confirmar" style="display:none;">
+    <div class="section-title">Confirmar importación</div>
+    <div id="dirsa-confirmar-texto" style="font-size:14px;color:#3C3C43;margin-bottom:16px;line-height:1.5;"></div>
+    <div style="height:6px;background:#EBF0F5;border-radius:3px;overflow:hidden;margin-bottom:12px;">
+      <div id="dirsa-progress" style="height:100%;background:#1C1C1E;border-radius:3px;width:0%;transition:width 0.3s ease;"></div>
+    </div>
+    <button class="btn-primary" id="btn-dirsa-importar" onclick="confirmarImportDIRSA()">Importar ahora</button>
+    <button class="btn-secondary" style="margin-top:8px;" onclick="resetearImportDIRSA()">Cancelar</button>
   </div>
   <div class="card">
     <div class="section-title">Resumen Tambo</div>
@@ -2529,10 +2598,12 @@ function cerrarMEV() {
 }
 
 // ---- IMPORTAR PADRON ----
-function importarPadron(input) {
+// ── IMPORTADOR DIRSA ──────────────────────────────────────────
+var _dirsaAnimalesParsed = []; // buffer de animales parseados antes de confirmar
+
+function importarPadronDIRSA(input) {
   var file = input.files[0];
   if(!file) return;
-
   var reader = new FileReader();
   reader.onload = function(e) {
     try {
@@ -2540,15 +2611,8 @@ function importarPadron(input) {
       var wb = XLSX.read(data, {type:'array', cellDates:true});
       var ws = wb.Sheets[wb.SheetNames[0]];
       var rows = XLSX.utils.sheet_to_json(ws, {defval:''});
-
       if(rows.length === 0) { mostrarResultadoImport('error','El archivo está vacío.'); return; }
 
-      // Confirm
-      if(!confirm('Se van a importar ' + rows.length + ' animales. Esto reemplaza el padrón actual. ¿Continuar?')) {
-        input.value=''; return;
-      }
-
-      // Map columns — flexible, handles different column names
       function getVal(row, names) {
         for(var i=0;i<names.length;i++) { if(row[names[i]]!==undefined&&row[names[i]]!=='') return row[names[i]]; }
         return null;
@@ -2559,8 +2623,8 @@ function importarPadron(input) {
         if(typeof v === 'string' && v.match(/\d{4}-\d{2}-\d{2}/)) return v.substring(0,10);
         return null;
       }
-      function mapEstadoProd(rodeo, condicion) {
-        var r = String(rodeo||'').trim();
+      function mapEstadoProd(r, condicion) {
+        r = String(r||'').trim();
         if(['R1','R2','R3','R4','R5'].includes(r)) return 'En Ordeñe';
         if(r==='R6') return 'Seca';
         if(String(condicion||'').trim()==='Rechazo') return 'En Ordeñe';
@@ -2583,79 +2647,111 @@ function importarPadron(input) {
         return 'Vaca';
       }
 
-      // Clear and rebuild rodeo
-      rodeo.length = 0;
-      guachera.length = 0;
-      recria.length = 0;
-
-      var importados=0, errores=0;
+      _dirsaAnimalesParsed = [];
+      var errores = 0;
+      var enOrdeñe = 0, secas = 0;
       rows.forEach(function(row) {
         var rp = parseInt(getVal(row,['RP','rp','Rp']));
         if(!rp) { errores++; return; }
-
-        var fechaNac = fmtDate(getVal(row,['Fecha Nacimiento','Fecha nacimiento','FechaNac','fecha_nac']));
-        var condicion = String(getVal(row,['Condicion','Condición','Estado','condicion'])||'Activa').trim();
-        var rodeoVal = String(getVal(row,['Rodeo','rodeo'])||'').trim();
-        var estadoRepro = mapEstadoRepro(getVal(row,['Estado Reproductivo','EstadoReproductivo','estado_reproductivo']));
-        var ultimoParto = fmtDate(getVal(row,['Inicio Lactancia','Ultimo Parto','UltimoParto','inicio_lactancia']));
-        var ultimaInsem = fmtDate(getVal(row,['Fecha Servicio','FechaServicio','Ultima Insem','ultima_insem']));
+        var fechaNac   = fmtDate(getVal(row,['Fecha Nacimiento','Fecha nacimiento','FechaNac','fecha_nac']));
+        var condicion  = String(getVal(row,['Condicion','Condición','Estado','condicion'])||'Activa').trim();
+        var rodeoVal   = String(getVal(row,['Rodeo','rodeo'])||'').trim();
+        var estadoRepro= mapEstadoRepro(getVal(row,['Estado Reproductivo','EstadoReproductivo','estado_reproductivo']));
+        var ultimoParto= fmtDate(getVal(row,['Inicio Lactancia','Ultimo Parto','UltimoParto','inicio_lactancia']));
+        var ultimaInsem= fmtDate(getVal(row,['Fecha Servicio','FechaServicio','Ultima Insem','ultima_insem']));
         var produccion = parseFloat(getVal(row,['Leche Ultimo Control','Leche','leche','produccion'])||0)||null;
-        var nroLact = parseInt(getVal(row,['Numero Lactancia','NroLactancia','lactancia'])||0)||0;
-        var padre = String(getVal(row,['Padre','Nombre Padre','padre'])||'').trim();
-        var rpMadre = getVal(row,['RP Madre','RPMadre','rp_madre']);
-        var diasParto = parseInt(getVal(row,['Dias al Parto','DiasAlParto'])||0)||null;
-
-        var cat = mapCat(condicion, fechaNac);
+        var nroLact    = parseInt(getVal(row,['Numero Lactancia','NroLactancia','lactancia'])||0)||0;
+        var padre      = String(getVal(row,['Padre','Nombre Padre','padre'])||'').trim();
+        var rpMadre    = getVal(row,['RP Madre','RPMadre','rp_madre']);
+        var diasParto  = parseInt(getVal(row,['Dias al Parto','DiasAlParto'])||0)||null;
+        var cat        = mapCat(condicion, fechaNac);
         var estadoProd = mapEstadoProd(rodeoVal, condicion);
-
-        // Parto estimado desde dias al parto
         var partoEstimado = null;
         if(diasParto && diasParto > 0) partoEstimado = sumarDias(TODAY, diasParto);
         else if(ultimaInsem) partoEstimado = sumarDias(ultimaInsem, 280);
-
         var animal = {
-          rp: rp,
-          nombre: String(getVal(row,['Nombre','nombre'])||'').trim(),
-          sexo: 'H',
-          raza: String(getVal(row,['Raza','raza'])||'Holando').trim(),
-          cat: cat,
-          estadoRepro: condicion==='Rechazo' ? 'Rechazo' : estadoRepro,
-          estadoProd: estadoProd,
-          fechaNac: fechaNac,
-          ultimoParto: ultimoParto,
-          ultimaInsem: ultimaInsem,
-          ultimaInsemToro: padre,
-          partoEstimado: partoEstimado,
-          nroServicios: parseInt(getVal(row,['Nro.Servicio','NroServicio','nro_servicio'])||0)||0,
-          produccionUltima: produccion,
-          madre: rpMadre ? parseInt(rpMadre) : null,
-          padre: padre,
-          nroLactancia: nroLact,
-          enSanitario: false,
-          rodeoManual: ['R1','R2','R3','R4','R5','R6'].includes(rodeoVal) ? rodeoVal : null,
+          rp:rp, nombre:String(getVal(row,['Nombre','nombre'])||'').trim(),
+          sexo:'H', raza:String(getVal(row,['Raza','raza'])||'Holando').trim(),
+          cat:cat, estadoRepro:condicion==='Rechazo'?'Rechazo':estadoRepro,
+          estadoProd:estadoProd, fechaNac:fechaNac, ultimoParto:ultimoParto,
+          ultimaInsem:ultimaInsem, ultimaInsemToro:padre, partoEstimado:partoEstimado,
+          nroServicios:parseInt(getVal(row,['Nro.Servicio','NroServicio','nro_servicio'])||0)||0,
+          produccionUltima:produccion, madre:rpMadre?parseInt(rpMadre):null, padre:padre,
+          nroLactancia:nroLact, enSanitario:false,
+          rodeoManual:['R1','R2','R3','R4','R5','R6'].includes(rodeoVal)?rodeoVal:null,
         };
-
-        // Crías a guachera/recria
-        if(cat === 'Ternera' || cat === 'Ternero') {
-          var d = fechaNac ? -diasHasta(fechaNac) : null;
-          if(d !== null && d <= 75) guachera.push({rp:rp,nombre:animal.nombre,sexo:'H',padre:padre,fechaNac:fechaNac,vacunado:false,salio:false,eventos:[]});
-          else recria.push({rp:rp,nombre:animal.nombre,sexo:'H',cat:cat,fechaNac:fechaNac,padre:padre,madre:'',eventos:[],activo:true});
-        } else if(cat === 'Vaquillona') {
-          recria.push({rp:rp,nombre:animal.nombre,sexo:'H',cat:cat,fechaNac:fechaNac,padre:padre,madre:'',eventos:[],activo:true});
-        }
-
-        rodeo.push(animal);
-        importados++;
+        _dirsaAnimalesParsed.push(animal);
+        if(estadoProd==='En Ordeñe') enOrdeñe++; else secas++;
       });
 
-      // Rebuild selects and render
-      actualizarCats();
-      poblarSelects();
-      renderDashboard();
-      renderRodeo();
+      // Actualizar zona de carga
+      document.getElementById('dirsa-drop-zone').style.background = '#D1F2E0';
+      document.getElementById('dirsa-drop-zone').innerHTML =
+        '<div style="font-size:24px;margin-bottom:4px;">✅</div>' +
+        '<div style="font-size:14px;font-weight:600;color:#1C1C1E;">'+file.name+'</div>' +
+        '<div style="font-size:12px;color:#8E8E93;">'+rows.length+' filas encontradas</div>';
 
-      mostrarResultadoImport('ok', importados+' animales importados correctamente.'+(errores>0?' ('+errores+' filas con error)':''));
-      input.value='';
+      // Stats
+      document.getElementById('dirsa-stat-total').textContent   = _dirsaAnimalesParsed.length;
+      document.getElementById('dirsa-stat-activas').textContent = enOrdeñe;
+      document.getElementById('dirsa-stat-secas').textContent   = secas;
+
+      // Preview tabla (primeras 5)
+      var tbody = document.getElementById('dirsa-preview-body');
+      tbody.innerHTML = '';
+      var preview = _dirsaAnimalesParsed.slice(0,5);
+      preview.forEach(function(a) {
+        var color = a.estadoProd==='En Ordeñe'?'#0A6B35':'#7A5500';
+        tbody.innerHTML += '<tr>' +
+          '<td style="padding:6px 8px;border-bottom:1px solid #F2F2F7;">'+a.rp+'</td>' +
+          '<td style="padding:6px 8px;border-bottom:1px solid #F2F2F7;">'+(a.nombre||'—')+'</td>' +
+          '<td style="padding:6px 8px;border-bottom:1px solid #F2F2F7;color:'+color+';font-weight:600;">'+a.estadoProd+'</td>' +
+          '<td style="padding:6px 8px;border-bottom:1px solid #F2F2F7;">'+(a.rodeoManual||'—')+'</td>' +
+          '</tr>';
+      });
+      document.getElementById('dirsa-preview-info').textContent =
+        'Mostrando primeras '+preview.length+' de '+_dirsaAnimalesParsed.length+' filas'+(errores>0?' ('+errores+' sin RP omitidas)':'');
+
+      // Conflictos: animales que ya existen en rodeo con estado repro más reciente
+      var conflictos = [];
+      _dirsaAnimalesParsed.forEach(function(a) {
+        var existe = rodeo.find(function(r){return r.rp===a.rp;});
+        if(existe && existe.ultimaInsem && a.ultimaInsem && existe.ultimaInsem >= a.ultimaInsem) {
+          conflictos.push({rp:a.rp, nombre:a.nombre||'Sin nombre', tipo:'repro-app'});
+        } else if(!existe) {
+          conflictos.push({rp:a.rp, nombre:a.nombre||'Sin nombre', tipo:'nuevo'});
+        }
+      });
+      var maxConflictos = 5;
+      var listaHTML = '';
+      var mostrados = conflictos.slice(0, maxConflictos);
+      mostrados.forEach(function(c) {
+        var badge = c.tipo==='nuevo'
+          ? '<span style="background:#D1F2E0;color:#0A6B35;padding:3px 9px;border-radius:8px;font-size:11px;font-weight:600;">Agregar</span>'
+          : '<span style="background:#D6EAFF;color:#1450A0;padding:3px 9px;border-radius:8px;font-size:11px;font-weight:600;">Mantener app</span>';
+        listaHTML +=
+          '<div style="display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid #F2F2F7;">' +
+          '<div><div style="font-size:13px;font-weight:600;color:#1C1C1E;">RP '+c.rp+' — '+c.nombre+'</div>' +
+          '<div style="font-size:11px;color:#8E8E93;">'+(c.tipo==='nuevo'?'Animal nuevo en DIRSA':'Estado repro más reciente en app')+'</div></div>' +
+          badge+'</div>';
+      });
+      if(conflictos.length > maxConflictos) listaHTML += '<div style="font-size:12px;color:#8E8E93;margin-top:8px;text-align:center;">Y '+(conflictos.length-maxConflictos)+' más...</div>';
+      var tituloConflictos = 'Conflictos detectados';
+      if(conflictos.length > 0) tituloConflictos += ' <span style="background:#FFF3CC;color:#7A5500;padding:2px 8px;border-radius:8px;font-size:11px;font-weight:600;margin-left:4px;">'+conflictos.length+'</span>';
+      document.getElementById('dirsa-conflictos-titulo').innerHTML = tituloConflictos;
+      document.getElementById('dirsa-conflictos-lista').innerHTML = listaHTML || '<div style="font-size:13px;color:#8E8E93;">Sin conflictos — todos los animales son nuevos.</div>';
+
+      // Texto de confirmación
+      var nuevos = _dirsaAnimalesParsed.filter(function(a){return !rodeo.find(function(r){return r.rp===a.rp;});}).length;
+      var actualizados = _dirsaAnimalesParsed.length - nuevos;
+      document.getElementById('dirsa-confirmar-texto').innerHTML =
+        'Se van a <strong>agregar '+nuevos+' animales nuevos</strong> y <strong>actualizar '+actualizados+' existentes</strong>. ' +
+        'El estado reproductivo se conserva si la app tiene datos más recientes.';
+
+      // Mostrar cards
+      document.getElementById('card-dirsa-preview').style.display   = 'block';
+      document.getElementById('card-dirsa-conflictos').style.display = 'block';
+      document.getElementById('card-dirsa-confirmar').style.display  = 'block';
 
     } catch(err) {
       mostrarResultadoImport('error','Error al leer el archivo: '+err.message);
@@ -2663,6 +2759,69 @@ function importarPadron(input) {
   };
   reader.readAsArrayBuffer(file);
 }
+
+function confirmarImportDIRSA() {
+  var btn = document.getElementById('btn-dirsa-importar');
+  btn.disabled = true;
+  btn.textContent = 'Importando...';
+  var progress = document.getElementById('dirsa-progress');
+  var total = _dirsaAnimalesParsed.length;
+  var i = 0;
+  var importados = 0, errores = 0;
+
+  // Vaciar listas
+  rodeo.length = 0;
+  guachera.length = 0;
+  recria.length = 0;
+
+  function procesarLote() {
+    var fin = Math.min(i + 20, total);
+    for(; i < fin; i++) {
+      var a = _dirsaAnimalesParsed[i];
+      var cat = a.cat;
+      if(cat === 'Ternera' || cat === 'Ternero') {
+        var d = a.fechaNac ? -diasHasta(a.fechaNac) : null;
+        if(d !== null && d <= 75) guachera.push({rp:a.rp,nombre:a.nombre,sexo:'H',padre:a.padre,fechaNac:a.fechaNac,vacunado:false,salio:false,eventos:[]});
+        else recria.push({rp:a.rp,nombre:a.nombre,sexo:'H',cat:cat,fechaNac:a.fechaNac,padre:a.padre,madre:'',eventos:[],activo:true});
+      } else if(cat === 'Vaquillona') {
+        recria.push({rp:a.rp,nombre:a.nombre,sexo:'H',cat:cat,fechaNac:a.fechaNac,padre:a.padre,madre:'',eventos:[],activo:true});
+      }
+      rodeo.push(a);
+      importados++;
+    }
+    progress.style.width = Math.round((i/total)*100)+'%';
+    if(i < total) { setTimeout(procesarLote, 10); }
+    else {
+      actualizarCats(); poblarSelects(); renderDashboard(); renderRodeo();
+      document.getElementById('card-dirsa-confirmar').style.display  = 'none';
+      document.getElementById('card-dirsa-preview').style.display    = 'none';
+      document.getElementById('card-dirsa-conflictos').style.display = 'none';
+      mostrarResultadoImport('ok', importados+' animales importados correctamente.'+(errores>0?' ('+errores+' con error)':''));
+      btn.disabled = false;
+      btn.textContent = 'Importar ahora';
+      document.getElementById('import-file').value = '';
+    }
+  }
+  procesarLote();
+}
+
+function resetearImportDIRSA() {
+  _dirsaAnimalesParsed = [];
+  document.getElementById('card-dirsa-preview').style.display   = 'none';
+  document.getElementById('card-dirsa-conflictos').style.display= 'none';
+  document.getElementById('card-dirsa-confirmar').style.display = 'none';
+  document.getElementById('import-resultado').innerHTML = '';
+  document.getElementById('dirsa-drop-zone').style.background = '#F7F9FB';
+  document.getElementById('dirsa-drop-zone').innerHTML =
+    '<div style="font-size:28px;margin-bottom:6px;">📂</div>' +
+    '<div style="font-size:15px;font-weight:600;color:#1C1C1E;margin-bottom:3px;">Seleccionar archivo Excel</div>' +
+    '<div style="font-size:12px;color:#8E8E93;">.xlsx exportado de DIRSA</div>';
+  document.getElementById('import-file').value = '';
+  document.getElementById('dirsa-progress').style.width = '0%';
+}
+
+// Alias para compatibilidad con código existente que llame importarPadron directamente
+function importarPadron(input) { importarPadronDIRSA(input); }
 
 function mostrarResultadoImport(tipo, msg) {
   var div = document.getElementById('import-resultado');
