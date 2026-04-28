@@ -2613,8 +2613,25 @@ function importarPadronDIRSA(input) {
       var rows = XLSX.utils.sheet_to_json(ws, {defval:''});
       if(rows.length === 0) { mostrarResultadoImport('error','El archivo está vacío.'); return; }
 
+      // Normalizar headers con trim para manejar espacios de DIRSA
+      var _rawRows = rows;
+      if(_rawRows.length > 0) {
+        var _firstRow = _rawRows[0];
+        var _hasSpaces = Object.keys(_firstRow).some(function(k){return k !== k.trim();});
+        if(_hasSpaces) {
+          rows = _rawRows.map(function(row) {
+            var clean = {};
+            Object.keys(row).forEach(function(k){ clean[k.trim()] = row[k]; });
+            return clean;
+          });
+        }
+      }
+
       function getVal(row, names) {
-        for(var i=0;i<names.length;i++) { if(row[names[i]]!==undefined&&row[names[i]]!=='') return row[names[i]]; }
+        for(var i=0;i<names.length;i++) {
+          var k = names[i];
+          if(row[k]!==undefined && row[k]!==null && String(row[k]).trim()!=='' && String(row[k]).trim()!=='0') return row[k];
+        }
         return null;
       }
       function fmtDate(v) {
@@ -2623,22 +2640,34 @@ function importarPadronDIRSA(input) {
         if(typeof v === 'string' && v.match(/\d{4}-\d{2}-\d{2}/)) return v.substring(0,10);
         return null;
       }
-      function mapEstadoProd(r, condicion) {
-        r = String(r||'').trim();
-        if(['R1','R2','R3','R4','R5'].includes(r)) return 'En Ordeñe';
-        if(r==='R6') return 'Seca';
-        // DIRSA: Est.Actual usa 'S' para seca, 'V' para vaca en ordeñe
-        var cond = String(condicion||'').trim();
-        if(cond==='S'||cond==='Seca') return 'Seca';
-        if(cond==='Rechazo') return 'En Ordeñe';
-        // Si no hay lote asignado y el estado es Activa/A, es En Ordeñe
-        if(cond==='A'||cond==='Activa') return 'En Ordeñe';
-        // Sin info suficiente — mirar si tiene lote anterior (llamador pasa Lote Ant como fallback)
+      function parseLeche(v) {
+        if(!v) return null;
+        var s = String(v).trim().replace(',','.');
+        var n = parseFloat(s);
+        return isNaN(n) || n===0 ? null : n;
+      }
+      function mapLoteArodeo(lote) {
+        // DIRSA Lote Act viene como número: 1→R1, 2→R2, etc. O como 'R1','R2' en otros formatos
+        var s = String(lote||'').trim();
+        if(s==='1'||s==='1.0'||s==='R1') return 'R1';
+        if(s==='2'||s==='2.0'||s==='R2') return 'R2';
+        if(s==='3'||s==='3.0'||s==='R3') return 'R3';
+        if(s==='4'||s==='4.0'||s==='R4') return 'R4';
+        if(s==='5'||s==='5.0'||s==='R5') return 'R5';
+        if(s==='6'||s==='6.0'||s==='R6') return 'R6';
+        return null;
+      }
+      function mapEstadoProd(loteAct, loteAnt, estActual) {
+        var rodeo = mapLoteArodeo(loteAct) || mapLoteArodeo(loteAnt);
+        if(rodeo) return rodeo==='R6' ? 'Seca' : 'En Ordeñe';
+        // Sin lote — usar Est.Actual: O=Ordeñe, S=Seca, V=dado de baja
+        var e = String(estActual||'').trim();
+        if(e==='S') return 'Seca';
+        if(e==='O') return 'En Ordeñe';
         return 'En Ordeñe';
       }
       function mapEstadoRepro(v) {
         var s = String(v||'').trim();
-        // Texto completo (listado propio / Ranking DIRSA)
         if(s==='Preñada'||s==='P') return 'Preñada';
         if(s==='Vacia'||s==='Vacía'||s==='V') return 'Vacía';
         if(s==='Inseminada'||s==='I') return 'Inseminada';
@@ -2646,9 +2675,10 @@ function importarPadronDIRSA(input) {
         if(s==='Anestro'||s==='A') return 'Anestro';
         return 'Vacía';
       }
-      function mapCat(condicion, fechaNac) {
-        var c = String(condicion||'').trim();
-        if(c==='Rechazo') return 'Vaca';
+      function mapCat(estActual, fechaNac) {
+        // En DIRSA Est.Actual: O=Ordeñe (vaca), S=Seca, V=dado de baja
+        var e = String(estActual||'').trim();
+        if(e==='V') return 'Baja'; // dado de baja — no importar
         if(!fechaNac) return 'Vaca';
         var meses = Math.round((new Date()-new Date(fechaNac))/2628000000);
         if(meses < 8) return 'Ternera';
@@ -2661,20 +2691,23 @@ function importarPadronDIRSA(input) {
       var enOrdeñe = 0, secas = 0;
       rows.forEach(function(row) {
         var rp = parseInt(getVal(row,['RP','rp','Rp']));
-        if(!rp) { errores++; return; }
+        if(!rp || isNaN(rp)) { errores++; return; }
         var fechaNac   = fmtDate(getVal(row,['F_Nac','Fecha Nacimiento','Fecha nacimiento','FechaNac','fecha_nac']));
-        var condicion  = String(getVal(row,['Estado','Condicion','Condición','condicion'])||'Activa').trim();
-        var rodeoVal   = String(getVal(row,['Lote Act','Lote Ant','Rodeo','rodeo'])||'').trim();
-        var estadoRepro= mapEstadoRepro(getVal(row,['Tacto','Est.Actual','Estado Reproductivo','EstadoReproductivo','estado_reproductivo']));
+        var estActual  = String(row['Est.Actual']||row['Estado']||'').trim();
+        var loteAct    = row['Lote Act'];
+        var loteAnt    = row['Lote Ant'];
+        var rodeoVal   = mapLoteArodeo(loteAct) || mapLoteArodeo(loteAnt) || '';
+        var estadoRepro= mapEstadoRepro(getVal(row,['Tacto','Estado Reproductivo','EstadoReproductivo','estado_reproductivo']));
         var ultimoParto= fmtDate(getVal(row,['Ini.Lact','Inicio Lactancia','Ultimo Parto','UltimoParto','inicio_lactancia']));
         var ultimaInsem= fmtDate(getVal(row,['Ult.Servicio','Fecha Servicio','FechaServicio','Ultima Insem','ultima_insem']));
-        var produccion = parseFloat(getVal(row,['Le.UC','Leche Ultimo Control','Leche','leche','produccion'])||0)||null;
+        var produccion = parseLeche(getVal(row,['Le.UC','Leche Ultimo Control','Leche','leche','produccion']));
         var nroLact    = parseInt(getVal(row,['Nro.Lact','Numero Lactancia','NroLactancia','lactancia'])||0)||0;
         var padre      = String(getVal(row,['ApodoPadre','Padre','Nombre Padre','padre'])||'').trim();
         var rpMadre    = getVal(row,['RP Madre','RPMadre','rp_madre']);
-        var diasParto  = parseInt(getVal(row,['Dias al Parto','DiasAlParto','Prox.Parto'])||0)||null;
-        var cat        = mapCat(condicion, fechaNac);
-        var estadoProd = mapEstadoProd(rodeoVal, condicion);
+        var diasParto  = parseInt(getVal(row,['Dias al Parto','DiasAlParto'])||0)||0;
+        var cat        = mapCat(estActual, fechaNac);
+        if(cat === 'Baja') { errores++; return; } // omitir animales dados de baja
+        var estadoProd = mapEstadoProd(loteAct, loteAnt, estActual);
         var partoEstimado = null;
         if(diasParto && diasParto > 0) partoEstimado = sumarDias(TODAY, diasParto);
         else if(ultimaInsem) partoEstimado = sumarDias(ultimaInsem, 280);
@@ -2687,10 +2720,10 @@ function importarPadronDIRSA(input) {
           nroServicios:parseInt(getVal(row,['Nro.Servicio','NroServicio','nro_servicio'])||0)||0,
           produccionUltima:produccion, madre:rpMadre?parseInt(rpMadre):null, padre:padre,
           nroLactancia:nroLact, enSanitario:false,
-          rodeoManual:['R1','R2','R3','R4','R5','R6'].includes(rodeoVal)?rodeoVal:null,
+          rodeoManual:rodeoVal||null,
         };
         _dirsaAnimalesParsed.push(animal);
-        if(estadoProd==='En Ordeñe') enOrdeñe++; else secas++;
+        if(estadoProd==='Seca') secas++; else enOrdeñe++;
       });
 
       // Actualizar zona de carga
