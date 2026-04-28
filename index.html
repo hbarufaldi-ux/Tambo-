@@ -2714,7 +2714,7 @@ function importarPadronDIRSA(input) {
         var animal = {
           rp:rp, nombre:String(getVal(row,['Nombre','nombre'])||'').trim(),
           sexo:'H', raza:String(getVal(row,['Raza','raza'])||'Holando').trim(),
-          cat:cat, estadoRepro:condicion==='Rechazo'?'Rechazo':estadoRepro,
+          cat:cat, estadoRepro:estadoRepro,
           estadoProd:estadoProd, fechaNac:fechaNac, ultimoParto:ultimoParto,
           ultimaInsem:ultimaInsem, ultimaInsemToro:padre, partoEstimado:partoEstimado,
           nroServicios:parseInt(getVal(row,['Nro.Servicio','NroServicio','nro_servicio'])||0)||0,
