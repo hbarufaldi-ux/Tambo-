@@ -778,6 +778,10 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
         <div id="dirsa-stat-secas" style="font-size:22px;font-weight:700;color:#7A5500;">0</div>
         <div style="font-size:11px;color:#8E8E93;font-weight:600;text-transform:uppercase;letter-spacing:0.04em;margin-top:2px;">Secas</div>
       </div>
+      <div style="flex:1;background:#F7F9FB;border-radius:12px;padding:10px 12px;text-align:center;">
+        <div id="dirsa-stat-recria" style="font-size:22px;font-weight:700;color:#5A5AE0;">0</div>
+        <div style="font-size:11px;color:#8E8E93;font-weight:600;text-transform:uppercase;letter-spacing:0.04em;margin-top:2px;">Recría</div
+      </div>
     </div>
     <div style="overflow-x:auto;">
       <table style="width:100%;border-collapse:collapse;font-size:12px;">
@@ -2657,19 +2661,18 @@ function importarPadronDIRSA(input) {
         if(s==='6'||s==='6.0'||s==='R6') return 'R6';
         return null;
       }
-      function mapEstadoProd(leUC, secado, nroLact) {
-        // Logica real confirmada con archivo DIRSA (todos vienen como A en Estado):
-        // 1. Le.UC con valor  → En Ordene (paso el control lechero)
-        // 2. Le.UC vacio + Secado con fecha → Seca (en transicion o seca)
-        // 3. Le.UC vacio + NroLact = 0 → Recria (vaquillona/ternera sin lactancia)
-        // 4. Le.UC vacio + NroLact > 0 + sin Secado → En Ordene (vaca activa sin control ese mes)
+      function mapEstadoProd(leUC, secado, cat) {
+        // Logica definitiva DIRSA:
+        // 1. Le.UC con valor  → En Ordene (paso el control)
+        // 2. Secado con fecha → Seca
+        // 3. Ternera/Vaquillona → Recria
+        // 4. Vaca adulta sin Le.UC y sin Secado → Omitir (datos sucios DIRSA)
         var tieneLeche = leUC && String(leUC).trim() && String(leUC).trim() !== '0';
         var tieneSecado = secado && secado instanceof Date;
-        var nroL = parseInt(nroLact||0)||0;
         if(tieneLeche) return 'En Ordeñe';
         if(tieneSecado) return 'Seca';
-        if(nroL === 0) return 'Recria';
-        return 'En Ordeñe';
+        if(cat === 'Ternera' || cat === 'Vaquillona') return 'Recria';
+        return 'Omitir';
       }
       function mapEstadoRepro(v) {
         var s = String(v||'').trim();
@@ -2683,18 +2686,18 @@ function importarPadronDIRSA(input) {
       function mapCat(estadoDIRSA, nroLact, fechaNac) {
         // DIRSA Estado col6: A=Activo en sistema, R=Retiro/Baja
         if(estadoDIRSA === 'R') return 'Baja';
-        // Clasificar por NroLact y edad
-        var nroL = parseInt(nroLact||0)||0;
-        if(!fechaNac) return nroL > 0 ? 'Vaca' : 'Vaquillona';
+        // Clasificar SIEMPRE por edad — NroLact=0 en DIRSA no significa recría,
+        // puede ser vaca adulta con historial no cargado
+        if(!fechaNac) return 'Vaca'; // sin fecha → asumir vaca adulta
         var meses = Math.round((new Date()-new Date(fechaNac))/2628000000);
         if(meses < 8) return 'Ternera';
-        if(meses < 24) return 'Vaquillona';
+        if(meses < 30) return 'Vaquillona'; // < 30 meses = recría real
         return 'Vaca';
       }
 
       _dirsaAnimalesParsed = [];
       var errores = 0;
-      var enOrdeñe = 0, secas = 0;
+      var enOrdeñe = 0, secas = 0, enRecria = 0;
       rows.forEach(function(row) {
         var rp = parseInt(getVal(row,['RP','rp','Rp']));
         if(!rp || isNaN(rp)) { errores++; return; }
@@ -2729,7 +2732,8 @@ function importarPadronDIRSA(input) {
         var proxParto  = getVal(row,['Prox.Parto','Prox Parto']);
         var cat        = mapCat(estadoDIRSA, nroLact, fechaNac);
         if(cat === 'Baja') { errores++; return; } // omitir animales dados de baja
-        var estadoProd = mapEstadoProd(leUCRaw, secadoRaw, nroLact);
+        var estadoProd = mapEstadoProd(leUCRaw, secadoRaw, cat);
+        if(estadoProd === 'Omitir') { errores++; return; } // vaca adulta sin datos en DIRSA
         var partoEstimado = null;
         if(proxParto && proxParto instanceof Date) partoEstimado = proxParto.toISOString().split('T')[0];
         else if(diasParto && diasParto > 0 && diasParto <= 290) partoEstimado = sumarDias(TODAY, diasParto);
@@ -2751,7 +2755,7 @@ function importarPadronDIRSA(input) {
           lecheAcum: parseLeche(getVal(row,['Le.ACU','LeACU'])) || 0,
         };
         _dirsaAnimalesParsed.push(animal);
-        if(estadoProd==='Seca') secas++; else enOrdeñe++;
+        if(estadoProd==='Seca') secas++; else if(estadoProd==='En Ordeñe') enOrdeñe++; else if(estadoProd==='Recria') enRecria++;
       });
 
       // Actualizar zona de carga
@@ -2765,6 +2769,8 @@ function importarPadronDIRSA(input) {
       document.getElementById('dirsa-stat-total').textContent   = _dirsaAnimalesParsed.length;
       document.getElementById('dirsa-stat-activas').textContent = enOrdeñe;
       document.getElementById('dirsa-stat-secas').textContent   = secas;
+      var recriaStat = document.getElementById('dirsa-stat-recria');
+      if(recriaStat) recriaStat.textContent = enRecria;
 
       // Preview tabla (primeras 5)
       var tbody = document.getElementById('dirsa-preview-body');
