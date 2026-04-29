@@ -4462,78 +4462,12 @@ function limpiarFilasEmpresa() {
 // ============================================================
 // SWIPE NAVIGATION
 // ============================================================
+/* SWIPE DE PANTALLA DESACTIVADO - navegacion solo por topbar
 (function(){
-  var SCREENS = ['dashboard','leche','rodeo','inseminacion','parto','guachera','recria','reportes'];
-  var touchStartX = 0, touchStartY = 0;
-  var touchEndX = 0, touchEndY = 0;
-  var MIN_SWIPE_X = 60;  // mínimo px horizontal
-  var MAX_SWIPE_Y = 40;  // máximo px vertical para considerar swipe
-
-  function getCurrentScreen() {
-    var active = document.querySelector('.screen.active');
-    if(!active) return -1;
-    var id = active.id.replace('screen-','');
-    return SCREENS.indexOf(id);
-  }
-
-  function swipeToScreen(idx) {
-    if(idx < 0 || idx >= SCREENS.length) return;
-    var navBtns = document.querySelectorAll('.nav-btn');
-    var navBtn = navBtns[idx] || null;
-    goTo(SCREENS[idx], navBtn);
-    // Asegurar que el nav-btn correcto quede activo
-    navBtns.forEach(function(b){ b.classList.remove('active'); });
-    if(navBtn) navBtn.classList.add('active');
-    // Scroll topbar al botón activo
-    var nav = document.getElementById('main-nav');
-    if(nav && navBtn) {
-      nav.scrollLeft = navBtn.offsetLeft - nav.offsetWidth/2 + navBtn.offsetWidth/2;
-    }
-    // Volver al top de la pantalla
-    window.scrollTo(0, 0);
-  }
-
-  document.addEventListener('touchstart', function(e) {
-    touchStartX = e.changedTouches[0].screenX;
-    touchStartY = e.changedTouches[0].screenY;
-  }, {passive: true});
-
-  document.addEventListener('touchend', function(e) {
-    touchEndX = e.changedTouches[0].screenX;
-    touchEndY = e.changedTouches[0].screenY;
-
-    var dx = touchEndX - touchStartX;
-    var dy = Math.abs(touchEndY - touchStartY);
-
-    // Solo swipe horizontal significativo y no en modal abierto
-    if(Math.abs(dx) < MIN_SWIPE_X) return;
-    if(dy > MAX_SWIPE_Y) return;
-
-    // No swipear si hay un modal abierto
-    var modals = ['modal-tm','modal-evento','modal-evento-vaca'];
-    for(var i=0;i<modals.length;i++){
-      var m = document.getElementById(modals[i]);
-      if(m && m.style.display !== 'none') return;
-    }
-
-    // No swipear en ficha o celo
-    var active = document.querySelector('.screen.active');
-    if(!active) return;
-    var activeId = active.id;
-    if(activeId === 'screen-ficha' || activeId === 'screen-celo') return;
-
-    var cur = getCurrentScreen();
-    if(cur === -1) return;
-
-    if(dx < 0) {
-      // Swipe izquierda → siguiente
-      swipeToScreen(cur + 1);
-    } else {
-      // Swipe derecha → anterior
-      swipeToScreen(cur - 1);
-    }
-  }, {passive: true});
+  // Codigo de swipe entre pantallas removido intencionalmente.
+  // El topbar tiene scroll horizontal nativo - el swipe causaba conflictos.
 })();
+*/
 </script>
 
 <!-- MODAL EVENTO VACA -->
