@@ -2715,7 +2715,7 @@ function importarPadronDIRSA(input) {
         if(colR==='r') estadoRepro = 'Rechazo'; // marcado como rechazo en libreta/padrón DIRSA
         else if(tactoVal==='P') estadoRepro = 'Preñada';
         else if(tactoVal==='V'||tactoVal==='Vacia'||tactoVal==='Vacía') estadoRepro = 'Vacía';
-        else if(estActual==='S') estadoRepro = 'Seca';
+        else if(estadoDIRSA==='S' || String(row['Est.Actual']||'').trim()==='S') estadoRepro = 'Seca';
         else if(diasParto2 > 0 && diasParto2 <= 290) estadoRepro = 'Preñada';
         else if(ultimaInsem && diasNR2 > 0 && diasNR2 <= 30) estadoRepro = 'Inseminada';
         else estadoRepro = 'Vacía';
@@ -2732,7 +2732,7 @@ function importarPadronDIRSA(input) {
         var estadoProd = mapEstadoProd(leUCRaw, secadoRaw, nroLact);
         var partoEstimado = null;
         if(proxParto && proxParto instanceof Date) partoEstimado = proxParto.toISOString().split('T')[0];
-        else if(diasParto && diasParto > 0) partoEstimado = sumarDias(TODAY, diasParto);
+        else if(diasParto && diasParto > 0 && diasParto <= 290) partoEstimado = sumarDias(TODAY, diasParto);
         else if(ultimaInsem && estadoRepro==='Preñada') partoEstimado = sumarDias(ultimaInsem, 280);
         var animal = {
           rp:rp, nombre:String(getVal(row,['Nombre','nombre'])||'').trim(),
