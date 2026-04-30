@@ -3222,10 +3222,19 @@ function _fetchPadronBackground(callback) {
       }
       function mapRepro(v) {
         var s = String(v||'').trim();
-        if(s === 'Preñada') return 'Preñada';
-        if(s === 'Vacia' || s === 'Vacía') return 'Vacía';
-        if(s === 'Inseminada') return 'Inseminada';
-        return 'Vacía';
+        if(!s) return 'Vacía';
+        if(s === 'Preñada' || s === 'P') return 'Preñada';
+        if(s === 'Vacia' || s === 'Vacía' || s === 'V') return 'Vacía';
+        if(s === 'Inseminada' || s === 'I') return 'Inseminada';
+        if(s === 'Seca' || s === 'S') return 'Seca';
+        if(s === 'Celo') return 'Celo';
+        if(s === 'Anestro' || s === 'A') return 'Anestro';
+        if(s === 'IATF') return 'IATF';
+        if(s === 'PG') return 'PG';
+        if(s === 'Rechazo') return 'Rechazo';
+        if(s === 'Baja') return 'Baja';
+        if(s === 'Dudoso') return 'Vacía'; // tratar dudoso como vacía
+        return s; // pasar el valor tal cual si no matchea ninguno
       }
       var importados = 0;
       for(var i = 1; i < filas.length; i++) {
