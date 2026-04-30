@@ -3233,14 +3233,14 @@ function _fetchPadronBackground(callback) {
         headers.forEach(function(h, idx){ row[h] = fila[idx]; });
         var rp = parseInt(row['RP']);
         if(!rp) continue;
-        var fechaNac = fmtD(row['Fecha Nacimiento']);
-        var condicion = String(row['Condicion'] || 'Activa').trim();
-        var rodeoVal = String(row['Rodeo'] || '').trim();
+        var fechaNac = fmtD(row['Fecha Nacimiento'] || row['F_Nac']);
+        var condicion = String(row['Condicion'] || row['Estado'] || 'Activa').trim();
+        var rodeoVal = String(row['Rodeo'] || row['Lote Act'] || '').trim();
         var estadoRepro = condicion === 'Rechazo' ? 'Rechazo' : mapRepro(row['Estado Reproductivo']);
         var estadoProd = mapProd(rodeoVal);
-        var ultimoParto = fmtD(row['Inicio Lactancia']);
-        var ultimaInsem = fmtD(row['Fecha Servicio']);
-        var produccion = parseFloat(row['Leche Ultimo Control']) || null;
+        var ultimoParto = fmtD(row['Inicio Lactancia'] || row['Ini.Lact']);
+        var ultimaInsem = fmtD(row['Fecha Servicio'] || row['Ult.Servicio']);
+        var produccion = parseFloat(String(row['Leche Ultimo Control'] || row['Le.UC'] || '').replace(',','.')) || null;
         var partoEstimado = null;
         var eRepro = String(row['Estado Reproductivo']||'').trim();
         if(eRepro === 'Preñada' && ultimaInsem) partoEstimado = sumarDias(ultimaInsem, 280);
@@ -3259,17 +3259,28 @@ function _fetchPadronBackground(callback) {
         var sexo = String(row['Sexo'] || row['sexo'] || 'H').trim();
         if(sexo !== 'M') sexo = 'H';
         var animal = {
-          rp: rp, nombre: String(row['Nombre'] || '').trim(), sexo: sexo,
-          raza: String(row['Raza'] || 'Holando').trim(), cat: cat,
-          estadoRepro: estadoRepro, estadoProd: estadoProd, fechaNac: fechaNac,
-          ultimoParto: ultimoParto, ultimaInsem: ultimaInsem,
+          rp: rp,
+          // Col2=Nombre Padre (ApodoPadre), Col6=Padre
+          nombre: String(row['Nombre Padre'] || row['Nombre'] || '').trim(),
+          sexo: sexo,
+          raza: String(row['Raza'] || 'Holando').trim(),
+          cat: cat,
+          estadoRepro: estadoRepro,
+          estadoProd: estadoProd,
+          fechaNac: fechaNac,
+          ultimoParto: ultimoParto,
+          ultimaInsem: ultimaInsem,
           ultimaInsemToro: String(row['Padre'] || row['Nombre Padre'] || '').trim(),
           partoEstimado: partoEstimado,
-          nroServicios: parseInt(row['Nro.Servicio'] || 0) || 0,
-          produccionUltima: produccion,
+          nroServicios: parseInt(row['Nro.Servicio'] || row['Nro Servicio'] || 0) || 0,
+          produccionUltima: parseFloat(String(row['Leche Ultimo Control'] || '').replace(',','.')) || null,
           diasNR: parseInt(row['Dias NR'] || 0) || 0,
+          diasAcum: parseInt(row['Dias Acumulados'] || 0) || 0,
+          lecheAcum: parseFloat(String(row['Leche Acumulado'] || '').replace(',','.')) || 0,
+          nroLactancia: nroLact,
           enSanitario: false,
           rodeoManual: ['R1','R2','R3','R4','R5','R6'].includes(rodeoVal) ? rodeoVal : null,
+          fechaEgreso: null,
         };
         rodeo.push(animal);
         if(cat === 'Ternera' || cat === 'Ternero') {
