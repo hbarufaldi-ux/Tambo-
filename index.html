@@ -1268,6 +1268,13 @@ function calcAlertas() {
     }
 
     // Producción baja
+    // Alerta: Seca sin preñez confirmada
+    if(a.estadoProd==='Seca' && a.estadoRepro!=='Preñada') {
+      var detSeca = a.ultimaInsem
+        ? 'Seca sin preñez · Último servicio: '+fmtFecha(a.ultimaInsem)+(a.ultimaInsemToro?' ('+a.ultimaInsemToro+')':'')
+        : 'Seca sin preñez · Sin servicio registrado';
+      alertas.push({cat:'SecaSinPreñez', rp:a.rp, detalle:detSeca, urgencia:999});
+    }
     if(a.produccionUltima!==null&&a.produccionUltima<CONFIG.umbralBajaProduccion&&a.estadoProd==='En Ordeñe') {
       alerts.push({cat:'produccion', rp:a.rp, detalle:a.produccionUltima+' '+CONFIG.unidad, urgencia:CONFIG.umbralBajaProduccion-a.produccionUltima});
     }
@@ -1619,7 +1626,8 @@ function renderRodeo() {
     left.appendChild(nm); left.appendChild(inf);
     var right=document.createElement('div'); right.style.cssText='display:flex;flex-direction:column;gap:3px;align-items:flex-end;margin-right:8px;pointer-events:none;';
     if(v.estadoProd) right.appendChild(mkBadge(v.estadoProd));
-    if(v.estadoRepro) right.appendChild(mkBadge(v.estadoRepro));
+    // No mostrar estadoRepro si es igual a estadoProd (evita duplicar "Seca")
+    if(v.estadoRepro && v.estadoRepro !== v.estadoProd) right.appendChild(mkBadge(v.estadoRepro));
     var arr=document.createElement('span'); arr.style.cssText='color:#C8C8CE;font-size:18px;align-self:center;'; arr.textContent='›';
     row.appendChild(left); row.appendChild(right); row.appendChild(arr);
     cont.appendChild(row);
