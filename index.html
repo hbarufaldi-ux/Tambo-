@@ -3267,11 +3267,13 @@ function _fetchPadronBackground(callback) {
         var partoEstimado = null;
         var eRepro = String(row['Estado Reproductivo']||'').trim();
         if(eRepro === 'Preñada' && ultimaInsem) partoEstimado = sumarDias(ultimaInsem, 280);
+        var sexo = String(row['Sexo'] || row['sexo'] || 'H').trim();
+        if(sexo !== 'M') sexo = 'H';
         var meses = fechaNac ? Math.round((new Date() - new Date(fechaNac)) / 2628000000) : 999;
         var nroLact = parseInt(row['Numero Lactancia'] || 0) || 0;
         var cat;
         if(condicion === 'Baja') cat = 'Baja';
-        else if(nroLact > 0 || ['R1','R2','R3','R4','R5','R6'].includes(rodeoVal)) cat = 'Vaca';
+        else if(condicion === 'Ordeñe' || condicion === 'Seca' || nroLact > 0 || ['R1','R2','R3','R4','R5','R6'].includes(rodeoVal)) cat = 'Vaca';
         else if(rodeoVal === 'R8') cat = 'Vaquillona';
         else if(rodeoVal === 'R9') cat = 'Vaquillona';
         else if(rodeoVal === 'R10') cat = 'Vaquillona';
@@ -3279,8 +3281,6 @@ function _fetchPadronBackground(callback) {
         else if(meses >= 24) cat = 'Vaca';
         else if(meses >= 8) cat = sexo==='M' ? 'Ternero' : 'Vaquillona';
         else cat = sexo==='M' ? 'Ternero' : 'Ternera';
-        var sexo = String(row['Sexo'] || row['sexo'] || 'H').trim();
-        if(sexo !== 'M') sexo = 'H';
         var animal = {
           rp: rp,
           // Col2=Nombre Padre (ApodoPadre), Col6=Padre

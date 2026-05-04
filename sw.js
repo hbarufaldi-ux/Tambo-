@@ -1,44 +1,51 @@
-const CACHE = 'tambo-v90';
-const PRECACHE = [
+var CACHE_NAME = 'tambo-v91';
+var urlsToCache = [
   '/Tambo-/',
   '/Tambo-/index.html',
-  'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js',
+  '/Tambo-/manifest.json',
+  '/Tambo-/icon-192.png'
 ];
-self.addEventListener('install', function(e) {
-  e.waitUntil(caches.open(CACHE).then(function(cache) {
-    return Promise.allSettled(PRECACHE.map(function(url) {
-      return cache.add(url).catch(function(){});
-    }));
-  }).then(function(){ return self.skipWaiting(); }));
+
+self.addEventListener('install', function(event) {
+  self.skipWaiting();
+  event.waitUntil(
+    caches.open(CACHE_NAME).then(function(cache) {
+      return cache.addAll(urlsToCache);
+    })
+  );
 });
-self.addEventListener('activate', function(e) {
-  e.waitUntil(caches.keys().then(function(keys) {
-    return Promise.all(keys.filter(function(k){ return k!==CACHE; }).map(function(k){ return caches.delete(k); }));
-  }).then(function(){ return self.clients.claim(); }));
+
+self.addEventListener('activate', function(event) {
+  event.waitUntil(
+    caches.keys().then(function(cacheNames) {
+      return Promise.all(
+        cacheNames.filter(function(name) {
+          return name !== CACHE_NAME;
+        }).map(function(name) {
+          return caches.delete(name);
+        })
+      );
+    }).then(function() {
+      return self.clients.claim();
+    })
+  );
 });
-self.addEventListener('fetch', function(e) {
-  var url = e.request.url;
-  if(url.includes('script.google.com')) {
-    e.respondWith(fetch(e.request).catch(function(){
-      return new Response(JSON.stringify({error:'offline'}),{headers:{'Content-Type':'application/json'}});
-    }));
-    return;
-  }
-  if(url.includes('accounts.google.com')||url.includes('googleapis.com')) {
-    e.respondWith(fetch(e.request).catch(function(){ return new Response('',{status:503}); }));
-    return;
-  }
-  e.respondWith(caches.match(e.request).then(function(cached) {
-    if(cached) return cached;
-    return fetch(e.request).then(function(response) {
-      if(response&&response.status===200&&response.type!=='opaque'){
-        var clone=response.clone();
-        caches.open(CACHE).then(function(cache){ cache.put(e.request,clone); });
-      }
-      return response;
-    }).catch(function(){
-      if(e.request.mode==='navigate') return caches.match('/Tambo-/index.html');
-      return new Response('',{status:503});
-    });
-  }));
+
+self.addEventListener('fetch', function(event) {
+  // No cachear llamadas al Apps Script
+  if(event.request.url.indexOf('script.google.com') !== -1) return;
+
+  event.respondWith(
+    caches.match(event.request).then(function(response) {
+      if(response) return response;
+      return fetch(event.request).then(function(response) {
+        if(!response || response.status !== 200 || response.type !== 'basic') return response;
+        var responseToCache = response.clone();
+        caches.open(CACHE_NAME).then(function(cache) {
+          cache.put(event.request, responseToCache);
+        });
+        return response;
+      });
+    })
+  );
 });
