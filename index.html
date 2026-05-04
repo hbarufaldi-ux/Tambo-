@@ -3201,132 +3201,137 @@ function cargarPadronDesdeSheets(callback) {
   setSyncStatus('⟳ Cargando padrón...');
   _fetchPadronBackground(callback);
 }
-
 function _fetchPadronBackground(callback) {
-  fetch(SCRIPT_URL + '?accion=padron')
-    .then(function(r){ return r.json(); })
-    .then(function(data) {
-      if(!data.ok || !data.datos || data.datos.length < 2) {
-        setSyncStatus('● Sin padrón en Sheets');
-        if(callback) callback(false);
-        return;
-      }
-      var filas = data.datos;
-      var headers = filas[0].map(function(h){ return String(h).trim(); });
-      var toros_backup = rodeo.filter(function(a){ return a.cat === 'Toro'; });
-      rodeo.length = 0; guachera.length = 0; recria.length = 0;
-      toros_backup.forEach(function(t){ rodeo.push(t); });
-      function fmtD(v) {
-        if(!v) return null;
-        if(v instanceof Date) return v.toISOString().split('T')[0];
-        if(typeof v === 'string' && v.match(/\d{4}-\d{2}-\d{2}/)) return v.substring(0,10);
-        return null;
-      }
-      function mapProd(condicion, rodeoVal) {
-        // Leer Estado Productivo directamente del Sheet
-        var c = String(condicion||'').trim();
-        if(c === 'Seca') return 'Seca';
-        if(c === 'Ordeñe' || c === 'En Ordeñe') return 'En Ordeñe';
-        // Fallback por Rodeo (compatibilidad hacia atrás)
-        var r = String(rodeoVal||'').trim();
-        if(['R1','R2','R3','R4','R5'].includes(r)) return 'En Ordeñe';
-        if(r === 'R6') return 'Seca';
-        if(r === 'R8') return 'En Ordeñe';
-        return 'En Ordeñe';
-      }
-      function mapRepro(v) {
-        var s = String(v||'').trim();
-        if(!s) return 'Vacía';
-        if(s === 'Preñada' || s === 'P') return 'Preñada';
-        if(s === 'Vacia' || s === 'Vacía' || s === 'V') return 'Vacía';
-        if(s === 'Inseminada' || s === 'I') return 'Inseminada';
-        if(s === 'Seca' || s === 'S') return 'Seca';
-        if(s === 'Celo') return 'Celo';
-        if(s === 'Anestro' || s === 'A') return 'Anestro';
-        if(s === 'IATF') return 'IATF';
-        if(s === 'PG') return 'PG';
-        if(s === 'Rechazo') return 'Rechazo';
-        if(s === 'Baja') return 'Baja';
-        if(s === 'Dudoso') return 'Vacía'; // tratar dudoso como vacía
-        return s; // pasar el valor tal cual si no matchea ninguno
-      }
-      var importados = 0;
-      for(var i = 1; i < filas.length; i++) {
-        var fila = filas[i]; var row = {};
-        headers.forEach(function(h, idx){ row[h] = fila[idx]; });
-        var rp = parseInt(row['RP']);
-        if(!rp) continue;
-        var fechaNac = fmtD(row['Fecha Nacimiento'] || row['F_Nac']);
-        var condicion = String(row['Estado Productivo'] || row['Condicion'] || row['Estado'] || 'Activa').trim();
-        var rodeoVal = String(row['Rodeo'] || row['Lote Act'] || '').trim();
-        var estadoRepro = condicion === 'Rechazo' ? 'Rechazo' : mapRepro(row['Estado Reproductivo']);
-        var estadoProd = mapProd(condicion, rodeoVal);
-        var ultimoParto = fmtD(row['Inicio Lactancia'] || row['Ini.Lact']);
-        var ultimaInsem = fmtD(row['Fecha Servicio'] || row['Ult.Servicio']);
-        var produccion = parseFloat(String(row['Leche Ultimo Control'] || row['Le.UC'] || '').replace(',','.')) || null;
-        var partoEstimado = null;
-        var eRepro = String(row['Estado Reproductivo']||'').trim();
-        if(eRepro === 'Preñada' && ultimaInsem) partoEstimado = sumarDias(ultimaInsem, 280);
-        var sexo = String(row['Sexo'] || row['sexo'] || 'H').trim();
-        if(sexo !== 'M') sexo = 'H';
-        var meses = fechaNac ? Math.round((new Date() - new Date(fechaNac)) / 2628000000) : 999;
-        var nroLact = parseInt(row['Numero Lactancia'] || 0) || 0;
-        var cat;
-        if(condicion === 'Baja') cat = 'Baja';
-        else if(condicion === 'Ordeñe' || condicion === 'Seca' || nroLact > 0 || ['R1','R2','R3','R4','R5','R6'].includes(rodeoVal)) cat = 'Vaca';
-        else if(rodeoVal === 'R8') cat = 'Vaquillona';
-        else if(rodeoVal === 'R9') cat = 'Vaquillona';
-        else if(rodeoVal === 'R10') cat = 'Vaquillona';
-        else if(rodeoVal === 'R11') cat = meses < 8 ? (sexo==='M'?'Ternero':'Ternera') : 'Vaquillona';
-        else if(meses >= 24) cat = 'Vaca';
-        else if(meses >= 8) cat = sexo==='M' ? 'Ternero' : 'Vaquillona';
-        else cat = sexo==='M' ? 'Ternero' : 'Ternera';
-        var animal = {
-          rp: rp,
-          // Col2=Nombre Padre (ApodoPadre), Col6=Padre
-          nombre: String(row['Nombre Padre'] || row['Nombre'] || '').trim(),
-          sexo: sexo,
-          raza: String(row['Raza'] || 'Holando').trim(),
-          cat: cat,
-          estadoRepro: estadoRepro,
-          estadoProd: estadoProd,
-          fechaNac: fechaNac,
-          ultimoParto: ultimoParto,
-          ultimaInsem: ultimaInsem,
-          ultimaInsemToro: String(row['Padre'] || row['Nombre Padre'] || '').trim(),
-          partoEstimado: partoEstimado,
-          nroServicios: parseInt(row['Nro.Servicio'] || row['Nro Servicio'] || 0) || 0,
-          produccionUltima: parseFloat(String(row['Leche Ultimo Control'] || '').replace(',','.')) || null,
-          diasNR: parseInt(row['Dias NR'] || 0) || 0,
-          diasAcum: parseInt(row['Dias Acumulados'] || 0) || 0,
-          lecheAcum: parseFloat(String(row['Leche Acumulado'] || '').replace(',','.')) || 0,
-          nroLactancia: nroLact,
-          enSanitario: false,
-          rodeoManual: ['R1','R2','R3','R4','R5','R6'].includes(rodeoVal) ? rodeoVal : null,
-          fechaEgreso: null,
-        };
-        rodeo.push(animal);
-        if(cat === 'Ternera' || cat === 'Ternero') {
-          var d = fechaNac ? -diasHasta(fechaNac) : null;
-          var sexoA = animal.sexo || 'H';
-          if(d !== null && d <= 75) guachera.push({rp:rp,nombre:animal.nombre,sexo:sexoA,padre:animal.ultimaInsemToro,fechaNac:fechaNac,vacunado:false,salio:false,eventos:[]});
-          else recria.push({rp:rp,nombre:animal.nombre,sexo:sexoA,cat:cat,estadoRepro:estadoRepro,rodeoManual:animal.rodeoManual,fechaNac:fechaNac,padre:animal.ultimaInsemToro,madre:'',eventos:[],activo:true});
-        } else if(cat === 'Vaquillona') {
-          recria.push({rp:rp,nombre:animal.nombre,sexo:'H',cat:cat,estadoRepro:estadoRepro,rodeoManual:animal.rodeoManual,fechaNac:fechaNac,padre:animal.ultimaInsemToro,madre:'',eventos:[],activo:true});
-        }
-        importados++;
-      }
-      actualizarCats(); poblarSelects(); renderDashboard(); renderRodeo();
-      setSyncStatus('● '+importados+' animales');
-      guardarCacheLocal();
-      if(callback) callback(true);
-    })
-    .catch(function(err) {
-      setSyncStatus('✕ Error al cargar');
+  var cbName = '_padronCB_' + Date.now();
+  var script = document.createElement('script');
+  var done = false;
+  var timer = setTimeout(function(){
+    if(done) return; done=true;
+    delete window[cbName];
+    if(script.parentNode) script.parentNode.removeChild(script);
+    setSyncStatus('✕ Sin conexión con Sheets');
+    if(callback) callback(false);
+  }, 15000);
+  window[cbName] = function(data) {
+    if(done) return; done=true;
+    clearTimeout(timer);
+    delete window[cbName];
+    if(script.parentNode) script.parentNode.removeChild(script);
+    if(!data.ok || !data.datos || data.datos.length < 2) {
+      setSyncStatus('● Sin padrón en Sheets');
       if(callback) callback(false);
-    });
+      return;
+    }
+    var filas = data.datos;
+    var headers = filas[0].map(function(h){ return String(h).trim(); });
+    var toros_backup = rodeo.filter(function(a){ return a.cat === 'Toro'; });
+    rodeo.length = 0; guachera.length = 0; recria.length = 0;
+    toros_backup.forEach(function(t){ rodeo.push(t); });
+    function fmtD(v) {
+      if(!v) return null;
+      if(v instanceof Date) return v.toISOString().split('T')[0];
+      if(typeof v === 'string' && v.match(/\d{4}-\d{2}-\d{2}/)) return v.substring(0,10);
+      return null;
+    }
+    function mapProd(condicion, rodeoVal) {
+      var c = String(condicion||'').trim();
+      if(c === 'Seca') return 'Seca';
+      if(c === 'Ordeñe' || c === 'En Ordeñe') return 'En Ordeñe';
+      var r = String(rodeoVal||'').trim();
+      if(['R1','R2','R3','R4','R5'].includes(r)) return 'En Ordeñe';
+      if(r === 'R6') return 'Seca';
+      if(r === 'R8') return 'En Ordeñe';
+      return 'En Ordeñe';
+    }
+    function mapRepro(v) {
+      var s = String(v||'').trim();
+      if(!s) return 'Vacía';
+      if(s === 'Preñada' || s === 'P') return 'Preñada';
+      if(s === 'Vacia' || s === 'Vacía' || s === 'V') return 'Vacía';
+      if(s === 'Inseminada' || s === 'I') return 'Inseminada';
+      if(s === 'Seca' || s === 'S') return 'Seca';
+      if(s === 'Celo') return 'Celo';
+      if(s === 'Anestro' || s === 'A') return 'Anestro';
+      if(s === 'IATF') return 'IATF';
+      if(s === 'PG') return 'PG';
+      if(s === 'Rechazo') return 'Rechazo';
+      if(s === 'Baja') return 'Baja';
+      if(s === 'Dudoso') return 'Vacía';
+      return s;
+    }
+    var importados = 0;
+    for(var i = 1; i < filas.length; i++) {
+      var fila = filas[i]; var row = {};
+      headers.forEach(function(h, idx){ row[h] = fila[idx]; });
+      var rp = parseInt(row['RP']);
+      if(!rp) continue;
+      var fechaNac = fmtD(row['Fecha Nacimiento'] || row['F_Nac']);
+      var condicion = String(row['Estado Productivo'] || row['Condicion'] || row['Estado'] || 'Activa').trim();
+      var rodeoVal = String(row['Rodeo'] || row['Lote Act'] || '').trim();
+      var estadoRepro = condicion === 'Rechazo' ? 'Rechazo' : mapRepro(row['Estado Reproductivo']);
+      var estadoProd = mapProd(condicion, rodeoVal);
+      var ultimoParto = fmtD(row['Inicio Lactancia'] || row['Ini.Lact']);
+      var ultimaInsem = fmtD(row['Fecha Servicio'] || row['Ult.Servicio']);
+      var produccion = parseFloat(String(row['Leche Ultimo Control'] || row['Le.UC'] || '').replace(',','.')) || null;
+      var partoEstimado = null;
+      var eRepro = String(row['Estado Reproductivo']||'').trim();
+      if(eRepro === 'Preñada' && ultimaInsem) partoEstimado = sumarDias(ultimaInsem, 280);
+      var sexo = String(row['Sexo'] || row['sexo'] || 'H').trim();
+      if(sexo !== 'M') sexo = 'H';
+      var meses = fechaNac ? Math.round((new Date() - new Date(fechaNac)) / 2628000000) : 999;
+      var nroLact = parseInt(row['Numero Lactancia'] || 0) || 0;
+      var cat;
+      if(condicion === 'Baja') cat = 'Baja';
+      else if(condicion === 'Ordeñe' || condicion === 'Seca' || nroLact > 0 || ['R1','R2','R3','R4','R5','R6'].includes(rodeoVal)) cat = 'Vaca';
+      else if(rodeoVal === 'R8') cat = 'Vaquillona';
+      else if(rodeoVal === 'R9') cat = 'Vaquillona';
+      else if(rodeoVal === 'R10') cat = 'Vaquillona';
+      else if(rodeoVal === 'R11') cat = meses < 8 ? (sexo==='M'?'Ternero':'Ternera') : 'Vaquillona';
+      else if(meses >= 24) cat = 'Vaca';
+      else if(meses >= 8) cat = sexo==='M' ? 'Ternero' : 'Vaquillona';
+      else cat = sexo==='M' ? 'Ternero' : 'Ternera';
+      var animal = {
+        rp: rp,
+        nombre: String(row['Nombre Padre'] || row['Nombre'] || '').trim(),
+        sexo: sexo,
+        raza: String(row['Raza'] || 'Holando').trim(),
+        cat: cat,
+        estadoRepro: estadoRepro,
+        estadoProd: estadoProd,
+        fechaNac: fechaNac,
+        ultimoParto: ultimoParto,
+        ultimaInsem: ultimaInsem,
+        ultimaInsemToro: String(row['Padre'] || row['Nombre Padre'] || '').trim(),
+        partoEstimado: partoEstimado,
+        nroServicios: parseInt(row['Nro.Servicio'] || row['Nro Servicio'] || 0) || 0,
+        produccionUltima: parseFloat(String(row['Leche Ultimo Control'] || '').replace(',','.')) || null,
+        diasNR: parseInt(row['Dias NR'] || 0) || 0,
+        diasAcum: parseInt(row['Dias Acumulados'] || 0) || 0,
+        lecheAcum: parseFloat(String(row['Leche Acumulado'] || '').replace(',','.')) || 0,
+        nroLactancia: nroLact,
+        enSanitario: false,
+        rodeoManual: ['R1','R2','R3','R4','R5','R6'].includes(rodeoVal) ? rodeoVal : null,
+        fechaEgreso: null,
+      };
+      rodeo.push(animal);
+      if(cat === 'Ternera' || cat === 'Ternero') {
+        var d = fechaNac ? -diasHasta(fechaNac) : null;
+        var sexoA = animal.sexo || 'H';
+        if(d !== null && d <= 75) guachera.push({rp:rp,nombre:animal.nombre,sexo:sexoA,padre:animal.ultimaInsemToro,fechaNac:fechaNac,vacunado:false,salio:false,eventos:[]});
+        else recria.push({rp:rp,nombre:animal.nombre,sexo:sexoA,cat:cat,estadoRepro:estadoRepro,rodeoManual:animal.rodeoManual,fechaNac:fechaNac,padre:animal.ultimaInsemToro,madre:'',eventos:[],activo:true});
+      } else if(cat === 'Vaquillona') {
+        recria.push({rp:rp,nombre:animal.nombre,sexo:'H',cat:cat,estadoRepro:estadoRepro,rodeoManual:animal.rodeoManual,fechaNac:fechaNac,padre:animal.ultimaInsemToro,madre:'',eventos:[],activo:true});
+      }
+      importados++;
+    }
+    actualizarCats(); poblarSelects(); renderDashboard(); renderRodeo();
+    setSyncStatus('● '+importados+' animales');
+    guardarCacheLocal();
+    if(callback) callback(true);
+  };
+  script.src = SCRIPT_URL + '?accion=padron&callback=' + cbName;
+  document.head.appendChild(script);
 }
-
 // ---- REGISTROS RECIENTES ----
 function renderRecientes(tipo) {
   var lista = document.getElementById(tipo+'-recientes-lista');
