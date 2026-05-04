@@ -2288,7 +2288,13 @@ function onAnimalSecado() {
 // ============================================================
 var CACHE_KEY_RODEO='tambo_rodeo',CACHE_KEY_TS='tambo_rodeo_ts',CACHE_KEY_GUACHERA='tambo_guachera',CACHE_KEY_RECRIA='tambo_recria',CACHE_KEY_PENDING='tambo_pending',CACHE_TTL_MS=4*60*60*1000;
 function guardarCacheLocal(){try{localStorage.setItem(CACHE_KEY_RODEO,JSON.stringify(rodeo));localStorage.setItem(CACHE_KEY_GUACHERA,JSON.stringify(guachera));localStorage.setItem(CACHE_KEY_RECRIA,JSON.stringify(recria));}catch(e){}}
-function cargarCacheLocal(){try{var r=localStorage.getItem(CACHE_KEY_RODEO);if(!r)return false;var pr=JSON.parse(r);if(!pr||pr.length===0)return false;rodeo.length=0;pr.forEach(function(a){rodeo.push(a);});var g=localStorage.getItem(CACHE_KEY_GUACHERA);if(g){var pg=JSON.parse(g);guachera.length=0;pg.forEach(function(a){guachera.push(a)});}var rc=localStorage.getItem(CACHE_KEY_RECRIA);if(rc){var prc=JSON.parse(rc);recria.length=0;prc.forEach(function(a){recria.push(a)});}return true;}catch(e){return false;}}
+function cargarCacheLocal(){try{var r=localStorage.getItem(CACHE_KEY_RODEO);if(!r)return false;var pr=JSON.parse(r);if(!pr||pr.length===0)return false;rodeo.length=0;pr.forEach(function(a){
+    // Normalizar estadoProd por si el caché tiene valores viejos
+    if(a.estadoProd==='Ordeñe'||a.estadoProd==='Activa'||a.estadoProd==='En Ordene'||a.estadoProd==='Recria') a.estadoProd='En Ordeñe';
+    else if(!a.estadoProd||a.estadoProd==='Baja') a.estadoProd='En Ordeñe';
+    if(a.cat==='Baja') a.estadoProd='';
+    rodeo.push(a);
+  });var g=localStorage.getItem(CACHE_KEY_GUACHERA);if(g){var pg=JSON.parse(g);guachera.length=0;pg.forEach(function(a){guachera.push(a)});}var rc=localStorage.getItem(CACHE_KEY_RECRIA);if(rc){var prc=JSON.parse(rc);recria.length=0;prc.forEach(function(a){recria.push(a)});}return true;}catch(e){return false;}}
 function cacheTTLVencido(){var ts=localStorage.getItem(CACHE_KEY_TS);if(!ts)return true;return(Date.now()-parseInt(ts))>CACHE_TTL_MS;}
 function leerPendientes(){try{var p=localStorage.getItem(CACHE_KEY_PENDING);return p?JSON.parse(p):[];}catch(e){return[];}}
 function guardarPendientes(l){try{localStorage.setItem(CACHE_KEY_PENDING,JSON.stringify(l));}catch(e){}}
