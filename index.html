@@ -1400,7 +1400,7 @@ function renderDashboard() {
       hdr.innerHTML='<div style="display:flex;align-items:baseline;gap:8px;flex:1;"><span style="display:inline-flex;align-items:center;height:1em;flex-shrink:0;"><span style="width:8px;height:8px;border-radius:50%;background:'+cfg.dot+';display:inline-block;"></span></span><span style="font-size:16px;font-weight:700;color:#fff;">'+cfg.label+'</span></div><span style="font-size:15px;font-weight:600;color:rgba(255,255,255,0.7);white-space:nowrap;">'+grupos[cat].length+' animales'+(cat==='tacto'?' <button onclick="event.stopPropagation();abrirTactoMasivo()" style="background:#E07000;color:#fff;border:none;border-radius:10px;padding:4px 10px;font-size:12px;font-weight:700;cursor:pointer;">📋 Lista</button>':'')+' ›</span>';
 
       var body = document.createElement('div');
-      body.style.display='none';
+      body.style.display='block';
       hdr.onclick=function(){ body.style.display=body.style.display==='none'?'block':'none'; };
 
       grupos[cat].forEach(function(a) {
@@ -1750,22 +1750,12 @@ function abrirFicha(rp) {
   if(a.estadoProd) bdgs.appendChild(mkBadge(a.estadoProd));
   if(a.estadoRepro) bdgs.appendChild(mkBadge(a.estadoRepro));
   hdr.appendChild(info); hdr.appendChild(bdgs);
-  var stickyHdr = document.createElement('div');
-  var navEl = document.getElementById('main-nav');
-  var navBottom = navEl ? navEl.getBoundingClientRect().bottom : 112;
-  var stickyTop = navEl ? navEl.offsetTop + navEl.offsetHeight : 112;
-  stickyHdr.style.cssText = 'position:sticky;top:130px;z-index:98;background:#D8E0E8;padding:8px 16px 10px;margin:-16px -16px 8px;border-bottom:0.5px solid rgba(0,0,0,0.08);';
   var volverBtn = document.createElement('button');
-  volverBtn.style.cssText = 'background:none;border:none;color:#1C1C1E;font-size:14px;font-weight:600;cursor:pointer;padding:0 0 8px;display:block;';
+  volverBtn.style.cssText = 'background:none;border:none;color:#1C1C1E;font-size:14px;font-weight:600;cursor:pointer;padding:0 0 12px;display:block;';
   volverBtn.textContent = '← Volver al Padrón';
   volverBtn.onclick = function(){ goBack(); };
-  stickyHdr.appendChild(volverBtn);
-  stickyHdr.appendChild(hdr);
-  cont.appendChild(stickyHdr);
-  // Spacer to push content below fixed header
-  var spacer = document.createElement('div');
-  spacer.style.height = '8px';
-  cont.appendChild(spacer);
+  cont.appendChild(volverBtn);
+  cont.appendChild(hdr);
 
   // Alertas
   alertas.forEach(function(al){
