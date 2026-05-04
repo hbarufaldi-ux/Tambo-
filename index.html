@@ -880,7 +880,8 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
   <div id="ficha-contenido"></div>
 </div>
 
-<script src="https://accounts.google.com/gsi/client" async defer>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<script>
 function drawDonut(id,pct,color){
   var svg=document.getElementById(id);
   if(!svg)return;
@@ -891,7 +892,6 @@ function drawDonut(id,pct,color){
   arc.setAttribute('stroke',color);
   arc.setAttribute('stroke-dasharray',(p/100*circ).toFixed(1)+' '+circ.toFixed(1));
 }
-
 </script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
@@ -1274,7 +1274,7 @@ function calcAlertas() {
       var detSeca = a.ultimaInsem
         ? 'Seca sin preñez · Último servicio: '+fmtFecha(a.ultimaInsem)+(a.ultimaInsemToro?' ('+a.ultimaInsemToro+')':'')
         : 'Seca sin preñez · Sin servicio registrado';
-      alerts.push({cat:'SecaSinPreñez', rp:a.rp, detalle:detSeca, urgencia:999});
+      alertas.push({cat:'SecaSinPreñez', rp:a.rp, detalle:detSeca, urgencia:999});
     }
     if(a.produccionUltima!==null&&a.produccionUltima<CONFIG.umbralBajaProduccion&&a.estadoProd==='En Ordeñe') {
       alerts.push({cat:'produccion', rp:a.rp, detalle:a.produccionUltima+' '+CONFIG.unidad, urgencia:CONFIG.umbralBajaProduccion-a.produccionUltima});
@@ -1616,7 +1616,7 @@ function renderRodeo() {
   }
   lista.forEach(function(v) {
     var row=document.createElement('div'); row.className='animal-row'; row.style.cursor='pointer'; row.style.position='relative'; row.style.zIndex='1';
-    row.addEventListener('click',function(){abrirFicha(v.rp);});
+    row.addEventListener('click',function(){abrirFicha(v.rp);}); row.onclick=function(){abrirFicha(v.rp); return false;};
     var left=document.createElement('div'); left.style.cssText='flex:1;pointer-events:none;';
     var nm=document.createElement('div'); nm.className='animal-name';
     nm.innerHTML='RP '+v.rp+' <span style="font-weight:400;color:#8E8E93;font-size:13px;">'+v.nombre+'</span>';
