@@ -897,6 +897,7 @@ function drawDonut(id,pct,color){
 <script>
 var SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxPT8TP7gpxNsVBXTbNIjW70SQtJdIu2iYOiBvvFKbxtQCPXZZ0DEUMfz241U7tVrEPEQ/exec';
 var TODAY = new Date().toISOString().split('T')[0];
+document.addEventListener('visibilitychange', function(){ if(!document.hidden) TODAY = new Date().toISOString().split('T')[0]; });
 var CONFIG_DEFAULT = {
   // General
   nombreTambo: 'Cañada Negra',
@@ -1116,15 +1117,6 @@ function poblarGuachera() {
   rodeo.forEach(function(a) {
     if(a.cat==='Baja') return;
     var d = a.fechaNac ? Math.max(0, -diasHasta(a.fechaNac)) : null;
-  // Buscar madre desde rodeo si no está en el objeto
-  var madreStr = a.madre || '';
-  if(!madreStr) {
-    var animalRodeo = getAnimal(rp);
-    if(animalRodeo && animalRodeo.madre) {
-      var madreAnimal = getAnimal(animalRodeo.madre);
-      madreStr = madreAnimal ? madreAnimal.nombre + ' (RP ' + animalRodeo.madre + ')' : 'RP ' + animalRodeo.madre;
-    }
-  }
     if(d===null||d>90) return;
     if(guachera.find(function(g){return g.rp===a.rp;})) return;
     var padre='';
@@ -1138,15 +1130,6 @@ function poblarRecria() {
     if(a.cat==='Baja'||a.cat==='Vaca'||a.cat==='Toro') return;
     if(!a.fechaNac) return;
     var d = a.fechaNac ? Math.max(0, -diasHasta(a.fechaNac)) : null;
-  // Buscar madre desde rodeo si no está en el objeto
-  var madreStr = a.madre || '';
-  if(!madreStr) {
-    var animalRodeo = getAnimal(rp);
-    if(animalRodeo && animalRodeo.madre) {
-      var madreAnimal = getAnimal(animalRodeo.madre);
-      madreStr = madreAnimal ? madreAnimal.nombre + ' (RP ' + animalRodeo.madre + ')' : 'RP ' + animalRodeo.madre;
-    }
-  }
     if(d===null||d<=75) return;
     if(recria.find(function(r){return r.rp===a.rp;})) return;
     var padre='', madre='';
@@ -1202,8 +1185,8 @@ function accionRechazo(accion) {
     renderDashboard();
   } else if(accion === 'rechazo') {
     a.estadoRepro = 'Rechazo';
-    guardarLocal();
-    sincronizarAnimal(a);
+    guardarCacheLocal();
+    enviarASheets('Reg_Bajas',[generarID('Rec',a.rp),TODAY,a.rp,a.nombre,'Rechazo','','','','']);
     showToast(a.nombre+' marcada como Rechazo');
     cerrarModalRechazo();
     renderDashboard();
@@ -1230,8 +1213,8 @@ function accionBajaProd(accion) {
   if(!a) return;
   if(accion === 'rechazo') {
     a.estadoRepro = 'Rechazo';
-    guardarLocal();
-    sincronizarAnimal(a);
+    guardarCacheLocal();
+    enviarASheets('Reg_Bajas',[generarID('Rec',a.rp),TODAY,a.rp,a.nombre,'Rechazo','','','','']);
     showToast(a.nombre+' marcada como Rechazo');
     cerrarModalBajaProd();
     renderDashboard();
@@ -1654,9 +1637,9 @@ function renderGuachera() {
 
   var lista=document.getElementById('g-lista'); lista.innerHTML='';
   if(activas.length===0){lista.innerHTML='<div style="padding:12px 0;text-align:center;color:#8E8E93;font-size:14px;">Sin crías en guachera</div>';return;}
-  if(activasFiltradas.length===0){lista.innerHTML='<div style="padding:12px 0;text-align:center;color:#8E8E93;font-size:14px;">Sin resultados para ese RP</div>';return;}
   var buscarG = (document.getElementById('guachera-buscar') ? document.getElementById('guachera-buscar').value : '').trim();
   var activasFiltradas = buscarG ? activas.filter(function(c){ return String(c.rp).startsWith(buscarG); }) : activas;
+  if(activasFiltradas.length===0){lista.innerHTML='<div style="padding:12px 0;text-align:center;color:#8E8E93;font-size:14px;">Sin resultados para ese RP</div>';return;}
   activasFiltradas.sort(function(a,b){ return (b.fechaNac||'').localeCompare(a.fechaNac||''); });
   activasFiltradas.forEach(function(c) {
     var d=diasDeVida(c.fechaNac);
@@ -2139,7 +2122,7 @@ function darDeBajaAnimal(rp) {
     showToast(nombre+' movido a recría');
   }
   renderGuachera(); renderRecria(); renderDashboard(); poblarSelects();
-  goTo('guachera');
+  goBack();
 }
 
 // ---- EXPORTAR ----
@@ -2310,7 +2293,7 @@ function cacheTTLVencido(){var ts=localStorage.getItem(CACHE_KEY_TS);if(!ts)retu
 function leerPendientes(){try{var p=localStorage.getItem(CACHE_KEY_PENDING);return p?JSON.parse(p):[];}catch(e){return[];}}
 function guardarPendientes(l){try{localStorage.setItem(CACHE_KEY_PENDING,JSON.stringify(l));}catch(e){}}
 function agregarPendiente(hoja,fila){var l=leerPendientes();l.push({hoja:hoja,fila:fila,ts:Date.now()});guardarPendientes(l);}
-async function reintentarPendientes(){var lista=leerPendientes();if(lista.length===0)return;setSyncStatus('⟳ Sincronizando '+lista.length+' eventos...');var err=0;for(var i=lista.length-1;i>=0;i--){try{await fetch(SCRIPT_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/json'},body:JSON.stringify({hoja:lista[i].hoja,fila:lista[i].fila})});var l=leerPendientes();l.splice(i,1);guardarPendientes(l);}catch(e){err++;}}setSyncStatus(err===0?'● Sincronizado':'⚠ '+err+' pendientes');}
+async function reintentarPendientes(){var lista=leerPendientes();if(lista.length===0)return;setSyncStatus('⟳ Sincronizando '+lista.length+' eventos...');var err=0;for(var i=lista.length-1;i>=0;i--){try{await fetch(SCRIPT_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain'},body:JSON.stringify({hoja:lista[i].hoja,fila:lista[i].fila})});var l=leerPendientes();l.splice(i,1);guardarPendientes(l);}catch(e){err++;}}setSyncStatus(err===0?'● Sincronizado':'⚠ '+err+' pendientes');}
 function limpiarCache(){['tambo_rodeo','tambo_rodeo_ts','tambo_guachera','tambo_recria','tambo_pending'].forEach(function(k){localStorage.removeItem(k);});showToast('Caché limpiada — recargando...');setTimeout(function(){location.reload();},1200);}
 // ============================================================
 
@@ -2320,7 +2303,7 @@ async function enviarASheets(hoja, fila, datosExtra) {
 
   try {
     var payload = {hoja:hoja, fila:fila, rp:String(fila[2]||''), datos:datosExtra||{}};
-    await fetch(SCRIPT_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+    await fetch(SCRIPT_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain'},body:JSON.stringify(payload)});
     setSyncStatus('● '+rodeo.length+' animales'); showSaving(false); return true;
   } catch(e) {
     agregarPendiente(hoja, fila);
@@ -2367,7 +2350,7 @@ async function guardarParto() {
   agregarReciente('guachera', parseInt(rpCria), fecha);
     enviarASheets('Guachera_Eventos',[generarID('Ing',rpCria),fecha,rpCria,nombreCria,'Ingreso',0,'',a.nombre,nombreToro,sexoCria]);
     // Agregar cría al Padrón en Sheets
-    enviarASheets('Padron',[parseInt(rpCria),nombreToro,'Holando','Activa','',fecha,a.rp,'',0,'','','',nombreToro,'','',0,0,0,0,0,0,catCria,'','','',0,0]);
+    enviarASheets('Padron',[parseInt(rpCria),nombreCria,'Holando','Activa',fecha,nombreToro,catCria,0,'','',0,'','',0,0,0,'',catCria,'',0,0,'']);
   }
 
   var fila=[generarID('Par',madre),fecha,madre,a.nombre,nombreToro,sexoCria,rpCria,nombreCria,document.getElementById('p-tipo').value,getRadio('viva'),getRadio('mellizo'),document.getElementById('p-obs').value||'',getRadio('placenta'),catCria];
@@ -2472,6 +2455,10 @@ function goTo(screen, btn) {
       document.querySelectorAll('.screen').forEach(function(s){s.classList.remove('active');});
       document.getElementById('screen-control-lechero').classList.add('active');
       setTimeout(function(){ abrirControlLechero(); }, 100);
+      if(btn){document.querySelectorAll('.nav-btn').forEach(function(b){b.classList.remove('active');});btn.classList.add('active');}
+      _navStack = [];
+      window.scrollTo(0,0);
+      return;
     } else {
       setTimeout(function(){ renderLeche(); }, 300);
     }
