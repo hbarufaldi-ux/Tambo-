@@ -982,7 +982,7 @@ function edadStr(f) {
   var m=edadMeses(f);
   return m>=12 ? Math.floor(m/12)+'a '+(m%12)+'m' : m+'m';
 }
-function getAnimal(rp) { return rodeo.find(function(a){return a.rp==rp;}); }
+function getAnimal(rp) { return rodeo.find(function(a){return String(a.rp)===String(rp);}); }
 function nextRP() {
   var criaRPs = rodeo.filter(function(a){return a.rp>=2000&&a.rp<3000;}).map(function(a){return a.rp;});
   return criaRPs.length>0 ? Math.max.apply(null,criaRPs)+1 : 2001;
@@ -1164,11 +1164,12 @@ function estaListo(a) {
 
 // ---- ALERTAS ----
 var ALERT_CATS = {
-  parto:     {label:'Parto vencido',    color:'#FFE8E8', text:'#A0200A', dot:'#C03030'},
-  tacto:     {label:'A tactar',         color:'#FFE8CC', text:'#7A3500', dot:'#E07000'},
-  secar:     {label:'A secar',          color:'#FFF3CC', text:'#7A5500', dot:'#E0A000'},
-  servicios: {label:'Evaluar rechazo',  color:'#EEE0FF', text:'#5A2DA0', dot:'#8040D0'},
-  produccion:{label:'Producción baja',  color:'#D6EAFF', text:'#0A4FA6', dot:'#1060C0'},
+  parto:        {label:'Parto vencido',       color:'#FFE8E8', text:'#A0200A', dot:'#C03030'},
+  tacto:        {label:'A tactar',            color:'#FFE8CC', text:'#7A3500', dot:'#E07000'},
+  secar:        {label:'A secar',             color:'#FFF3CC', text:'#7A5500', dot:'#E0A000'},
+  servicios:    {label:'Evaluar rechazo',     color:'#EEE0FF', text:'#5A2DA0', dot:'#8040D0'},
+  produccion:   {label:'Producción baja',     color:'#D6EAFF', text:'#0A4FA6', dot:'#1060C0'},
+  SecaSinPreñez:{label:'Seca sin preñez',     color:'#FFE8CC', text:'#7A3500', dot:'#E07000'},
 };
 
 
@@ -1403,7 +1404,7 @@ function renderDashboard() {
     lista.appendChild(ok);
   } else {
     // Grouped alerts by category
-    var catOrder = ['parto','tacto','secar','servicios','produccion'];
+    var catOrder = ['parto','SecaSinPreñez','tacto','secar','servicios','produccion'];
     catOrder.forEach(function(cat) {
       if(!grupos[cat] || grupos[cat].length===0) return;
       var cfg = ALERT_CATS[cat];
