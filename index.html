@@ -710,6 +710,50 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
     <div id="l-historial"></div>
   </div>
 
+  <!-- FAB + Action Sheet -->
+  <div id="fab-leche" style="position:fixed;bottom:88px;right:20px;z-index:200;">
+    <button onclick="abrirFabLeche()" style="width:52px;height:52px;border-radius:50%;background:#1C1C1E;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px rgba(0,0,0,0.3);">
+      <svg width="22" height="22" viewBox="0 0 22 22" fill="none"><path d="M11 4v14M4 11h14" stroke="#fff" stroke-width="2.2" stroke-linecap="round"/></svg>
+    </button>
+  </div>
+
+  <!-- Overlay -->
+  <div id="fab-overlay" onclick="cerrarFabLeche()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:300;"></div>
+
+  <!-- Action Sheet -->
+  <div id="fab-sheet" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:400;background:#fff;border-radius:18px 18px 0 0;padding:0 0 24px;">
+    <div style="text-align:center;padding:12px 0 4px;">
+      <div style="width:36px;height:4px;background:#C7CDD6;border-radius:2px;margin:0 auto 12px;"></div>
+      <div style="font-size:13px;color:#8E8E93;margin-bottom:4px;">Registrar</div>
+    </div>
+    <div style="border-top:0.5px solid #E5E5EA;">
+      <button onclick="irAFormulario('produccion')" style="width:100%;padding:18px 20px;background:none;border:none;border-bottom:0.5px solid #E5E5EA;cursor:pointer;display:flex;align-items:center;gap:14px;text-align:left;">
+        <div style="width:36px;height:36px;border-radius:10px;background:#E8F0FF;flex-shrink:0;display:flex;align-items:center;justify-content:center;">
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M9 3v12M3 9h12" stroke="#185FA5" stroke-width="2" stroke-linecap="round"/></svg>
+        </div>
+        <div>
+          <div style="font-size:16px;color:#1C1C1E;font-weight:500;">Producción</div>
+          <div style="font-size:13px;color:#8E8E93;">Litros por empresa</div>
+        </div>
+        <span style="margin-left:auto;color:#C7CDD6;font-size:18px;">›</span>
+      </button>
+      <button onclick="irAFormulario('calidad')" style="width:100%;padding:18px 20px;background:none;border:none;cursor:pointer;display:flex;align-items:center;gap:14px;text-align:left;">
+        <div style="width:36px;height:36px;border-radius:10px;background:#E1F5EE;flex-shrink:0;display:flex;align-items:center;justify-content:center;">
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="6" stroke="#0F6E56" stroke-width="1.8"/><path d="M6 9l2 2 4-4" stroke="#0F6E56" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <div>
+          <div style="font-size:16px;color:#1C1C1E;font-weight:500;">Calidad</div>
+          <div style="font-size:13px;color:#8E8E93;">UFC, CS, grasa, proteína</div>
+        </div>
+        <span style="margin-left:auto;color:#C7CDD6;font-size:18px;">›</span>
+      </button>
+    </div>
+    <div style="border-top:0.5px solid #E5E5EA;margin-top:8px;">
+      <button onclick="cerrarFabLeche()" style="width:100%;padding:16px;background:none;border:none;cursor:pointer;font-size:16px;color:#8E8E93;">Cancelar</button>
+    </div>
+  </div>
+
+
 </div>
 
 <div id="screen-rodeo" class="screen" style="padding-top:0;">
@@ -2463,6 +2507,9 @@ function goTo(screen, btn) {
   document.querySelectorAll('.screen').forEach(function(s){s.classList.remove('active');});
   var sc=document.getElementById('screen-'+screen);
   if(sc) sc.classList.add('active');
+  // FAB leche: mostrar solo en screen-leche
+  var fabLeche = document.getElementById('fab-leche');
+  if(fabLeche) fabLeche.style.display = screen === 'leche' ? 'block' : 'none';
   window.scrollTo(0,0);
   if(screen==='dashboard'){setTimeout(function(){renderDashboard&&renderDashboard();},80);}
   if(btn){document.querySelectorAll('.nav-btn').forEach(function(b){b.classList.remove('active');});btn.classList.add('active');}
@@ -3463,6 +3510,27 @@ function init() {
 }
 
 
+
+function abrirFabLeche() {
+  document.getElementById('fab-overlay').style.display = 'block';
+  document.getElementById('fab-sheet').style.display = 'block';
+}
+function cerrarFabLeche() {
+  document.getElementById('fab-overlay').style.display = 'none';
+  document.getElementById('fab-sheet').style.display = 'none';
+}
+function irAFormulario(tipo) {
+  cerrarFabLeche();
+  var id = tipo === 'produccion' ? 'l-fecha' : 'l-cal-fecha';
+  var el = document.getElementById(id);
+  if(el) {
+    setTimeout(function(){
+      el.scrollIntoView({behavior:'smooth', block:'start'});
+      el.focus();
+    }, 100);
+  }
+}
+
 // ---- ARRANQUE ----
 window.addEventListener('load', function() {
   // Intentar restaurar sesión sin Google
@@ -3902,6 +3970,7 @@ async function guardarCalidad() {
   var grasa = parseFloat(document.getElementById('l-grasa').value) || 0;
   var proteina = parseFloat(document.getElementById('l-proteina').value) || 0;
 
+  if(!fecha) { showToast('Ingresá la fecha', true); return; }
   if(!empresa) { showToast('Seleccioná una empresa', true); return; }
 
   calidadLeche.push({fecha:fecha, empresa:empresa, ufc:ufc, cs:cs, grasa:grasa, proteina:proteina});
