@@ -20,7 +20,7 @@ html{scrollbar-gutter:stable;}body{font-family:-apple-system,BlinkMacSystemFont,
 .nav::-webkit-scrollbar{display:none;}
 .nav-btn{flex-shrink:0;padding:13px 22px;border:1px solid #B8C4CE;border-radius:22px;background:#EBF0F5;color:#3C4A5A;font-size:16px;font-weight:600;cursor:pointer;white-space:nowrap;box-shadow:0 2px 6px rgba(0,0,0,0.08);}
 .nav-btn.active{background:#1C1C1E;color:#fff;border-color:#1C1C1E;}
-.screen{display:none;padding:16px;}
+.screen{display:none;padding:16px;}.screen.active{display:block;min-height:calc(100vh - 160px);}
 .screen.active{display:block;}
 .card{background:#fff;border-radius:16px;padding:16px;margin-bottom:12px;box-shadow:0 6px 20px rgba(0,0,0,0.16),0 2px 6px rgba(0,0,0,0.10);}
 .input-fill:focus,.input-fill:not(:placeholder-shown){border-color:#1060C0 !important;background:#FFF8E8 !important;}
@@ -1846,7 +1846,7 @@ function abrirFicha(rp) {
   document.querySelectorAll('.screen').forEach(function(s){s.classList.remove('active');});
   document.getElementById('screen-ficha').classList.add('active');
   document.querySelectorAll('.nav-btn').forEach(function(b){b.classList.remove('active');});
-  window.scrollTo(0,0);
+  requestAnimationFrame(function(){ window.scrollTo(0,0); });
 }
 
 // ---- FICHA JOVEN (guachera/recria) ----
@@ -1957,7 +1957,7 @@ function abrirFichaJoven(rp) {
   document.querySelectorAll('.screen').forEach(function(s){s.classList.remove('active');});
   document.getElementById('screen-ficha').classList.add('active');
   document.querySelectorAll('.nav-btn').forEach(function(b){b.classList.remove('active');});
-  window.scrollTo(0,0);
+  requestAnimationFrame(function(){ window.scrollTo(0,0); });
 }
 
 // ---- GUACHERA ACTIONS ----
