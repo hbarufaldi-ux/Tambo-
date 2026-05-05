@@ -876,8 +876,8 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 
 
 <!-- FICHA -->
-<div id="screen-ficha" class="screen">
-  <div id="ficha-contenido"></div>
+<div id="screen-ficha" class="screen" style="min-height:calc(100vh - 160px);">
+  <div id="ficha-contenido" style="min-height:200px;"></div>
 </div>
 
 <script src="https://accounts.google.com/gsi/client" async defer></script>
@@ -1846,24 +1846,7 @@ function abrirFicha(rp) {
   document.querySelectorAll('.screen').forEach(function(s){s.classList.remove('active');});
   document.getElementById('screen-ficha').classList.add('active');
   document.querySelectorAll('.nav-btn').forEach(function(b){b.classList.remove('active');});
-  // DEBUG BANNER
-  setTimeout(function(){
-    var sf = document.getElementById('screen-ficha');
-    var fc = document.getElementById('ficha-contenido');
-    var sfR = sf ? sf.getBoundingClientRect() : {};
-    var fcR = fc ? fc.getBoundingClientRect() : {};
-    var dbg = document.createElement('div');
-    dbg.style.cssText = 'position:fixed;top:0;left:0;right:0;background:red;color:white;font-size:12px;padding:8px;z-index:9999;font-family:monospace;';
-    dbg.innerHTML = 'screen-ficha: top='+Math.round(sfR.top)+' h='+Math.round(sfR.height)+
-      ' | ficha-cont: top='+Math.round(fcR.top)+' h='+Math.round(fcR.height)+
-      ' | children='+fc.children.length+
-      ' | bodyPT='+document.body.style.paddingTop+
-      ' | scroll='+window.scrollY+
-      ' <button onclick="this.parentNode.remove()" style="margin-left:8px;background:white;color:red;border:none;cursor:pointer;">X</button>';
-    document.body.appendChild(dbg);
-    // Scrollear al screen-ficha
-    sf.scrollIntoView({block:'start', behavior:'instant'});
-  }, 100);
+  window.scrollTo(0,0);
 }
 
 // ---- FICHA JOVEN (guachera/recria) ----
