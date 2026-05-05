@@ -127,11 +127,10 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 <!-- LOGIN -->
 <div id="screen-login" style="display:flex;align-items:center;justify-content:center;min-height:100vh;background:#D8E0E8;position:fixed;inset:0;z-index:500;transition:opacity 0.3s;">
   <div style="background:#fff;border-radius:24px;padding:40px 32px;width:90%;max-width:380px;text-align:center;box-shadow:0 4px 32px rgba(0,0,0,0.10);">
-    <div id="login-logo" style="margin-bottom:20px;"></div>
     <div style="font-size:22px;font-weight:700;letter-spacing:-0.3px;margin-bottom:6px;">Tambo Cañada Negra</div>
-    <div style="font-size:14px;color:#8E8E93;margin-bottom:32px;">Ingresá con tu cuenta Google</div>
-    <button onclick="loginConGoogle()" style="display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:14px;border:1px solid #dadce0;border-radius:12px;background:#fff;cursor:pointer;font-size:15px;font-weight:500;color:#3c4043;"><svg width="18" height="18" viewBox="0 0 18 18"><path fill="#4285F4" d="M16.51 8H8.98v3h4.3c-.18 1-.74 1.48-1.6 2.04v2.01h2.6a7.8 7.8 0 002.38-5.88c0-.57-.05-.66-.15-1.18z"/><path fill="#34A353" d="M8.98 17c2.16 0 3.97-.72 5.3-1.94l-2.6-2a4.8 4.8 0 01-7.18-2.54H1.83v2.07A8 8 0 008.98 17z"/><path fill="#FBBC05" d="M4.5 10.52a4.8 4.8 0 010-3.04V5.45H1.83a8 8 0 000 7.1l2.67-2.03z"/><path fill="#EA4335" d="M8.98 4.18c1.17 0 2.23.4 3.06 1.2l2.3-2.3A8 8 0 001.83 5.45L4.5 7.49a4.77 4.77 0 014.48-3.3z"/></svg>Iniciar sesión con Google</button>
-    <div id="login-error" style="margin-top:16px;font-size:13px;color:#A0200A;display:none;">Tu cuenta no tiene acceso a esta aplicación.</div>
+    <div style="font-size:14px;color:#8E8E93;margin-bottom:28px;">¿Quién sos?</div>
+    <div id="login-usuarios" style="display:flex;flex-direction:column;gap:10px;"></div>
+    <div id="login-error" style="margin-top:16px;font-size:13px;color:#A0200A;display:none;">Error al ingresar.</div>
   </div>
 </div>
 
@@ -918,99 +917,72 @@ function drawDonut(id,pct,color){
 </script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js">
 
-var CLIENT_ID = '826442069632-jokpo9kbk83ssme3o1pqhbrrhkmqrjg4.apps.googleusercontent.com';
-var USUARIOS = {
-  'hbarufaldi@gmail.com': {nombre:'Hernán', rol:'admin'},
-  'hernan@ucalac.com.ar': {nombre:'Hernán', rol:'lectura'},
-};
+// ── LOGIN SIMPLE ───────────────────────────────────────────────────────────
+var USUARIOS = [
+  {nombre:'Hernán', rol:'admin'},
+  {nombre:'Diego', rol:'admin'},
+  {nombre:'Peón 1', rol:'lectura'},
+  {nombre:'Peón 2', rol:'lectura'},
+];
 var usuarioActual = null;
 
 function initLogin() {
-  // Add logo to login screen
-  var logoImg = document.querySelector('#login-logo');
-  var mainLogo = document.querySelector('img[alt="CN"]');
-  if(logoImg && mainLogo) {
-    var clone = mainLogo.cloneNode();
-    clone.style.cssText = 'width:80px;height:80px;object-fit:contain;';
-    logoImg.appendChild(clone);
-  }
-  google.accounts.id.initialize({
-    client_id: CLIENT_ID,
-    callback: handleCredentialResponse,
-    auto_select: true,
-  });
-  // Try auto sign-in
-  google.accounts.id.prompt();
-}
-
-function loginConGoogle() {
-  google.accounts.id.initialize({
-    client_id: CLIENT_ID,
-    callback: handleCredentialResponse,
-    auto_select: false,
-  });
-  google.accounts.id.prompt(function(notification) {
-    if(notification.isNotDisplayed() || notification.isSkippedMoment()) {
-      var tmp = document.createElement('div');
-      tmp.style.cssText = 'position:fixed;top:-9999px;left:-9999px;';
-      document.body.appendChild(tmp);
-      google.accounts.id.renderButton(tmp, {theme:'outline',size:'large'});
-      setTimeout(function(){
-        var btn = tmp.querySelector('[role=button]') || tmp.querySelector('div');
-        if(btn) btn.click();
-      }, 500);
+  // Verificar sesión guardada
+  try {
+    var sesion = JSON.parse(localStorage.getItem('tambo_sesion') || 'null');
+    if(sesion && sesion.nombre && (Date.now() - sesion.ts) < 7*24*60*60*1000) {
+      usuarioActual = sesion;
+      _entrarApp();
+      return;
     }
+  } catch(e) {}
+  // Mostrar botones de usuario
+  var cont = document.getElementById('login-usuarios');
+  if(!cont) return;
+  cont.innerHTML = '';
+  USUARIOS.forEach(function(u) {
+    var btn = document.createElement('button');
+    btn.style.cssText = 'width:100%;padding:14px;border:1px solid #E5E5EA;border-radius:12px;background:#F8F8F8;cursor:pointer;font-size:17px;font-weight:600;color:#1C1C1E;text-align:left;display:flex;align-items:center;gap:12px;';
+    btn.innerHTML = '<div style="width:36px;height:36px;border-radius:50%;background:#1C1C1E;color:#fff;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;flex-shrink:0;">' + u.nombre[0] + '</div>' + u.nombre;
+    btn.onclick = (function(usuario) { return function() { loginComo(usuario); }; })(u);
+    cont.appendChild(btn);
   });
 }
 
+function loginComo(usuario) {
+  usuarioActual = {nombre: usuario.nombre, rol: usuario.rol, ts: Date.now()};
+  try { localStorage.setItem('tambo_sesion', JSON.stringify(usuarioActual)); } catch(e) {}
+  _entrarApp();
+}
 
-function handleCredentialResponse(response) {
-  var payload = parseJwt(response.credential);
-  var email = payload.email;
-  var usuario = USUARIOS[email];
-  if(!usuario) {
-    document.getElementById('login-error').style.display='block';
-    return;
-  }
-  usuarioActual = {email:email, nombre:usuario.nombre, rol:usuario.rol};
-  // Guardar sesión en localStorage
-  try { localStorage.setItem('tambo_sesion', JSON.stringify({email:email, nombre:usuario.nombre, rol:usuario.rol, ts:Date.now()})); } catch(e) {}
+function _entrarApp() {
   var loginEl = document.getElementById('screen-login');
-  loginEl.style.opacity='0';
-  loginEl.style.pointerEvents='none';
-  setTimeout(function(){ loginEl.style.display='none'; }, 350);
-  document.querySelector('.topbar').style.display='flex';
-  document.getElementById('main-nav').style.display='flex';
-  aplicarRol(usuario.rol);
-  setSyncStatus('⟳ Cargando padrón...'); var tn=document.getElementById('topbar-nombre'); if(tn) tn.textContent=CONFIG.nombreTambo;
+  if(loginEl) { loginEl.style.opacity='0'; loginEl.style.pointerEvents='none'; }
+  setTimeout(function(){ if(loginEl) loginEl.style.display='none'; }, 350);
+  var topbar = document.querySelector('.topbar');
+  var nav = document.getElementById('main-nav');
+  if(topbar) topbar.style.display='flex';
+  if(nav) nav.style.display='flex';
+  aplicarRol(usuarioActual.rol);
+  var tn = document.getElementById('topbar-nombre');
+  if(tn) tn.textContent = CONFIG.nombreTambo;
+  setSyncStatus('⟳ Cargando padrón...');
   setTimeout(function(){
     init();
-    var topbar = document.querySelector('.topbar');
-    var nav = document.getElementById('main-nav');
     if(topbar && nav) {
       nav.style.top = topbar.offsetHeight + 'px';
       var totalH = Math.max(topbar.offsetHeight + nav.offsetHeight, 120);
       document.body.style.paddingTop = totalH + 'px';
       window._fixedBarsH = totalH;
     }
-    // Load padron from Sheets
     cargarPadronDesdeSheets(function(ok){
-      if(!ok) {
-        setSyncStatus('● Padrón local');
-      }
+      if(!ok) setSyncStatus('● Padrón local');
     });
   }, 100);
 }
 
-function parseJwt(token) {
-  var base64 = token.split('.')[1].replace(/-/g,'+').replace(/_/g,'/');
-  var json = decodeURIComponent(atob(base64).split('').map(function(c){return '%'+('00'+c.charCodeAt(0).toString(16)).slice(-2);}).join(''));
-  return JSON.parse(json);
-}
-
 function aplicarRol(rol) {
   if(rol === 'lectura') {
-    // Hide all form screens, keep only dashboard, padron, guachera, recria, reportes
     var soloLectura = ['produccion','parto','inseminacion','celo','tacto','secado','baja'];
     soloLectura.forEach(function(s) {
       document.querySelectorAll('.nav-btn').forEach(function(btn){
@@ -1023,15 +995,15 @@ function aplicarRol(rol) {
 }
 
 function cerrarSesion() {
-  google.accounts.id.disableAutoSelect();
   usuarioActual = null;
   try { localStorage.removeItem('tambo_sesion'); } catch(e) {}
-  // Ocultar screens activas
   document.querySelectorAll('.screen').forEach(function(s){ s.classList.remove('active'); });
-  document.querySelector('.topbar').style.display='none';
-  document.getElementById('main-nav').style.display='none';
-  document.getElementById('screen-login').style.display='flex';
-  // Re-inicializar login
+  var topbar = document.querySelector('.topbar');
+  var nav = document.getElementById('main-nav');
+  if(topbar) topbar.style.display='none';
+  if(nav) nav.style.display='none';
+  var loginEl = document.getElementById('screen-login');
+  if(loginEl) { loginEl.style.display='flex'; loginEl.style.opacity='1'; loginEl.style.pointerEvents='auto'; }
   initLogin();
 }
 
@@ -2222,7 +2194,6 @@ function abrirFicha(rp) {
       </button>
     </div>
   </div>
-</div>
 
 </body>
 </html>
