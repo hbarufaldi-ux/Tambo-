@@ -1846,7 +1846,8 @@ function abrirFicha(rp) {
   document.querySelectorAll('.screen').forEach(function(s){s.classList.remove('active');});
   document.getElementById('screen-ficha').classList.add('active');
   document.querySelectorAll('.nav-btn').forEach(function(b){b.classList.remove('active');});
-  setTimeout(function(){ window.scrollTo({top:0,left:0,behavior:'instant'}); }, 0);
+  var sf=document.getElementById('screen-ficha'); if(sf) sf.scrollIntoView({block:'start',behavior:'instant'});
+  window.scrollTo(0,0);
 }
 
 // ---- FICHA JOVEN (guachera/recria) ----
@@ -1957,7 +1958,7 @@ function abrirFichaJoven(rp) {
   document.querySelectorAll('.screen').forEach(function(s){s.classList.remove('active');});
   document.getElementById('screen-ficha').classList.add('active');
   document.querySelectorAll('.nav-btn').forEach(function(b){b.classList.remove('active');});
-  setTimeout(function(){ window.scrollTo({top:0,left:0,behavior:'instant'}); }, 0);
+  window.scrollTo(0,0);
 }
 
 // ---- GUACHERA ACTIONS ----
