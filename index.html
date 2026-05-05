@@ -590,7 +590,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 </div>
 
 <!-- RODEO -->
-<div <!-- LECHE -->
+<!-- LECHE -->
 <div id="screen-leche" class="screen">
 
   <!-- HEADER CARD azul - todo en uno -->
@@ -833,6 +833,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
   </div>
 </div>
 
+</div><!-- fin screen-reportes -->
 <!-- CONTROL LECHERO MASIVO -->
 <div id="screen-control-lechero" class="screen">
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
@@ -876,8 +877,8 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 
 
 <!-- FICHA -->
-<div id="screen-ficha" class="screen" style="min-height:calc(100vh - 160px);">
-  <div id="ficha-contenido" style="min-height:200px;"></div>
+<div id="screen-ficha" class="screen">
+  <div id="ficha-contenido"></div>
 </div>
 
 <script src="https://accounts.google.com/gsi/client" async defer></script>
@@ -1400,7 +1401,7 @@ function renderDashboard() {
       hdr.innerHTML='<div style="display:flex;align-items:baseline;gap:8px;flex:1;"><span style="display:inline-flex;align-items:center;height:1em;flex-shrink:0;"><span style="width:8px;height:8px;border-radius:50%;background:'+cfg.dot+';display:inline-block;"></span></span><span style="font-size:16px;font-weight:700;color:#fff;">'+cfg.label+'</span></div><span style="font-size:15px;font-weight:600;color:rgba(255,255,255,0.7);white-space:nowrap;">'+grupos[cat].length+' animales'+(cat==='tacto'?' <button onclick="event.stopPropagation();abrirTactoMasivo()" style="background:#E07000;color:#fff;border:none;border-radius:10px;padding:4px 10px;font-size:12px;font-weight:700;cursor:pointer;">📋 Lista</button>':'')+' ›</span>';
 
       var body = document.createElement('div');
-      body.style.display='block';
+      body.style.display='none';
       hdr.onclick=function(){ body.style.display=body.style.display==='none'?'block':'none'; };
 
       grupos[cat].forEach(function(a) {
@@ -3119,7 +3120,7 @@ function handleCredentialResponse(response) {
     var nav = document.getElementById('main-nav');
     if(topbar && nav) {
       nav.style.top = topbar.offsetHeight + 'px';
-      var totalH = topbar.offsetHeight + nav.offsetHeight;
+      var totalH = Math.max(topbar.offsetHeight + nav.offsetHeight, 120);
       document.body.style.paddingTop = totalH + 'px';
       window._fixedBarsH = totalH;
     }
@@ -3447,7 +3448,7 @@ function init() {
     var nav = document.querySelector('.nav');
     if(topbar && nav) {
       nav.style.top = topbar.offsetHeight + 'px';
-      var totalH = topbar.offsetHeight + nav.offsetHeight;
+      var totalH = Math.max(topbar.offsetHeight + nav.offsetHeight, 120);
       document.body.style.paddingTop = totalH + 'px';
       window._fixedBarsH = totalH;
 
@@ -3483,7 +3484,7 @@ window.addEventListener('load', function() {
         var nav = document.getElementById('main-nav');
         if(topbar && nav) {
           nav.style.top = topbar.offsetHeight + 'px';
-          document.body.style.paddingTop = (topbar.offsetHeight + nav.offsetHeight) + 'px';
+          document.body.style.paddingTop = Math.max(topbar.offsetHeight + nav.offsetHeight, 120) + 'px';
         }
         cargarPadronDesdeSheets(function(ok){ if(!ok) setSyncStatus('● Padrón local'); });
       }, 100);
