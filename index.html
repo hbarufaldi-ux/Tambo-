@@ -589,7 +589,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 </div>
 
 <!-- RODEO -->
-<div <!-- LECHE -->
+<!-- LECHE -->
 <div id="screen-leche" class="screen">
 
   <!-- HEADER CARD azul - todo en uno -->
@@ -707,6 +707,50 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
   <div class="card" style="margin-top:8px;">
     <div class="section-title">Últimos 7 días</div>
     <div id="l-historial"></div>
+  </div>
+  <!-- FAB Leche -->
+  <div id="fab-leche" style="position:fixed;bottom:88px;right:20px;z-index:200;display:none;">
+    <button onclick="abrirFabLeche()" style="width:52px;height:52px;border-radius:50%;background:#1C1C1E;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px rgba(0,0,0,0.3);"><svg width="22" height="22" viewBox="0 0 22 22" fill="none"><path d="M11 4v14M4 11h14" stroke="#fff" stroke-width="2.2" stroke-linecap="round"/></svg></button>
+  </div>
+  <div id="fab-overlay" onclick="cerrarFabLeche()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:300;"></div>
+  <div id="fab-sheet" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:400;background:#fff;border-radius:18px 18px 0 0;padding-bottom:20px;">
+    <div style="width:36px;height:4px;background:#C7CDD6;border-radius:2px;margin:10px auto 0;"></div>
+    <div style="display:flex;margin:12px 16px 0;border-radius:10px;background:#F2F2F7;padding:3px;">
+      <button id="fab-tab-prod" onclick="fabCambiarTab('prod')" style="flex:1;padding:8px;text-align:center;font-size:14px;font-weight:500;border-radius:8px;cursor:pointer;color:#1C1C1E;background:#fff;border:none;box-shadow:0 1px 3px rgba(0,0,0,0.1);">Producción</button>
+      <button id="fab-tab-cal" onclick="fabCambiarTab('cal')" style="flex:1;padding:8px;text-align:center;font-size:14px;font-weight:500;border-radius:8px;cursor:pointer;color:#8E8E93;background:none;border:none;">Calidad</button>
+    </div>
+    <div style="height:220px;overflow-y:auto;padding:14px 16px 0;">
+      <div id="fab-tc-prod">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
+          <div><label style="display:block;font-size:12px;font-weight:600;color:#3C3C43;margin-bottom:4px;">Fecha</label><input type="date" id="l-fecha" style="width:100%;padding:10px 12px;border:1px solid #E8A020;border-radius:10px;font-size:15px;background:#FFF8E8;box-sizing:border-box;"></div>
+          <div><label style="display:block;font-size:12px;font-weight:600;color:#3C3C43;margin-bottom:4px;">Vacas</label><input type="number" id="l-vacas" inputmode="numeric" placeholder="Auto" style="width:100%;padding:10px 12px;border:1px solid #B0BCC8;border-radius:10px;font-size:15px;background:#EBF0F5;box-sizing:border-box;"></div>
+        </div>
+        <div style="margin-bottom:10px;">
+          <label style="display:block;font-size:12px;font-weight:600;color:#3C3C43;margin-bottom:6px;">Entregas por empresa</label>
+          <div id="l-filas-empresas"></div>
+          <button type="button" onclick="agregarFilaEmpresa()" style="width:100%;padding:9px;border:0.5px dashed #C8C8CE;border-radius:10px;background:#F8F8F8;font-size:14px;color:#3C3C43;cursor:pointer;margin-top:4px;">+ Agregar empresa</button>
+        </div>
+        <div><label style="display:block;font-size:12px;font-weight:600;color:#3C3C43;margin-bottom:4px;">Observaciones</label><textarea id="l-obs" rows="2" placeholder="Opcional..." style="width:100%;padding:10px 12px;border:1px solid #B0BCC8;border-radius:10px;font-size:15px;background:#EBF0F5;resize:none;box-sizing:border-box;"></textarea></div>
+      </div>
+      <div id="fab-tc-cal" style="display:none;">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
+          <div><label style="display:block;font-size:12px;font-weight:600;color:#3C3C43;margin-bottom:4px;">Fecha</label><input type="date" id="l-cal-fecha" style="width:100%;padding:10px 12px;border:1px solid #E8A020;border-radius:10px;font-size:15px;background:#FFF8E8;box-sizing:border-box;"></div>
+          <div><label style="display:block;font-size:12px;font-weight:600;color:#3C3C43;margin-bottom:4px;">Empresa</label><select id="l-cal-empresa" style="width:100%;padding:10px 12px;border:1px solid #B0BCC8;border-radius:10px;font-size:15px;background:#EBF0F5;box-sizing:border-box;"><option value="">Seleccionar...</option><option>Ucalac SA</option><option>Saputo</option></select></div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
+          <div><label style="display:block;font-size:12px;font-weight:600;color:#3C3C43;margin-bottom:4px;">UFC</label><input type="number" id="l-ufc" inputmode="decimal" placeholder="0" style="width:100%;padding:10px 12px;border:1px solid #B0BCC8;border-radius:10px;font-size:15px;background:#EBF0F5;box-sizing:border-box;"></div>
+          <div><label style="display:block;font-size:12px;font-weight:600;color:#3C3C43;margin-bottom:4px;">Células somáticas</label><input type="number" id="l-cs" inputmode="decimal" placeholder="0" style="width:100%;padding:10px 12px;border:1px solid #B0BCC8;border-radius:10px;font-size:15px;background:#EBF0F5;box-sizing:border-box;"></div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
+          <div><label style="display:block;font-size:12px;font-weight:600;color:#3C3C43;margin-bottom:4px;">Grasa %</label><input type="number" id="l-grasa" inputmode="decimal" placeholder="0.0" style="width:100%;padding:10px 12px;border:1px solid #B0BCC8;border-radius:10px;font-size:15px;background:#EBF0F5;box-sizing:border-box;"></div>
+          <div><label style="display:block;font-size:12px;font-weight:600;color:#3C3C43;margin-bottom:4px;">Proteína %</label><input type="number" id="l-proteina" inputmode="decimal" placeholder="0.0" style="width:100%;padding:10px 12px;border:1px solid #B0BCC8;border-radius:10px;font-size:15px;background:#EBF0F5;box-sizing:border-box;"></div>
+        </div>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;padding:12px 16px 0;border-top:0.5px solid #E5E5EA;margin-top:4px;">
+      <button onclick="fabGuardar()" style="flex:1;padding:14px;background:#1C1C1E;color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:600;cursor:pointer;">Guardar</button>
+      <button onclick="cerrarFabLeche()" style="flex:1;padding:14px;background:none;color:#8E8E93;border:0.5px solid #E5E5EA;border-radius:12px;font-size:15px;cursor:pointer;">Cancelar</button>
+    </div>
   </div>
 
 </div>
@@ -831,6 +875,8 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
     </div>
   </div>
 </div>
+
+</div><!-- /screen-reportes -->
 
 <!-- CONTROL LECHERO MASIVO -->
 <div id="screen-control-lechero" class="screen">
@@ -1825,13 +1871,56 @@ function abrirFicha(rp) {
     }
   }
 
-  // Botón registrar evento
+  // FAB contextual ficha
   if(a.sexo==='H' && a.cat!=='Baja') {
-    var bEvt=document.createElement('button');
-    bEvt.style.cssText='width:100%;padding:16px;background:#1C1C1E;color:#fff;border:none;border-radius:14px;font-size:19px;font-weight:600;cursor:pointer;margin-bottom:8px;';
-    bEvt.textContent='+ Registrar evento';
-    bEvt.onclick=(function(animal){ return function(){ abrirModalEventoVaca(animal); }; })(a);
-    cont.appendChild(bEvt);
+    ['ficha-fab-overlay','ficha-fab-menu','ficha-fab-btn'].forEach(function(id){var el=document.getElementById(id);if(el)el.remove();});
+    var fabOv=document.createElement('div');fabOv.id='ficha-fab-overlay';
+    fabOv.style.cssText='display:none;position:fixed;inset:0;background:rgba(0,0,0,0.65);z-index:200;';
+    fabOv.onclick=function(){cerrarFichaFab();};document.body.appendChild(fabOv);
+    var fabMenu=document.createElement('div');fabMenu.id='ficha-fab-menu';
+    fabMenu.style.cssText='display:none;position:fixed;bottom:88px;right:20px;z-index:201;width:180px;';
+    var ops=[{label:'Celo',s:'ficha-sheet-celo'},{label:'Inseminar',s:'ficha-sheet-inseminar'},{label:'Tacto',s:'ficha-sheet-tacto'},{label:'Secar',s:'ficha-sheet-secar'},{label:'Producci\xf3n',s:'ficha-sheet-produccion'},{label:'Baja',s:'ficha-sheet-baja',c:'#F09595'},{label:'Tratamiento',s:'ficha-sheet-tratamiento'},{label:'Sanidad',s:'ficha-sheet-sanidad'}];
+    ops.forEach(function(op){
+      var item=document.createElement('div');
+      item.style.cssText='padding:11px 4px;cursor:pointer;font-size:20px;font-weight:700;color:'+(op.c||'#fff')+';text-align:right;';
+      item.textContent=op.label;
+      item.onclick=(function(sid){return function(){cerrarFichaFab();var s=document.getElementById(sid);if(s){document.getElementById('ficha-fab-overlay').style.display='block';s.style.display='block';}};})(op.s);
+      fabMenu.appendChild(item);
+    });
+    document.body.appendChild(fabMenu);
+    var fabBtn=document.createElement('button');fabBtn.id='ficha-fab-btn';
+    fabBtn.style.cssText='position:fixed;bottom:20px;right:20px;width:52px;height:52px;border-radius:50%;background:#1C1C1E;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:202;transition:transform 0.2s;';
+    fabBtn.innerHTML='<svg width="22" height="22" viewBox="0 0 22 22" fill="none"><path d="M11 4v14M4 11h14" stroke="#fff" stroke-width="2.2" stroke-linecap="round"/><\/svg>';
+    fabBtn.onclick=function(){toggleFichaFab();};document.body.appendChild(fabBtn);
+    var td=new Date().toISOString().split('T')[0];
+    var sb='position:fixed;bottom:0;left:0;right:0;z-index:203;background:#fff;border-radius:16px 16px 0 0;padding-bottom:20px;display:none;';
+    var si='width:100%;padding:10px 12px;border:1px solid #B0BCC8;border-radius:10px;font-size:15px;background:#EBF0F5;box-sizing:border-box;';
+    var sa='width:100%;padding:10px 12px;border:1px solid #E8A020;border-radius:10px;font-size:15px;background:#FFF8E8;box-sizing:border-box;';
+    var g2='display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;';
+    var lb='display:block;font-size:12px;font-weight:600;color:#3C3C43;margin-bottom:4px;';
+    function mkS(id,tit,body){
+      var s=document.createElement('div');s.id=id;s.style.cssText=sb;
+      s.innerHTML='<div style="width:36px;height:4px;background:#C7CDD6;border-radius:2px;margin:10px auto 0;"><\/div>'
+        +'<div style="font-size:16px;font-weight:700;color:#1C1C1E;padding:14px 16px 4px;">'+tit+' \xb7 RP '+a.rp+'<\/div>'
+        +'<div style="padding:0 16px;">'+body+'<\/div>'
+        +'<div style="display:flex;gap:8px;padding:12px 16px 0;border-top:0.5px solid #E5E5EA;margin-top:8px;">'
+        +'<button id="'+id+'-g" data-sheet="'+id+'" data-rp="'+a.rp+'" onclick="fichaGuardar(this.dataset.sheet,this.dataset.rp)" style="flex:1;padding:14px;background:#C7CDD6;color:#8E8E93;border:none;border-radius:12px;font-size:15px;font-weight:600;cursor:not-allowed;" disabled>Guardar<\/button>'
+        +'<button data-sheet="'+id+'" onclick="cerrarFichaSheet(this.dataset.sheet)" style="flex:1;padding:14px;background:none;color:#8E8E93;border:0.5px solid #E5E5EA;border-radius:12px;font-size:15px;cursor:pointer;">Cancelar<\/button>'
+        +'<\/div>';
+      document.body.appendChild(s);
+    }
+    var to=toros.map(function(t){return '<option value="'+t.rp+'">'+t.nombre+'<\/option>';}).join('');
+    var rb=['Pre\xf1ada','Vac\xeda','Repetici\xf3n','IATF','PG','Anestro','Hormonal'].map(function(r){return '<button onclick="fichaSelTacto(this)" data-val="'+r+'" style="padding:10px;border:1px solid #B0BCC8;border-radius:10px;font-size:14px;background:#EBF0F5;color:#3C3C43;cursor:pointer;">'+r+'<\/button>';}).join('');
+    mkS('ficha-sheet-celo','Celo','<div style="'+g2+'"><div><label style="'+lb+'">Fecha<\/label><input id="fsc-fecha" type="date" value="'+td+'" oninput="fichaCheck(\'ficha-sheet-celo\')" style="'+sa+'"><\/div><div><label style="'+lb+'">Obs<\/label><input id="fsc-obs" type="text" placeholder="Opcional..." style="'+si+'"><\/div><\/div>');
+    mkS('ficha-sheet-inseminar','Inseminar','<div style="'+g2+'"><div><label style="'+lb+'">Fecha<\/label><input id="fsi-fecha" type="date" value="'+td+'" oninput="fichaCheck(\'ficha-sheet-inseminar\')" style="'+sa+'"><\/div><div><label style="'+lb+'">Toro *<\/label><select id="fsi-toro" onchange="fichaCheck(\'ficha-sheet-inseminar\')" style="'+si+'"><option value="">Seleccionar...<\/option>'+to+'<\/select><\/div><\/div><div style="'+g2+'"><div><label style="'+lb+'">Tipo<\/label><select id="fsi-tipo" style="'+si+'"><option>IA<\/option><option>IATF<\/option><option>TE<\/option><option>Monta natural<\/option><\/select><\/div><div><label style="'+lb+'">Inseminador<\/label><input id="fsi-insem" type="text" placeholder="Opcional" style="'+si+'"><\/div><\/div>');
+    mkS('ficha-sheet-tacto','Tacto','<div style="margin-bottom:10px;"><label style="'+lb+'">Fecha<\/label><input id="fst-fecha" type="date" value="'+td+'" style="'+sa+'"><\/div><div style="margin-bottom:10px;"><label style="'+lb+'">Resultado *<\/label><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px;">'+rb+'<\/div><\/div>');
+    mkS('ficha-sheet-secar','Secar','<div style="'+g2+'"><div><label style="'+lb+'">Fecha<\/label><input id="fss-fecha" type="date" value="'+td+'" style="'+sa+'"><\/div><div style="background:#D8E0E8;border-radius:10px;padding:10px 12px;font-size:13px;color:#3C3C43;"><span style="font-size:11px;color:#8E8E93;font-weight:600;display:block;margin-bottom:2px;">Estado<\/span><strong>'+(a.estadoProd||'\u2014')+' \xb7 '+(a.estadoRepro||'\u2014')+'<\/strong><\/div><\/div>');
+    mkS('ficha-sheet-produccion','Producci\xf3n','<div style="'+g2+'"><div><label style="'+lb+'">Fecha<\/label><input id="fsp-fecha" type="date" value="'+td+'" oninput="fichaCheck(\'ficha-sheet-produccion\')" style="'+sa+'"><\/div><div><label style="'+lb+'">Litros *<\/label><input id="fsp-litros" type="number" inputmode="decimal" placeholder="0" oninput="fichaCheck(\'ficha-sheet-produccion\')" style="'+si+'"><\/div><\/div>');
+    mkS('ficha-sheet-baja','Baja','<div style="'+g2+'"><div><label style="'+lb+'">Fecha<\/label><input id="fsb-fecha" type="date" value="'+td+'" oninput="fichaCheck(\'ficha-sheet-baja\')" style="'+sa+'"><\/div><div><label style="'+lb+'">Motivo *<\/label><select id="fsb-motivo" onchange="fichaCheck(\'ficha-sheet-baja\')" style="'+si+'"><option value="">Seleccionar...<\/option><option>Muerte<\/option><option>Venta<\/option><option>Descarte<\/option><option>Otro<\/option><\/select><\/div><\/div><div style="background:#FFD6D6;border-radius:10px;padding:10px;font-size:13px;color:#A0200A;margin-bottom:8px;">Esta acci\xf3n marca el animal como Baja.<\/div>');
+    mkS('ficha-sheet-tratamiento','Tratamiento','<div style="'+g2+'"><div><label style="'+lb+'">Fecha<\/label><input id="fstt-fecha" type="date" value="'+td+'" oninput="fichaCheck(\'ficha-sheet-tratamiento\')" style="'+sa+'"><\/div><div><label style="'+lb+'">Tipo *<\/label><select id="fstt-tipo" onchange="fichaCheck(\'ficha-sheet-tratamiento\')" style="'+si+'"><option value="">Seleccionar...<\/option><option>Patas<\/option><option>Mastitis<\/option><option>Otro<\/option><\/select><\/div><\/div><div style="margin-bottom:8px;"><label style="'+lb+'">Descripci\xf3n<\/label><input id="fstt-desc" type="text" placeholder="Ej: desvasado..." style="'+si+'"><\/div>');
+    mkS('ficha-sheet-sanidad','Sanidad','<div style="'+g2+'"><div><label style="'+lb+'">Fecha<\/label><input id="fssn-fecha" type="date" value="'+td+'" oninput="fichaCheck(\'ficha-sheet-sanidad\')" style="'+sa+'"><\/div><div><label style="'+lb+'">Tipo *<\/label><select id="fssn-tipo" onchange="fichaSelSanidad(this);fichaCheck(\'ficha-sheet-sanidad\')" style="'+si+'"><option value="">Seleccionar...<\/option><option>Brucelosis<\/option><option>Aftosa<\/option><option>Tuberculosis<\/option><\/select><\/div><\/div><div id="fssn-tbc" style="display:none;margin-bottom:8px;"><label style="'+lb+'">Resultado TBC<\/label><div style="display:flex;gap:8px;margin-top:4px;"><button onclick="fichaSelTbc(this,\'Negativa\')" style="flex:1;padding:10px;border:1px solid #B0BCC8;border-radius:10px;font-size:14px;background:#EBF0F5;cursor:pointer;">Negativa<\/button><button onclick="fichaSelTbc(this,\'Positiva\')" style="flex:1;padding:10px;border:1px solid #B0BCC8;border-radius:10px;font-size:14px;background:#EBF0F5;color:#A32D2D;cursor:pointer;">Positiva<\/button><\/div><\/div>');
+    setTimeout(function(){fichaCheck('ficha-sheet-celo');fichaCheck('ficha-sheet-secar');},50);
+    window._fichaFabRp=a.rp;
   }
 
   var btn=document.createElement('button');
@@ -2460,6 +2549,8 @@ function goTo(screen, btn) {
   document.querySelectorAll('.screen').forEach(function(s){s.classList.remove('active');});
   var sc=document.getElementById('screen-'+screen);
   if(sc) sc.classList.add('active');
+  var fabLeche=document.getElementById('fab-leche');
+  if(fabLeche) fabLeche.style.display = screen==='leche' ? 'block' : 'none';
   window.scrollTo(0,0);
   if(screen==='dashboard'){setTimeout(function(){renderDashboard&&renderDashboard();},80);}
   if(btn){document.querySelectorAll('.nav-btn').forEach(function(b){b.classList.remove('active');});btn.classList.add('active');}
@@ -4457,6 +4548,140 @@ function limpiarFilasEmpresa() {
   // El topbar tiene scroll horizontal nativo - el swipe causaba conflictos.
 })();
 */
+
+// ── FAB LECHE ────────────────────────────────────────────────────────────
+var _fabTab = 'prod';
+function abrirFabLeche() {
+  var hoy = new Date().toISOString().split('T')[0];
+  var lf = document.getElementById('l-fecha'); if(lf && !lf.value) lf.value = hoy;
+  var lcf = document.getElementById('l-cal-fecha'); if(lcf && !lcf.value) lcf.value = hoy;
+  document.getElementById('fab-overlay').style.display = 'block';
+  document.getElementById('fab-sheet').style.display = 'block';
+}
+function cerrarFabLeche() {
+  document.getElementById('fab-overlay').style.display = 'none';
+  document.getElementById('fab-sheet').style.display = 'none';
+}
+function fabCambiarTab(t) {
+  _fabTab = t;
+  ['prod','cal'].forEach(function(x) {
+    var active = x === t;
+    var tab = document.getElementById('fab-tab-'+x);
+    var tc = document.getElementById('fab-tc-'+x);
+    tab.style.background = active ? '#fff' : 'none';
+    tab.style.color = active ? '#1C1C1E' : '#8E8E93';
+    tab.style.boxShadow = active ? '0 1px 3px rgba(0,0,0,0.1)' : 'none';
+    tc.style.display = active ? 'block' : 'none';
+  });
+}
+function fabGuardar() {
+  if(_fabTab === 'prod') { guardarProduccion(); cerrarFabLeche(); }
+  else { guardarCalidad(); cerrarFabLeche(); }
+}
+// ── FAB FICHA ────────────────────────────────────────────────────────────
+var _fichaFabOpen = false;
+function toggleFichaFab() {
+  _fichaFabOpen = !_fichaFabOpen;
+  var ov = document.getElementById('ficha-fab-overlay');
+  var menu = document.getElementById('ficha-fab-menu');
+  var btn = document.getElementById('ficha-fab-btn');
+  if(ov) ov.style.display = _fichaFabOpen ? 'block' : 'none';
+  if(menu) menu.style.display = _fichaFabOpen ? 'block' : 'none';
+  if(btn) btn.style.transform = _fichaFabOpen ? 'rotate(45deg)' : 'rotate(0deg)';
+}
+function cerrarFichaFab() {
+  _fichaFabOpen = false;
+  var ov = document.getElementById('ficha-fab-overlay');
+  var menu = document.getElementById('ficha-fab-menu');
+  var btn = document.getElementById('ficha-fab-btn');
+  if(ov) ov.style.display = 'none';
+  if(menu) menu.style.display = 'none';
+  if(btn) btn.style.transform = 'rotate(0deg)';
+}
+function cerrarFichaSheet(id) {
+  var s = document.getElementById(id); if(s) s.style.display = 'none';
+  var ov = document.getElementById('ficha-fab-overlay'); if(ov) ov.style.display = 'none';
+}
+function fichaCheck(sheetId) {
+  var btn = document.getElementById(sheetId+'-g'); if(!btn) return;
+  var ok = false;
+  if(sheetId==='ficha-sheet-celo') ok = !!document.getElementById('fsc-fecha').value;
+  else if(sheetId==='ficha-sheet-inseminar') ok = !!(document.getElementById('fsi-fecha').value && document.getElementById('fsi-toro').value);
+  else if(sheetId==='ficha-sheet-tacto') ok = !!document.getElementById('ficha-sheet-tacto').getAttribute('data-res');
+  else if(sheetId==='ficha-sheet-secar') ok = !!document.getElementById('fss-fecha').value;
+  else if(sheetId==='ficha-sheet-produccion') ok = !!(document.getElementById('fsp-fecha').value && parseFloat(document.getElementById('fsp-litros').value) > 0);
+  else if(sheetId==='ficha-sheet-baja') ok = !!(document.getElementById('fsb-fecha').value && document.getElementById('fsb-motivo').value);
+  else if(sheetId==='ficha-sheet-tratamiento') ok = !!(document.getElementById('fstt-fecha').value && document.getElementById('fstt-tipo').value);
+  else if(sheetId==='ficha-sheet-sanidad') ok = !!(document.getElementById('fssn-fecha').value && document.getElementById('fssn-tipo').value);
+  btn.disabled = !ok;
+  btn.style.background = ok ? '#1C1C1E' : '#C7CDD6';
+  btn.style.color = ok ? '#fff' : '#8E8E93';
+  btn.style.cursor = ok ? 'pointer' : 'not-allowed';
+}
+function fichaSelTacto(el) {
+  el.parentNode.querySelectorAll('button').forEach(function(b){ b.style.background='#EBF0F5'; b.style.borderColor='#B0BCC8'; b.style.color='#3C3C43'; });
+  el.style.background='#1C1C1E'; el.style.borderColor='#1C1C1E'; el.style.color='#fff';
+  document.getElementById('ficha-sheet-tacto').setAttribute('data-res', el.getAttribute('data-val'));
+  fichaCheck('ficha-sheet-tacto');
+}
+function fichaSelSanidad(sel) {
+  var tbc = document.getElementById('fssn-tbc');
+  if(tbc) tbc.style.display = sel.value === 'Tuberculosis' ? 'block' : 'none';
+}
+function fichaSelTbc(el, val) {
+  el.parentNode.querySelectorAll('button').forEach(function(b){ b.style.background='#EBF0F5'; b.style.borderColor='#B0BCC8'; });
+  el.style.background = val === 'Negativa' ? '#D1F2E0' : '#FFD6D6';
+  el.style.borderColor = val === 'Negativa' ? '#1A7A40' : '#A32D2D';
+  el.setAttribute('data-selected','1');
+}
+async function fichaGuardar(sheetId, rp) {
+  var a = getAnimal(rp); if(!a) return;
+  cerrarFichaSheet(sheetId);
+  var hoy = new Date().toISOString().split('T')[0];
+  if(sheetId==='ficha-sheet-celo') {
+    a.estadoRepro='Celo'; a.ultimoCelo=document.getElementById('fsc-fecha').value||hoy;
+    guardarCacheLocal();
+    await enviarASheets('Reg_Celos',[generarID('Cel',rp),a.ultimoCelo,rp,a.nombre,document.getElementById('fsc-obs').value||'']);
+    showToast('Celo registrado ✓'); renderDashboard(); renderRodeo();
+  } else if(sheetId==='ficha-sheet-inseminar') {
+    var fecha=document.getElementById('fsi-fecha').value||hoy;
+    a.estadoRepro='Inseminada'; a.ultimaInsem=fecha; a.nroServicios=(a.nroServicios||0)+1;
+    guardarCacheLocal();
+    await enviarASheets('Reg_Inseminaciones',[generarID('Ins',rp),fecha,rp,a.nombre,document.getElementById('fsi-toro').value,document.getElementById('fsi-tipo').value,document.getElementById('fsi-insem').value||'','']);
+    showToast('Inseminación registrada ✓'); renderDashboard(); renderRodeo();
+  } else if(sheetId==='ficha-sheet-tacto') {
+    var fecha=document.getElementById('fst-fecha').value||hoy;
+    var res=document.getElementById('ficha-sheet-tacto').getAttribute('data-res');
+    if(res==='Preñada'){a.estadoRepro='Preñada';if(a.ultimaInsem){var fp=new Date(a.ultimaInsem);fp.setDate(fp.getDate()+283);a.partoEstimado=fp.toISOString().split('T')[0];}}
+    else if(res==='Vacía'||res==='Repetición'){a.estadoRepro='Vacía';}
+    else if(res==='Hormonal'){a.estadoRepro='IATF';}
+    else{a.estadoRepro=res;}
+    guardarCacheLocal();
+    await enviarASheets('Reg_Tactos',[generarID('Tac',rp),fecha,rp,a.nombre,res,''],{resultado:res});
+    showToast('Tacto registrado ✓'); renderDashboard(); renderRodeo();
+  } else if(sheetId==='ficha-sheet-secar') {
+    a.estadoProd='Seca'; guardarCacheLocal();
+    await enviarASheets('Reg_Secados',[generarID('Sec',rp),document.getElementById('fss-fecha').value||hoy,rp,a.nombre,'']);
+    showToast('Secado registrado ✓'); renderDashboard(); renderRodeo();
+  } else if(sheetId==='ficha-sheet-produccion') {
+    await enviarASheets('Reg_Produccion',[generarID('Prd',rp),document.getElementById('fsp-fecha').value||hoy,rp,a.nombre,parseFloat(document.getElementById('fsp-litros').value)||0,'']);
+    showToast('Producción registrada ✓');
+  } else if(sheetId==='ficha-sheet-baja') {
+    a.cat='Baja'; a.estadoProd=''; a.estadoRepro='Baja'; guardarCacheLocal();
+    await enviarASheets('Reg_Bajas',[generarID('Baj',rp),document.getElementById('fsb-fecha').value||hoy,rp,a.nombre,document.getElementById('fsb-motivo').value,document.getElementById('fsb-obs').value||'']);
+    showToast('Baja registrada'); renderDashboard(); renderRodeo(); goBack(); return;
+  } else if(sheetId==='ficha-sheet-tratamiento') {
+    await enviarASheets('Reg_Tratamientos',[generarID('Tra',rp),document.getElementById('fstt-fecha').value||hoy,rp,a.nombre,document.getElementById('fstt-tipo').value,document.getElementById('fstt-desc').value||'','']);
+    showToast('Tratamiento registrado ✓');
+  } else if(sheetId==='ficha-sheet-sanidad') {
+    var tbc=document.getElementById('fssn-tbc');
+    var resTbc=tbc?((tbc.querySelector('[data-selected]')||{}).textContent||''):'';
+    await enviarASheets('Reg_Sanidad',[generarID('San',rp),document.getElementById('fssn-fecha').value||hoy,rp,a.nombre,document.getElementById('fssn-tipo').value,resTbc,'']);
+    showToast('Sanidad registrada ✓');
+  }
+  abrirFicha(rp);
+}
+
 </script>
 
 <!-- MODAL EVENTO VACA -->
@@ -4669,8 +4894,6 @@ function limpiarFilasEmpresa() {
       </button>
     </div>
   </div>
-</div>
-</div>
 </div>
 <script>initLogin();</script>
 </body>
