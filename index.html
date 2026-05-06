@@ -1806,6 +1806,7 @@ function abrirFicha(rp) {
     fabMenu.style.cssText='display:none;position:fixed;bottom:88px;right:20px;z-index:201;width:180px;';
     var todasOps=[
       {label:'Parto',      s:'ficha-sheet-parto'},
+      {label:'Aborto',     s:'ficha-sheet-aborto', prenadaOnly:true},
       {label:'Celo',       s:'ficha-sheet-celo'},
       {label:'Inseminar',  s:'ficha-sheet-inseminar'},
       {label:'Tacto',      s:'ficha-sheet-tacto'},
@@ -1829,7 +1830,10 @@ function abrirFicha(rp) {
     if(prod==='Seca') { bloqueadas.push('Producción'); bloqueadas.push('Secar'); }
     // Baja: solo admin y tambero
     if(rol!=='admin'&&rol!=='tambero') bloqueadas.push('Baja');
-    var ops = todasOps.filter(function(o){ return perm.indexOf(o.label)>=0; }).map(function(o){
+    var ops = todasOps.filter(function(o){
+      if(o.prenadaOnly && repro!=='Preñada') return false;
+      return perm.indexOf(o.label)>=0;
+    }).map(function(o){
       var bloq = bloqueadas.indexOf(o.label)>=0;
       var extra = '';
       if(o.label==='Secar'&&(repro==='Preñada')&&a.partoEstimado){
@@ -1875,6 +1879,7 @@ function abrirFicha(rp) {
     var to=toros.map(function(t){return '<option value="'+t.rp+'">'+t.nombre+'<\/option>';}).join('');
     var rb=['Pre\xf1ada','Vac\xeda','Repetici\xf3n','IATF','PG','Anestro','Hormonal'].map(function(r){return '<button onclick="fichaSelTacto(this)" data-val="'+r+'" style="padding:10px;border:1px solid #B0BCC8;border-radius:10px;font-size:14px;background:#EBF0F5;color:#3C3C43;cursor:pointer;">'+r+'<\/button>';}).join('');
     mkS('ficha-sheet-parto','Parto','<div style="'+g2+'"><div><label style="'+lb+'">Fecha<\/label><input id="fsp2-fecha" type="date" value="'+td+'" oninput="fichaCheck(\'ficha-sheet-parto\')" style="'+sa+'"><\/div><div><label style="'+lb+'">Tipo parto<\/label><select id="fsp2-tipo" style="'+si+'"><option>Normal<\/option><option>Distócico<\/option><option>Cesárea<\/option><\/select><\/div><\/div><div style="'+g2+'"><div><label style="'+lb+'">Sexo cría<\/label><select id="fsp2-sexo" style="'+si+'"><option value="">Seleccionar...<\/option><option>Macho<\/option><option>Hembra<\/option><\/select><\/div><div><label style="'+lb+'">RP cría (opcional)<\/label><input id="fsp2-rp" type="text" placeholder="RP..." style="'+si+'"><\/div><\/div><div style="margin-bottom:8px;"><label style="'+lb+'">Observaciones<\/label><input id="fsp2-obs" type="text" placeholder="Opcional..." style="'+si+'"><\/div>');
+    mkS('ficha-sheet-aborto','Aborto','<div style="margin-bottom:12px;"><label style="'+lb+'">Fecha<\/label><input id="fsa2-fecha" type="date" value="'+td+'" oninput="fichaCheck(\'ficha-sheet-aborto\')" style="'+sa+'"><\/div><div style="background:#FFD6D6;border-radius:12px;padding:12px 14px;margin-bottom:12px;font-size:13px;color:#A0200A;">Esta acción marca la vaca como Vacía y registra el aborto.<\/div><div style="margin-bottom:8px;"><label style="'+lb+'">Observaciones<\/label><input id="fsa2-obs" type="text" placeholder="Opcional..." style="'+si+'"><\/div>');
     mkS('ficha-sheet-celo','Celo','<div style="'+g2+'"><div><label style="'+lb+'">Fecha<\/label><input id="fsc-fecha" type="date" value="'+td+'" oninput="fichaCheck(\'ficha-sheet-celo\')" style="'+sa+'"><\/div><div><label style="'+lb+'">Obs<\/label><input id="fsc-obs" type="text" placeholder="Opcional..." style="'+si+'"><\/div><\/div>');
     mkS('ficha-sheet-inseminar','Inseminar','<div style="'+g2+'"><div><label style="'+lb+'">Fecha<\/label><input id="fsi-fecha" type="date" value="'+td+'" oninput="fichaCheck(\'ficha-sheet-inseminar\')" style="'+sa+'"><\/div><div><label style="'+lb+'">Toro *<\/label><select id="fsi-toro" onchange="fichaCheck(\'ficha-sheet-inseminar\')" style="'+si+'"><option value="">Seleccionar...<\/option>'+to+'<\/select><\/div><\/div><div style="'+g2+'"><div><label style="'+lb+'">Tipo<\/label><select id="fsi-tipo" style="'+si+'"><option>IA<\/option><option>IATF<\/option><option>TE<\/option><option>Monta natural<\/option><\/select><\/div><div><label style="'+lb+'">Inseminador<\/label><input id="fsi-insem" type="text" placeholder="Opcional" style="'+si+'"><\/div><\/div>');
     mkS('ficha-sheet-tacto','Tacto','<div style="margin-bottom:10px;"><label style="'+lb+'">Fecha<\/label><input id="fst-fecha" type="date" value="'+td+'" style="'+sa+'"><\/div><div style="margin-bottom:10px;"><label style="'+lb+'">Resultado *<\/label><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px;">'+rb+'<\/div><\/div>');
@@ -4648,7 +4653,8 @@ function cerrarFichaSheet(id) {
 function fichaCheck(sheetId) {
   var btn = document.getElementById(sheetId+'-g'); if(!btn) return;
   var ok = false;
-  if(sheetId==='ficha-sheet-parto') ok = !!document.getElementById('fsp2-fecha').value;
+  if(sheetId==='ficha-sheet-aborto') ok = !!document.getElementById('fsa2-fecha').value;
+  else if(sheetId==='ficha-sheet-parto') ok = !!document.getElementById('fsp2-fecha').value;
   else if(sheetId==='ficha-sheet-celo') ok = !!document.getElementById('fsc-fecha').value;
   else if(sheetId==='ficha-sheet-inseminar') ok = !!(document.getElementById('fsi-fecha').value && document.getElementById('fsi-toro').value);
   else if(sheetId==='ficha-sheet-tacto') ok = !!document.getElementById('ficha-sheet-tacto').getAttribute('data-res');
@@ -4682,7 +4688,26 @@ async function fichaGuardar(sheetId, rp) {
   var a = getAnimal(rp); if(!a) return;
   cerrarFichaSheet(sheetId);
   var hoy = new Date().toISOString().split('T')[0];
-  if(sheetId==='ficha-sheet-parto') {
+  if(sheetId==='ficha-sheet-aborto') {
+    var fecha=document.getElementById('fsa2-fecha').value||hoy;
+    var obs=document.getElementById('fsa2-obs').value||'';
+    // Calcular meses de gestación
+    var mesesAborto = 0;
+    if(a.ultimaInsem) {
+      mesesAborto = Math.floor((new Date(fecha)-new Date(a.ultimaInsem))/(30*864e5));
+    }
+    var umbral = (CONFIG && CONFIG.mesesAbortoPorLactancia) || 6;
+    // Resetear estado reproductivo
+    a.estadoRepro='Vacía'; a.partoEstimado=''; a.ultimaInsem='';
+    // Si ≥ umbral meses → nueva lactancia
+    if(mesesAborto >= umbral) {
+      a.estadoProd='En Ordeñe';
+      a.diasLactancia=0; a.lecheAcum=0;
+    }
+    guardarCacheLocal();
+    await enviarASheets('Reg_Abortos',[generarID('Abo',rp),fecha,rp,a.nombre,mesesAborto+'m',obs]);
+    showToast('Aborto registrado ✓'); renderDashboard(); renderRodeo(); goBack(); return;
+  } else if(sheetId==='ficha-sheet-parto') {
     var fecha=document.getElementById('fsp2-fecha').value||hoy;
     var tipo=document.getElementById('fsp2-tipo').value||'Normal';
     var sexo=document.getElementById('fsp2-sexo').value||'';
@@ -4693,10 +4718,13 @@ async function fichaGuardar(sheetId, rp) {
     await enviarASheets('Reg_Partos',[generarID('Par',rp),fecha,rp,a.nombre,tipo,sexo,rpCria,obs]);
     showToast('Parto registrado ✓'); renderDashboard(); renderRodeo(); goBack(); return;
   } else if(sheetId==='ficha-sheet-celo') {
+    var celoEnPreniada = a.estadoRepro && a.estadoRepro.normalize('NFC')==='Preñada';
     a.estadoRepro='Celo'; a.ultimoCelo=document.getElementById('fsc-fecha').value||hoy;
     guardarCacheLocal();
     await enviarASheets('Reg_Celos',[generarID('Cel',rp),a.ultimoCelo,rp,a.nombre,document.getElementById('fsc-obs').value||'']);
-    showToast('Celo registrado ✓'); renderDashboard(); renderRodeo();
+    if(celoEnPreniada) showToast('⚠️ Posible aborto — RP '+rp);
+    else showToast('Celo registrado ✓');
+    renderDashboard(); renderRodeo();
   } else if(sheetId==='ficha-sheet-inseminar') {
     var fecha=document.getElementById('fsi-fecha').value||hoy;
     a.estadoRepro='Inseminada'; a.ultimaInsem=fecha; a.nroServicios=(a.nroServicios||0)+1;
