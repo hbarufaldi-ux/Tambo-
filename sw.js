@@ -1,4 +1,4 @@
-var CACHE_NAME = 'tambo-v94';
+var CACHE_NAME = 'tambo-v95';
 var urlsToCache = [
   '/Tambo-/',
   '/Tambo-/index.html',
