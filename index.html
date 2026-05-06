@@ -661,11 +661,11 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 
 <!-- FAB Leche -->
 <div id="leche-fab-btn" style="position:fixed;bottom:24px;right:24px;z-index:300;">
-  <button onclick="toggleLecheFab()" id="leche-fab-toggle" style="width:62px;height:62px;border-radius:50%;background:#1C1C1E;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 16px rgba(0,0,0,0.3);transition:transform 0.2s;">
+  <button onclick="toggleLecheFab()" id="leche-fab-toggle" style="width:68px;height:68px;border-radius:50%;background:#1C1C1E;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 16px rgba(0,0,0,0.3);transition:transform 0.2s;">
     <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M12 4v16M4 12h16" stroke="#fff" stroke-width="2.4" stroke-linecap="round"/></svg>
   </button>
 </div>
-<div id="leche-fab-overlay" onclick="cerrarLecheFab()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.65);z-index:200;"></div>
+<div id="leche-fab-overlay" onclick="cerrarLecheFab()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.80);z-index:200;"></div>
 <div id="leche-fab-menu" style="display:none;position:fixed;bottom:100px;right:24px;z-index:250;width:200px;text-align:right;">
   <div onclick="cerrarLecheFab();abrirFormLeche('prod')" style="padding:12px 4px;cursor:pointer;font-size:22px;font-weight:700;color:#fff;letter-spacing:-0.3px;">Producción</div>
   <div onclick="cerrarLecheFab();abrirFormLeche('cal')" style="padding:12px 4px;cursor:pointer;font-size:22px;font-weight:700;color:#fff;letter-spacing:-0.3px;">Calidad</div>
@@ -1794,7 +1794,7 @@ function abrirFicha(rp) {
   if(a.sexo==='H' && a.cat!=='Baja') {
     ['ficha-fab-overlay','ficha-fab-menu','ficha-fab-btn'].forEach(function(id){var el=document.getElementById(id);if(el)el.remove();});
     var fabOv=document.createElement('div');fabOv.id='ficha-fab-overlay';
-    fabOv.style.cssText='display:none;position:fixed;inset:0;background:rgba(0,0,0,0.65);z-index:200;';
+    fabOv.style.cssText='display:none;position:fixed;inset:0;background:rgba(0,0,0,0.80);z-index:200;';
     fabOv.onclick=function(){cerrarFichaFab();};document.body.appendChild(fabOv);
     var fabMenu=document.createElement('div');fabMenu.id='ficha-fab-menu';
     fabMenu.style.cssText='display:none;position:fixed;bottom:88px;right:20px;z-index:201;width:180px;';
@@ -1808,7 +1808,7 @@ function abrirFicha(rp) {
     });
     document.body.appendChild(fabMenu);
     var fabBtn=document.createElement('button');fabBtn.id='ficha-fab-btn';
-    fabBtn.style.cssText='position:fixed;bottom:20px;right:20px;width:62px;height:62px;border-radius:50%;background:#1C1C1E;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:202;transition:transform 0.2s;';
+    fabBtn.style.cssText='position:fixed;bottom:20px;right:20px;width:68px;height:68px;border-radius:50%;background:#1C1C1E;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:202;transition:transform 0.2s;';
     fabBtn.innerHTML='<svg width="22" height="22" viewBox="0 0 22 22" fill="none"><path d="M11 4v14M4 11h14" stroke="#fff" stroke-width="2.2" stroke-linecap="round"/><\/svg>';
     fabBtn.onclick=function(){toggleFichaFab();};document.body.appendChild(fabBtn);
     var td=new Date().toISOString().split('T')[0];
@@ -1879,7 +1879,7 @@ function abrirFichaJoven(rp) {
   }
 
   var hdr=document.createElement('div'); hdr.style.cssText='display:flex;align-items:center;gap:14px;margin-bottom:16px;';
-  var icon=document.createElement('div'); icon.style.cssText='width:52px;height:52px;border-radius:50%;background:#D8E0E8;display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0;'; icon.textContent=a.sexo==='H'?'🐄':'🐂';
+  var icon=document.createElement('div'); icon.style.cssText='width:68px;height:68px;border-radius:50%;background:#D8E0E8;display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0;'; icon.textContent=a.sexo==='H'?'🐄':'🐂';
   var info=document.createElement('div'); info.style.flex='1';
   info.innerHTML='<div style="font-size:20px;font-weight:700;">RP '+a.rp+'</div><div style="font-size:15px;font-weight:500;color:#3C3C43;">'+a.nombre+'</div><div style="font-size:13px;color:#8E8E93;">'+(a.cat||'')+' · '+edadStr(a.fechaNac)+(enG&&!enG.salio?' · En guachera':'')+'</div>';
   hdr.appendChild(icon); hdr.appendChild(info); cont.appendChild(hdr);
@@ -2497,6 +2497,7 @@ function goTo(screen, btn) {
   if(screen==='recria') renderRecria();
   if(screen==='dashboard') renderDashboard();
   if(screen==='config') renderConfig();
+  if(screen==='leche') { setTimeout(function(){ renderLeche(); }, 100); }
   window.scrollTo(0,0);
 
 }
@@ -4615,7 +4616,7 @@ function abrirFormLeche(tipo) {
   var hoy = new Date().toISOString().split('T')[0];
   var ov = document.createElement('div');
   ov.id = 'leche-form-overlay';
-  ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:400;';
+  ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.80);z-index:400;';
   ov.onclick = function(){ cerrarFormLeche(); };
   lockScroll();
   document.body.appendChild(ov);
