@@ -1804,14 +1804,50 @@ function abrirFicha(rp) {
     fabOv.onclick=function(){cerrarFichaFab();};document.body.appendChild(fabOv);
     var fabMenu=document.createElement('div');fabMenu.id='ficha-fab-menu';
     fabMenu.style.cssText='display:none;position:fixed;bottom:88px;right:20px;z-index:201;width:180px;';
-    var todasOps=[{label:'Celo',s:'ficha-sheet-celo'},{label:'Inseminar',s:'ficha-sheet-inseminar'},{label:'Tacto',s:'ficha-sheet-tacto'},{label:'Secar',s:'ficha-sheet-secar'},{label:'Producci\xf3n',s:'ficha-sheet-produccion'},{label:'Baja',s:'ficha-sheet-baja',c:'#F09595'},{label:'Parto',s:'ficha-sheet-parto'},{label:'Tratamiento',s:'ficha-sheet-tratamiento'},{label:'Sanidad',s:'ficha-sheet-sanidad'}];
+    var todasOps=[
+      {label:'Parto',      s:'ficha-sheet-parto'},
+      {label:'Celo',       s:'ficha-sheet-celo'},
+      {label:'Inseminar',  s:'ficha-sheet-inseminar'},
+      {label:'Tacto',      s:'ficha-sheet-tacto'},
+      {label:'Secar',      s:'ficha-sheet-secar'},
+      {label:'Producci\xf3n', s:'ficha-sheet-produccion'},
+      {label:'Baja',       s:'ficha-sheet-baja', c:'#F09595'},
+      {label:'Tratamiento',s:'ficha-sheet-tratamiento'},
+      {label:'Sanidad',    s:'ficha-sheet-sanidad'},
+    ];
+    // Filtro por rol
     var perm=(window._permisos&&window._permisos.fabFicha)||todasOps.map(function(o){return o.label;});
-    var ops=todasOps.filter(function(o){return perm.indexOf(o.label)>=0;});
+    // Filtro contextual según estado del animal
+    var repro = (a.estadoRepro||'').normalize('NFC');
+    var prod  = (a.estadoProd||'').normalize('NFC');
+    var rol   = (window.usuarioActual&&window.usuarioActual.rol)||'ayudante';
+    var bloqueadas = [];
+    // Preñada o Inseminada → no inseminar
+    if(repro==='Preñada'||repro==='Inseminada') bloqueadas.push('Inseminar');
+    // Preñada → no tacto (solo de confirmación, lo dejamos disponible)
+    // Seca → no producción, no secar de nuevo
+    if(prod==='Seca') { bloqueadas.push('Producción'); bloqueadas.push('Secar'); }
+    // Baja: solo admin y tambero
+    if(rol!=='admin'&&rol!=='tambero') bloqueadas.push('Baja');
+    var ops = todasOps.filter(function(o){ return perm.indexOf(o.label)>=0; }).map(function(o){
+      var bloq = bloqueadas.indexOf(o.label)>=0;
+      var extra = '';
+      if(o.label==='Secar'&&(repro==='Preñada')&&a.partoEstimado){
+        var dp=Math.round((new Date(a.partoEstimado)-new Date())/864e5);
+        if(dp>(CONFIG.diasAntesPartoSecar||60)) extra=' ⚠️';
+      }
+      return {label:o.label+(bloq?' ✕':extra), s:o.s, c:bloq?'#909090':(o.c||null), disabled:bloq};
+    })
     ops.forEach(function(op){
       var item=document.createElement('div');
       item.style.cssText='padding:11px 4px;cursor:pointer;font-size:20px;font-weight:700;color:'+(op.c||'#fff')+';text-align:right;';
       item.textContent=op.label;
-      item.onclick=(function(sid){return function(){cerrarFichaFab();var s=document.getElementById(sid);if(s){document.getElementById('ficha-fab-overlay').style.display='block';s.style.display='block';lockScroll();}};})(op.s);
+      if(op.disabled){
+        item.style.opacity='0.35';
+        item.style.cursor='default';
+      } else {
+        item.onclick=(function(sid){return function(){cerrarFichaFab();var s=document.getElementById(sid);if(s){var _ov=document.getElementById('ficha-fab-overlay');_ov.style.display='block';_ov.style.zIndex='202';_ov.onclick=function(){cerrarFichaSheet(sid);};s.style.display='block';lockScroll();}};})(op.s);
+      }
       fabMenu.appendChild(item);
     });
     document.body.appendChild(fabMenu);
@@ -4601,7 +4637,13 @@ function cerrarFichaFab() {
 }
 function cerrarFichaSheet(id) {
   var s = document.getElementById(id); if(s) s.style.display = 'none';
-  var ov = document.getElementById('ficha-fab-overlay'); if(ov) ov.style.display = 'none';
+  var ov = document.getElementById('ficha-fab-overlay');
+  if(ov) {
+    ov.style.display = 'none';
+    ov.style.zIndex = '200';
+    ov.onclick = function(){ cerrarFichaFab(); };
+  }
+  unlockScroll && unlockScroll();
 }
 function fichaCheck(sheetId) {
   var btn = document.getElementById(sheetId+'-g'); if(!btn) return;
