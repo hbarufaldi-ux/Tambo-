@@ -1415,6 +1415,8 @@ function renderDashboard() {
 function limpiarFiltros() {
   filtroRodeo = {prod: null, repro: null};
   document.querySelectorAll('.fchip').forEach(function(c){c.classList.remove('active');});
+  var todosBtn = document.getElementById('fc-todos');
+  if(todosBtn) todosBtn.classList.add('active');
   actualizarLabelFiltro();
   renderRodeo();
 }
@@ -3704,7 +3706,7 @@ function renderLeche() {
   if(fcEl) { if(!fcEl.value) fcEl.value = TODAY; fcEl.max = TODAY; }
 
   var nOrdene = rodeo.filter(function(a){ return a.estadoProd==='En Ordeñe'; }).length;
-  document.getElementById('l-vacas').placeholder = nOrdene ? nOrdene+' (auto)' : '0';
+  var lVacas = document.getElementById('l-vacas'); if(lVacas) lVacas.placeholder = nOrdene ? nOrdene+' (auto)' : '0';
 
   // Acumulado del mes
   var mesActual = TODAY.substring(0,7);
