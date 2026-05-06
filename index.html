@@ -1805,7 +1805,7 @@ function abrirFicha(rp) {
     var fabMenu=document.createElement('div');fabMenu.id='ficha-fab-menu';
     fabMenu.style.cssText='display:none;position:fixed;bottom:88px;right:20px;z-index:201;width:180px;';
     var todasOps=[
-      {label:'Parto',      s:'ficha-sheet-parto'},
+      {label:'Parto',      s:'ficha-sheet-parto', prenadaOnly:true},
       {label:'Aborto',     s:'ficha-sheet-aborto', prenadaOnly:true},
       {label:'Celo',       s:'ficha-sheet-celo'},
       {label:'Inseminar',  s:'ficha-sheet-inseminar'},
@@ -1831,7 +1831,11 @@ function abrirFicha(rp) {
     // Baja: solo admin y tambero
     if(rol!=='admin'&&rol!=='tambero') bloqueadas.push('Baja');
     var ops = todasOps.filter(function(o){
-      if(o.prenadaOnly && repro!=='Preñada') return false;
+      if(o.prenadaOnly) {
+        var reprNorm = repro.normalize ? repro.normalize('NFC') : repro;
+        var esPreniada = reprNorm==='Preñada' || reprNorm==='Preñada';
+        if(!esPreniada) return false;
+      }
       return perm.indexOf(o.label)>=0;
     }).map(function(o){
       var bloq = bloqueadas.indexOf(o.label)>=0;
@@ -2504,6 +2508,11 @@ function goBack() {
   else if(anterior === 'guachera') renderGuachera();
   else if(anterior === 'recria') renderRecria();
   else if(anterior === 'dashboard') renderDashboard();
+  // Limpiar FAB de ficha al volver
+  ['ficha-fab-overlay','ficha-fab-menu','ficha-fab-btn',
+   'ficha-joven-fab-overlay','ficha-joven-fab-menu','ficha-joven-fab-btn'].forEach(function(id){
+    var el=document.getElementById(id); if(el) el.remove();
+  });
   window.scrollTo(0,0);
 }
 
@@ -3202,19 +3211,19 @@ function aplicarRol(rol) {
     admin: {
       nav: ['nav-inicio','nav-leche','nav-padron','nav-guachera','nav-recria','nav-mas'],
       mas: ['mas-reportes','mas-config'],
-      fabFicha: ['Celo','Inseminar','Tacto','Secar','Producción','Baja','Tratamiento','Sanidad'],
+      fabFicha: ['Parto','Aborto','Celo','Inseminar','Tacto','Secar','Producción','Baja','Tratamiento','Sanidad'],
       fabLeche: ['prod','cal','control'],
     },
     tambero: {
       nav: ['nav-inicio','nav-leche','nav-padron','nav-guachera','nav-recria','nav-mas'],
       mas: ['mas-reportes'],
-      fabFicha: ['Celo','Inseminar','Tacto','Secar','Producción','Baja','Tratamiento','Sanidad'],
+      fabFicha: ['Parto','Aborto','Celo','Inseminar','Tacto','Secar','Producción','Baja','Tratamiento','Sanidad'],
       fabLeche: ['prod','cal','control'],
     },
     ayudante: {
       nav: ['nav-inicio','nav-leche','nav-padron','nav-guachera','nav-recria'],
       mas: [],
-      fabFicha: ['Celo','Parto','Tratamiento','Parto'],
+      fabFicha: ['Parto','Celo','Tratamiento'],
       fabLeche: ['prod'],
     },
     control_lechero: {
