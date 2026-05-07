@@ -127,7 +127,6 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
       <div class="topbar-title" id="topbar-nombre">Cañada Negra</div>
       <div id="sync-status" style="font-size:15px;color:#555;font-weight:600;">● Listo</div>
     </div>
-    <button onclick="goTo('config')" style="background:none;border:none;font-size:26px;cursor:pointer;padding:0;color:#1C1C1E;line-height:1;letter-spacing:2px;align-self:flex-start;margin-top:4px;" title="Configuración">···</button>
   </div>
   <div style="display:flex;align-items:center;gap:10px;">
     <button onclick="cerrarSesion()" style="font-size:15px;font-weight:700;color:#1C1C1E;background:none;border:1px solid #C0C0C0;border-radius:8px;cursor:pointer;padding:4px 12px;">Salir</button>
@@ -751,7 +750,10 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 
 <!-- REPORTES -->
 <div id="screen-reportes" class="screen">
-  <!-- IMPORTAR DIRSA -->
+  <div style="display:flex;align-items:center;gap:10px;padding:4px 0 12px;">
+    <button onclick="volverDeSecundaria()" style="background:none;border:none;font-size:22px;color:#1C1C1E;cursor:pointer;padding:4px 8px 4px 0;font-weight:600;line-height:1;">‹</button>
+    <div style="font-size:19px;font-weight:800;color:#1C1C1E;letter-spacing:-0.3px;">Reportes</div>
+  </div>
   <div class="card" id="card-dirsa-upload">
     <div class="section-title">Importar desde DIRSA</div>
     <div style="margin-bottom:14px;">
@@ -2664,14 +2666,18 @@ function goToNav(screen) {
   goTo(screen, btn||null);
 }
 
+var _navAnterior = null; // {screen, navId}
+
 function goTo(screen, btn) {
+  var SCREENS_SIN_NAV = ['config', 'reportes'];
+  var esSinNav = SCREENS_SIN_NAV.indexOf(screen) >= 0;
+
   if(screen==='reportes'){ setTimeout(function(){ renderResumenTambo(); }, 50); }
   if(screen==='leche'){
     cargarCacheLeche();
     cargarProduccionDesdeSheets();
     var cc = cargarCacheControl();
     if(cc && cc.data && Object.keys(cc.data).length > 0) {
-      // Control en curso: mostrar screen-control-lechero directamente
       document.querySelectorAll('.screen').forEach(function(s){s.classList.remove('active');});
       document.getElementById('screen-control-lechero').classList.add('active');
       setTimeout(function(){ abrirControlLechero(); }, 100);
@@ -2683,6 +2689,7 @@ function goTo(screen, btn) {
       setTimeout(function(){ renderLeche(); }, 300);
     }
   }
+
   document.querySelectorAll('.screen').forEach(function(s){s.classList.remove('active');});
   var sc=document.getElementById('screen-'+screen);
   if(sc) sc.classList.add('active');
@@ -2691,8 +2698,23 @@ function goTo(screen, btn) {
   if(screen !== 'leche') cerrarLecheFab && cerrarLecheFab();
   window.scrollTo(0,0);
   if(screen==='dashboard'){setTimeout(function(){renderDashboard&&renderDashboard();},80);}
-  if(btn){document.querySelectorAll('.nav-btn').forEach(function(b){b.classList.remove('active');});btn.classList.add('active');}
-  _navStack = []; // limpiar stack al navegar por menú principal
+
+  // Nav activo / apagado
+  if(esSinNav) {
+    // Guardar dónde estaba el usuario antes de entrar a config/reportes
+    var navActivo = document.querySelector('.nav-btn.active');
+    _navAnterior = navActivo ? {navId: navActivo.id} : null;
+    // Apagar todos los botones del nav
+    document.querySelectorAll('.nav-btn').forEach(function(b){b.classList.remove('active');});
+    // Encender "Más" para dar contexto visual
+    var masBtn = document.getElementById('nav-mas');
+    if(masBtn) masBtn.classList.add('active');
+  } else {
+    _navAnterior = null; // limpiar al navegar a pantallas normales
+    if(btn){document.querySelectorAll('.nav-btn').forEach(function(b){b.classList.remove('active');});btn.classList.add('active');}
+  }
+
+  _navStack = [];
   if(screen==='rodeo') {
     var buscarEl = document.getElementById('rodeo-buscar');
     if(buscarEl) buscarEl.value = '';
@@ -2706,11 +2728,9 @@ function goTo(screen, btn) {
     actualizarLabelFiltro();
     renderRodeo();
   }
-  // Limpiar FAB ficha al salir
   ['ficha-fab-overlay','ficha-fab-menu','ficha-fab-btn'].forEach(function(id){
     var el=document.getElementById(id); if(el) el.remove();
   });
-  // Mostrar/ocultar FABs de sección
 
   if(screen==='guachera') renderGuachera();
   if(screen==='celo') renderRecientes('celo');
@@ -2722,7 +2742,6 @@ function goTo(screen, btn) {
   if(screen==='config') renderConfig();
   if(screen==='leche') { setTimeout(function(){ renderLeche(); }, 100); }
   window.scrollTo(0,0);
-
 }
 
 function nuevoReg(tipo) {
@@ -3588,6 +3607,27 @@ function toggleMasMenu() {
 function cerrarMasMenu() {
   var menu = document.getElementById('mas-menu');
   if(menu) menu.style.display = 'none';
+}
+
+function volverDeSecundaria() {
+  // Volver a la pantalla anterior con el nav correcto encendido
+  var ant = _navAnterior;
+  _navAnterior = null;
+  if(ant && ant.navId) {
+    var navBtn = document.getElementById(ant.navId);
+    // Mapear navId → screen
+    var mapaNav = {
+      'nav-inicio':   'dashboard',
+      'nav-leche':    'leche',
+      'nav-padron':   'rodeo',
+      'nav-guachera': 'guachera',
+      'nav-recria':   'recria',
+    };
+    var screenAnterior = mapaNav[ant.navId] || 'dashboard';
+    goTo(screenAnterior, navBtn);
+  } else {
+    goTo('dashboard', document.getElementById('nav-inicio'));
+  }
 }
 
 function cerrarSesion() {
@@ -5529,8 +5569,10 @@ function cerrarJovenFab() {
 <!-- CONFIGURACIÓN                                                 -->
 <!-- ============================================================ -->
 <div id="screen-config" class="screen">
-
-  <!-- GENERAL -->
+  <div style="display:flex;align-items:center;gap:10px;padding:4px 0 12px;">
+    <button onclick="volverDeSecundaria()" style="background:none;border:none;font-size:22px;color:#1C1C1E;cursor:pointer;padding:4px 8px 4px 0;font-weight:600;line-height:1;">‹</button>
+    <div style="font-size:19px;font-weight:800;color:#1C1C1E;letter-spacing:-0.3px;">Configuración</div>
+  </div>
   <div class="card">
     <div class="section-title">🏠 General</div>
     <div class="form-row">
