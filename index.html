@@ -3189,8 +3189,13 @@ function _entrarApp() {
   var tn = document.getElementById('topbar-nombre');
   if(tn) tn.textContent = CONFIG.nombreTambo;
   setSyncStatus('⟳ Cargando padrón...');
+  // Mostrar overlay de carga
+  var lov = document.getElementById('loading-overlay');
+  if(lov) { lov.style.display='flex'; }
   setTimeout(function(){
     init();
+    // Ir a inicio
+    goTo('dashboard');
     var topbar2 = document.querySelector('.topbar');
     var nav2 = document.getElementById('main-nav');
     if(topbar2 && nav2) {
@@ -3200,6 +3205,9 @@ function _entrarApp() {
       window._fixedBarsH = totalH;
     }
     cargarPadronDesdeSheets(function(ok){
+      // Ocultar overlay con animación
+      var lov2 = document.getElementById('loading-overlay');
+      if(lov2) { lov2.style.opacity='0'; lov2.style.transition='opacity 0.4s'; setTimeout(function(){ lov2.style.display='none'; lov2.style.opacity='1'; }, 400); }
       if(!ok) setSyncStatus('● Padrón local');
     });
   }, 100);
@@ -3267,6 +3275,7 @@ function cerrarMasMenu() {
 
 function cerrarSesion() {
   usuarioActual = null;
+  window._permisos = null;
   try { localStorage.removeItem('tambo_sesion'); } catch(e) {}
   document.querySelectorAll('.screen').forEach(function(s){ s.classList.remove('active'); });
   var topbar = document.querySelector('.topbar');
@@ -3296,6 +3305,12 @@ function cargarPadronDesdeSheets(callback) {
   // 3. Sin caché: cargar bloqueante (primera vez)
   setSyncStatus('⟳ Cargando padrón...');
   _fetchPadronBackground(callback);
+}
+function _actualizarLoadingArc(pct) {
+  var arc = document.getElementById('loading-arc');
+  if(!arc) return;
+  var circ = 2 * Math.PI * 24;
+  arc.setAttribute('stroke-dasharray', (pct/100*circ).toFixed(1)+' '+circ.toFixed(1));
 }
 function _fetchPadronBackground(callback) {
   var cbName = '_padronCB_' + Date.now();
@@ -5339,6 +5354,16 @@ function cerrarJovenFab() {
       </button>
     </div>
   </div>
+</div>
+<!-- Overlay de carga -->
+<div id="loading-overlay" style="display:none;position:fixed;inset:0;background:rgba(28,28,30,0.75);z-index:600;flex-direction:column;align-items:center;justify-content:center;gap:20px;">
+  <svg width="60" height="60" viewBox="0 0 60 60">
+    <circle cx="30" cy="30" r="24" fill="none" stroke="#3C3C43" stroke-width="5"/>
+    <circle id="loading-arc" cx="30" cy="30" r="24" fill="none" stroke="#fff" stroke-width="5"
+      stroke-linecap="round" stroke-dasharray="0 151" stroke-dashoffset="38"
+      style="transition:stroke-dasharray 0.4s ease;transform:rotate(-90deg);transform-origin:30px 30px;"/>
+  </svg>
+  <div style="color:#fff;font-size:15px;font-weight:600;letter-spacing:-0.2px;" id="loading-msg">Cargando padrón...</div>
 </div>
 <script>initLogin();</script>
 </body>
