@@ -3482,9 +3482,17 @@ function _entrarApp() {
   var tn = document.getElementById('topbar-nombre');
   if(tn) tn.textContent = CONFIG.nombreTambo;
 
-  // Inicializar UI sin padrón (solo lo que no depende de datos)
+  // Inicializar UI sin padrón
   init();
   goTo('dashboard');
+
+  // Fix bug 2: encender nav-inicio explícitamente al entrar
+  var navInicio = document.getElementById('nav-inicio');
+  if(navInicio) {
+    document.querySelectorAll('.nav-btn').forEach(function(b){b.classList.remove('active');});
+    navInicio.classList.add('active');
+  }
+
   var topbar2 = document.querySelector('.topbar');
   var nav2 = document.getElementById('main-nav');
   if(topbar2 && nav2) {
@@ -3494,34 +3502,43 @@ function _entrarApp() {
     window._fixedBarsH = totalH;
   }
 
-  // ── CASO A: hay caché válida → sin overlay, carga instantánea ──
-  var desdeCache = cargarCacheLocal();
-  if(desdeCache) {
-    actualizarCats(); poblarSelects(); renderDashboard(); renderRodeo();
-    setSyncStatus('● '+(usuarioActual&&usuarioActual.nombre?usuarioActual.nombre:rodeo.length+' animales'));
-    // Refresh background silencioso si TTL venció
-    if(cacheTTLVencido()) {
-      setSyncStatus('● '+rodeo.length+' · actualizando...');
-      _fetchPadronBackground(function(ok){
-        if(ok) setSyncStatus('● '+(usuarioActual&&usuarioActual.nombre?usuarioActual.nombre:rodeo.length+' animales'));
-      });
-    }
-    return;
-  }
-
-  // ── CASO B: sin caché → overlay con 2 fases ──────────────────
+  // Siempre mostrar overlay al entrar (fix bug 1)
   _lovMostrar();
   _lovSetFase(0);
   _lovSetTexto('Cargando padrón...', 'Conectando con el servidor');
   setSyncStatus('⟳ Cargando padrón...');
 
+  // ── CASO A: hay caché válida → overlay breve, luego entrar ──
+  var desdeCache = cargarCacheLocal();
+  if(desdeCache) {
+    actualizarCats(); poblarSelects(); renderDashboard(); renderRodeo();
+    // Mostrar fase 2 rápida para dar feedback visual
+    _lovSetFase(1);
+    _lovSetTexto('Actualizando animales...', '');
+    _lovProgreso(60);
+    var tA1 = setTimeout(function(){ _lovProgreso(100); _lovCheck(); }, 300);
+    var tA2 = setTimeout(function(){
+      _lovOcultar(function(){
+        setSyncStatus('● '+(usuarioActual&&usuarioActual.nombre?usuarioActual.nombre:rodeo.length+' animales'));
+      });
+      // Refresh background si TTL venció
+      if(cacheTTLVencido()) {
+        setSyncStatus('● '+rodeo.length+' · actualizando...');
+        _fetchPadronBackground(function(ok){
+          if(ok) setSyncStatus('● '+(usuarioActual&&usuarioActual.nombre?usuarioActual.nombre:rodeo.length+' animales'));
+        });
+      }
+    }, 800);
+    _lovTimers.push(tA1, tA2);
+    return;
+  }
+
+  // ── CASO B: sin caché → overlay con 2 fases completas ──────
   _fetchPadronBackground(function(ok) {
     if(!ok) {
-      // Error de red
       _lovOcultar(function(){ setSyncStatus('● Padrón local'); });
       return;
     }
-    // FASE 2 — procesamiento visual
     _lovSetFase(1);
     _lovSetTexto('Procesando animales...', 'Clasificando rodeo y estado reproductivo');
     _lovProgreso(35);
@@ -3531,7 +3548,6 @@ function _entrarApp() {
       _lovSetFase(2);
       _lovSetTexto('Listo', '');
       _lovCheck();
-      // Cierre final
       var t4 = setTimeout(function(){
         _lovOcultar(function(){
           setSyncStatus('● '+(usuarioActual&&usuarioActual.nombre?usuarioActual.nombre:rodeo.length+' animales'));
