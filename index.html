@@ -82,6 +82,21 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 .loading-dot{width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,0.25);transition:background 0.3s,transform 0.3s;}
 .loading-dot.activo{background:#fff;transform:scale(1.35);}
 .loading-dot.hecho{background:#4CD964;transform:scale(1);}
+/* ── PIN teclado ── */
+.pin-dot{width:14px;height:14px;border-radius:50%;border:2px solid #C7C7CC;background:transparent;transition:background 0.15s,border-color 0.15s;}
+.pin-dot.filled{background:#1C1C1E;border-color:#1C1C1E;}
+.pin-dot.error{background:#A0200A;border-color:#A0200A;}
+@keyframes pinShake{0%,100%{transform:translateX(0)}20%{transform:translateX(-8px)}40%{transform:translateX(8px)}60%{transform:translateX(-5px)}80%{transform:translateX(5px)}}
+#pin-dots.shake{animation:pinShake 0.35s ease;}
+.pin-key{padding:15px;border-radius:14px;border:none;background:#F2F2F7;cursor:pointer;font-size:22px;font-weight:600;color:#1C1C1E;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:56px;transition:background 0.12s,transform 0.1s;user-select:none;-webkit-user-select:none;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;}
+.pin-key:active{background:#E0E0E5;transform:scale(0.94);}
+.pin-key-sub{font-size:9px;font-weight:500;letter-spacing:0.5px;color:#8E8E93;margin-top:1px;line-height:1;}
+/* ── Config usuarios ── */
+.cfg-user-row{display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid #F0F0F5;}
+.cfg-user-row:last-child{border-bottom:none;padding-bottom:0;}
+.cfg-avatar{width:38px;height:38px;border-radius:50%;background:#1C1C1E;color:#fff;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;flex-shrink:0;}
+.cfg-edit-btn{padding:6px 14px;border-radius:8px;border:1px solid #E5E5EA;background:#F8F8F8;font-size:13px;font-weight:600;color:#1C1C1E;cursor:pointer;}
+.cfg-add-btn{width:100%;padding:13px;border-radius:12px;border:2px dashed #C7C7CC;background:transparent;font-size:15px;font-weight:600;color:#8E8E93;cursor:pointer;margin-top:10px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;}
 .alert-banner{padding:12px 14px;border-radius:12px;font-size:17px;margin-bottom:8px;display:flex;align-items:flex-start;gap:8px;font-weight:500;}
 .alert-warn{background:#FFF8E0;color:#7A5500;}
 .alert-danger{background:#FFE8E8;color:#A0200A;}
@@ -145,11 +160,34 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 
 <!-- LOGIN -->
 <div id="screen-login" style="display:flex;align-items:center;justify-content:center;min-height:100vh;background:#D8E0E8;position:fixed;inset:0;z-index:500;transition:opacity 0.3s;">
-  <div style="background:#fff;border-radius:24px;padding:40px 32px;width:90%;max-width:380px;text-align:center;box-shadow:0 4px 32px rgba(0,0,0,0.10);">
-    <div style="font-size:22px;font-weight:700;letter-spacing:-0.3px;margin-bottom:6px;">Tambo Cañada Negra</div>
-    <div style="font-size:14px;color:#8E8E93;margin-bottom:28px;">¿Quién sos?</div>
-    <div id="login-usuarios" style="display:flex;flex-direction:column;gap:10px;"></div>
-    <div id="login-error" style="margin-top:16px;font-size:13px;color:#A0200A;display:none;">Error al ingresar.</div>
+  <div style="background:#fff;border-radius:24px;padding:36px 28px;width:90%;max-width:360px;text-align:center;box-shadow:0 4px 32px rgba(0,0,0,0.10);display:flex;flex-direction:column;align-items:center;">
+    <div style="font-size:22px;font-weight:700;letter-spacing:-0.3px;margin-bottom:4px;">Tambo Cañada Negra</div>
+    <div style="font-size:14px;color:#8E8E93;margin-bottom:24px;" id="login-subtitle">¿Quién sos?</div>
+    <!-- Step 1: lista usuarios -->
+    <div id="login-step-usuarios" style="width:100%;display:flex;flex-direction:column;gap:9px;"></div>
+    <!-- Step 2: teclado PIN -->
+    <div id="login-step-pin" style="width:100%;display:none;flex-direction:column;align-items:center;gap:0;">
+      <div style="font-size:17px;font-weight:700;color:#1C1C1E;margin-bottom:18px;" id="login-pin-nombre"></div>
+      <div id="pin-dots" style="display:flex;gap:14px;margin-bottom:28px;">
+        <div class="pin-dot" id="pd0"></div><div class="pin-dot" id="pd1"></div>
+        <div class="pin-dot" id="pd2"></div><div class="pin-dot" id="pd3"></div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;width:100%;">
+        <button class="pin-key" onclick="pinKey('1')">1</button>
+        <button class="pin-key" onclick="pinKey('2')">2<span class="pin-key-sub">ABC</span></button>
+        <button class="pin-key" onclick="pinKey('3')">3<span class="pin-key-sub">DEF</span></button>
+        <button class="pin-key" onclick="pinKey('4')">4<span class="pin-key-sub">GHI</span></button>
+        <button class="pin-key" onclick="pinKey('5')">5<span class="pin-key-sub">JKL</span></button>
+        <button class="pin-key" onclick="pinKey('6')">6<span class="pin-key-sub">MNO</span></button>
+        <button class="pin-key" onclick="pinKey('7')">7<span class="pin-key-sub">PQRS</span></button>
+        <button class="pin-key" onclick="pinKey('8')">8<span class="pin-key-sub">TUV</span></button>
+        <button class="pin-key" onclick="pinKey('9')">9<span class="pin-key-sub">WXYZ</span></button>
+        <button class="pin-key" style="color:#8E8E93;font-size:22px;" onclick="loginVolverUsuarios()">‹</button>
+        <button class="pin-key" onclick="pinKey('0')">0</button>
+        <button class="pin-key" style="font-size:18px;" onclick="pinBorrar()">⌫</button>
+      </div>
+      <div id="login-pin-error" style="margin-top:14px;font-size:13px;color:#A0200A;min-height:18px;"></div>
+    </div>
   </div>
 </div>
 
@@ -1516,6 +1554,7 @@ function renderConfig() {
   if (alerta) alerta.oninput = actualizarAlertaPreview;
   var unidad = document.getElementById('cfg-unidad');
   if (unidad) unidad.onchange = actualizarUnidadesConfig;
+  renderCfgUsuarios();
 }
 
 function actualizarUnidadesConfig() {
@@ -1559,6 +1598,85 @@ function resetConfig() {
   guardarConfig();
   renderConfig();
   showToast('Valores restaurados');
+}
+
+// ── GESTIÓN DE USUARIOS (Config) ──────────────────────────────
+function renderCfgUsuarios() {
+  var lista = document.getElementById('cfg-usuarios-lista');
+  if(!lista) return;
+  lista.innerHTML = '';
+  USUARIOS.forEach(function(u, idx) {
+    var row = document.createElement('div');
+    row.className = 'cfg-user-row';
+    row.innerHTML =
+      '<div class="cfg-avatar">'+u.nombre[0]+'</div>'+
+      '<div style="flex:1;"><div style="font-size:15px;font-weight:600;color:#1C1C1E;">'+u.nombre+'</div>'+
+      '<div style="font-size:12px;color:#8E8E93;margin-top:1px;">'+(ROL_LABELS[u.rol]||u.rol)+'</div></div>'+
+      '<button class="cfg-edit-btn" onclick="abrirModalUsuario('+idx+')">Editar</button>';
+    lista.appendChild(row);
+  });
+}
+
+var _editUsuarioIdx = null;
+function abrirModalUsuario(idx) {
+  _editUsuarioIdx = idx;
+  var modal = document.getElementById('modal-usuario');
+  if(!modal) return;
+  modal.style.display = 'flex';
+  var pinInput = document.getElementById('mu-pin');
+  pinInput.type = 'password';
+  document.getElementById('mu-pin-toggle').textContent = 'Ver';
+  if(idx === null) {
+    document.getElementById('modal-u-titulo').textContent = 'Nuevo usuario';
+    document.getElementById('mu-nombre').value = '';
+    document.getElementById('mu-rol').value = 'tambero';
+    pinInput.value = '';
+    document.getElementById('mu-eliminar').style.display = 'none';
+  } else {
+    var u = USUARIOS[idx];
+    document.getElementById('modal-u-titulo').textContent = 'Editar usuario';
+    document.getElementById('mu-nombre').value = u.nombre;
+    document.getElementById('mu-rol').value = u.rol;
+    pinInput.value = u.pin;
+    var esUnicoAdmin = u.rol==='admin' && USUARIOS.filter(function(x){return x.rol==='admin';}).length<=1;
+    document.getElementById('mu-eliminar').style.display = esUnicoAdmin ? 'none' : 'block';
+  }
+}
+function cerrarModalUsuario() {
+  var modal = document.getElementById('modal-usuario');
+  if(modal) modal.style.display = 'none';
+}
+function togglePinVisible() {
+  var inp = document.getElementById('mu-pin');
+  var btn = document.getElementById('mu-pin-toggle');
+  if(inp.type==='password'){inp.type='text';btn.textContent='Ocultar';}
+  else{inp.type='password';btn.textContent='Ver';}
+}
+function guardarUsuarioModal() {
+  var nombre = document.getElementById('mu-nombre').value.trim();
+  var rol    = document.getElementById('mu-rol').value;
+  var pin    = document.getElementById('mu-pin').value.trim();
+  if(!nombre) { showToast('Ingresá un nombre'); return; }
+  if(!/^\d{4}$/.test(pin)) { showToast('El PIN debe tener 4 dígitos numéricos'); return; }
+  if(_editUsuarioIdx === null) {
+    USUARIOS.push({nombre:nombre, rol:rol, pin:pin});
+  } else {
+    USUARIOS[_editUsuarioIdx] = {nombre:nombre, rol:rol, pin:pin};
+  }
+  _guardarUsuarios(USUARIOS);
+  renderCfgUsuarios();
+  cerrarModalUsuario();
+  showToast('Usuario guardado ✓');
+}
+function eliminarUsuarioModal() {
+  if(_editUsuarioIdx===null) return;
+  var u = USUARIOS[_editUsuarioIdx];
+  if(!confirm('¿Eliminar a '+u.nombre+'?')) return;
+  USUARIOS.splice(_editUsuarioIdx,1);
+  _guardarUsuarios(USUARIOS);
+  renderCfgUsuarios();
+  cerrarModalUsuario();
+  showToast('Usuario eliminado');
 }
 
 function renderRodeo() {
@@ -3164,16 +3282,34 @@ function mostrarResultadoImport(tipo, msg) {
 }
 
 
-// ── LOGIN SIMPLE ─────────────────────────────────────────────────────────
-var USUARIOS = [
-  {nombre:'Hernán',    rol:'admin'},
-  {nombre:'Marcelo',   rol:'tambero'},
-  {nombre:'Marcelito', rol:'ayudante'},
-  {nombre:'Oscar',     rol:'control_lechero'},
+// ── LOGIN CON PIN ─────────────────────────────────────────────
+var USUARIOS_DEFAULT = [
+  {nombre:'Hernán',    rol:'admin',           pin:'0000'},
+  {nombre:'Marcelo',   rol:'tambero',         pin:'0000'},
+  {nombre:'Marcelito', rol:'ayudante',        pin:'0000'},
+  {nombre:'Oscar',     rol:'control_lechero', pin:'0000'},
 ];
+var ROL_LABELS = {
+  admin:'Admin', tambero:'Tambero', veterinario:'Veterinario',
+  ayudante:'Ayudante', control_lechero:'Control lechero'
+};
+function _cargarUsuarios() {
+  try {
+    var s = JSON.parse(localStorage.getItem('tambo_usuarios') || 'null');
+    if(s && Array.isArray(s) && s.length) return s;
+  } catch(e) {}
+  return USUARIOS_DEFAULT.map(function(u){ return Object.assign({},u); });
+}
+function _guardarUsuarios(lista) {
+  try { localStorage.setItem('tambo_usuarios', JSON.stringify(lista)); } catch(e) {}
+}
+var USUARIOS = _cargarUsuarios();
 var usuarioActual = null;
+var _pinActual = '';
+var _pinUsuario = null;
 
 function initLogin() {
+  // Restaurar sesión válida (7 días)
   try {
     var sesion = JSON.parse(localStorage.getItem('tambo_sesion') || 'null');
     if(sesion && sesion.nombre && (Date.now() - sesion.ts) < 7*24*60*60*1000) {
@@ -3182,19 +3318,80 @@ function initLogin() {
       return;
     }
   } catch(e) {}
-  var cont = document.getElementById('login-usuarios');
-  if(!cont) return;
+  loginVolverUsuarios();
+}
+
+function loginVolverUsuarios() {
+  USUARIOS = _cargarUsuarios();
+  _pinActual = ''; _pinUsuario = null;
+  document.getElementById('login-subtitle').textContent = '¿Quién sos?';
+  document.getElementById('login-step-usuarios').style.display = 'flex';
+  document.getElementById('login-step-pin').style.display = 'none';
+  document.getElementById('login-pin-error').textContent = '';
+  _pinActualizarDots();
+  var cont = document.getElementById('login-step-usuarios');
   cont.innerHTML = '';
   USUARIOS.forEach(function(u) {
     var btn = document.createElement('button');
-    btn.style.cssText = 'width:100%;padding:14px;border:1px solid #E5E5EA;border-radius:12px;background:#F8F8F8;cursor:pointer;font-size:17px;font-weight:600;color:#1C1C1E;text-align:left;display:flex;align-items:center;gap:12px;';
-    btn.innerHTML = '<div style="width:36px;height:36px;border-radius:50%;background:#1C1C1E;color:#fff;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;flex-shrink:0;">' + u.nombre[0] + '</div>' + u.nombre;
-    btn.onclick = (function(usuario) { return function() { loginComo(usuario); }; })(u);
+    btn.style.cssText = 'width:100%;padding:13px 14px;border:1px solid #E5E5EA;border-radius:13px;background:#F8F8F8;cursor:pointer;font-size:16px;font-weight:600;color:#1C1C1E;text-align:left;display:flex;align-items:center;gap:12px;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;';
+    btn.innerHTML = '<div style="width:36px;height:36px;border-radius:50%;background:#1C1C1E;color:#fff;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;flex-shrink:0;">'+u.nombre[0]+'</div>'+u.nombre;
+    btn.onclick = (function(usuario){ return function(){ _loginPedirPIN(usuario); }; })(u);
     cont.appendChild(btn);
   });
 }
 
+function _loginPedirPIN(usuario) {
+  _pinUsuario = usuario; _pinActual = '';
+  document.getElementById('login-subtitle').textContent = 'Ingresá tu PIN';
+  document.getElementById('login-step-usuarios').style.display = 'none';
+  document.getElementById('login-step-pin').style.display = 'flex';
+  document.getElementById('login-pin-nombre').textContent = usuario.nombre;
+  document.getElementById('login-pin-error').textContent = '';
+  _pinActualizarDots();
+}
+
+function pinKey(d) {
+  if(_pinActual.length >= 4) return;
+  _pinActual += d;
+  _pinActualizarDots();
+  if(_pinActual.length === 4) setTimeout(_pinVerificar, 120);
+}
+
+function pinBorrar() {
+  _pinActual = _pinActual.slice(0,-1);
+  _pinActualizarDots();
+  document.getElementById('login-pin-error').textContent = '';
+}
+
+function _pinActualizarDots(error) {
+  for(var i=0;i<4;i++) {
+    var d = document.getElementById('pd'+i);
+    if(!d) continue;
+    d.className = 'pin-dot' + (error ? ' error' : (i < _pinActual.length ? ' filled' : ''));
+  }
+}
+
+function _pinVerificar() {
+  if(_pinActual === _pinUsuario.pin) {
+    usuarioActual = {nombre:_pinUsuario.nombre, rol:_pinUsuario.rol, ts:Date.now()};
+    try { localStorage.setItem('tambo_sesion', JSON.stringify(usuarioActual)); } catch(e) {}
+    _entrarApp();
+  } else {
+    _pinActualizarDots(true);
+    var dots = document.getElementById('pin-dots');
+    if(dots) { dots.classList.add('shake'); }
+    document.getElementById('login-pin-error').textContent = 'PIN incorrecto';
+    if(navigator.vibrate) navigator.vibrate([80,40,80]);
+    setTimeout(function(){
+      if(dots) dots.classList.remove('shake');
+      _pinActual = '';
+      _pinActualizarDots(false);
+    }, 400);
+  }
+}
+
 function loginComo(usuario) {
+  // Compatibilidad — no se usa con PIN activo
   usuarioActual = {nombre: usuario.nombre, rol: usuario.rol, ts: Date.now()};
   try { localStorage.setItem('tambo_sesion', JSON.stringify(usuarioActual)); } catch(e) {}
   _entrarApp();
@@ -3342,6 +3539,12 @@ function aplicarRol(rol) {
       fabFicha: ['Parto','Aborto','Celo','Inseminar','Tacto','Secar','Producción','Baja','Tratamiento','Sanidad'],
       fabLeche: ['prod','cal','control'],
     },
+    veterinario: {
+      nav: ['nav-inicio','nav-leche','nav-padron','nav-guachera','nav-recria','nav-mas'],
+      mas: ['mas-reportes'],
+      fabFicha: ['Parto','Aborto','Celo','Inseminar','Tacto','Secar','Producción','Baja','Tratamiento','Sanidad'],
+      fabLeche: ['prod','cal','control'],
+    },
     ayudante: {
       nav: ['nav-inicio','nav-leche','nav-padron','nav-guachera','nav-recria'],
       mas: [],
@@ -3391,18 +3594,16 @@ function cerrarSesion() {
   usuarioActual = null;
   window._permisos = null;
   try { localStorage.removeItem('tambo_sesion'); } catch(e) {}
-  document.querySelectorAll('.screen').forEach(function(s){ s.classList.remove('active'); });
   var topbar = document.querySelector('.topbar');
   var nav = document.getElementById('main-nav');
   if(topbar) topbar.style.display='none';
   if(nav) nav.style.display='none';
-  // Ir a inicio antes de mostrar login
   document.querySelectorAll('.screen').forEach(function(s){s.classList.remove('active');});
   var dashSc = document.getElementById('screen-dashboard');
   if(dashSc) dashSc.classList.add('active');
   var loginEl = document.getElementById('screen-login');
   if(loginEl) { loginEl.style.display='flex'; loginEl.style.opacity='1'; loginEl.style.pointerEvents='auto'; }
-  initLogin();
+  loginVolverUsuarios();
 }
 
 // ---- CARGAR PADRON DESDE SHEETS (con caché) ----
@@ -5418,6 +5619,13 @@ function cerrarJovenFab() {
     </div>
   </div>
 
+  <!-- USUARIOS (solo admin) -->
+  <div class="card" id="cfg-card-usuarios">
+    <div class="section-title">👤 Usuarios</div>
+    <div id="cfg-usuarios-lista"></div>
+    <button class="cfg-add-btn" onclick="abrirModalUsuario(null)">+ Agregar usuario</button>
+  </div>
+
   <!-- BOTONES -->
   <div style="display:flex;gap:10px;padding:0 0 16px;">
     <button onclick="resetConfig()" style="flex:1;padding:14px;border:1px solid #E0E0E5;border-radius:12px;background:#fff;font-size:15px;font-weight:600;cursor:pointer;color:#8E8E93;">Restaurar</button>
@@ -5426,6 +5634,37 @@ function cerrarJovenFab() {
 
 </div>
 
+
+<!-- MODAL USUARIO -->
+<div id="modal-usuario" style="display:none;position:fixed;inset:0;z-index:800;background:rgba(0,0,0,0.45);align-items:flex-end;justify-content:center;">
+  <div style="background:#fff;border-radius:24px 24px 0 0;padding:24px 20px 40px;width:100%;max-width:480px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+      <div style="font-size:19px;font-weight:800;color:#1C1C1E;" id="modal-u-titulo">Nuevo usuario</div>
+      <button onclick="cerrarModalUsuario()" style="background:none;border:none;font-size:22px;color:#8E8E93;cursor:pointer;">✕</button>
+    </div>
+    <div class="field"><label>Nombre</label><input type="text" id="mu-nombre" class="form-input" placeholder="ej: Diego"></div>
+    <div class="field"><label>Rol</label>
+      <select id="mu-rol" class="form-input">
+        <option value="admin">Admin</option>
+        <option value="tambero">Tambero</option>
+        <option value="veterinario">Veterinario</option>
+        <option value="ayudante">Ayudante</option>
+        <option value="control_lechero">Control lechero</option>
+      </select>
+    </div>
+    <div class="field"><label>PIN (4 dígitos)</label>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <input type="password" id="mu-pin" class="form-input" maxlength="4" inputmode="numeric" pattern="[0-9]*" placeholder="••••" style="flex:1;letter-spacing:4px;font-size:20px;font-weight:700;">
+        <button id="mu-pin-toggle" onclick="togglePinVisible()" style="padding:12px 14px;border-radius:12px;border:1px solid #E5E5EA;background:#F8F8F8;font-size:14px;cursor:pointer;white-space:nowrap;">Ver</button>
+      </div>
+    </div>
+    <div style="display:flex;gap:10px;margin-top:4px;">
+      <button onclick="cerrarModalUsuario()" style="flex:1;padding:14px;border:1px solid #E5E5EA;border-radius:13px;background:#fff;font-size:15px;font-weight:600;cursor:pointer;">Cancelar</button>
+      <button onclick="guardarUsuarioModal()" style="flex:2;padding:14px;border:none;border-radius:13px;background:#1C1C1E;color:#fff;font-size:15px;font-weight:700;cursor:pointer;">Guardar</button>
+    </div>
+    <button id="mu-eliminar" onclick="eliminarUsuarioModal()" style="display:none;width:100%;padding:13px;border:1px solid #FFD6D6;border-radius:13px;background:#FFF0F0;color:#A0200A;font-size:15px;font-weight:600;cursor:pointer;margin-top:10px;">Eliminar usuario</button>
+  </div>
+</div>
 
 <!-- MODAL EVALUAR RECHAZO -->
 <div id="modal-rechazo" style="display:none;position:fixed;inset:0;z-index:700;background:rgba(0,0,0,0.5);align-items:flex-end;justify-content:center;">
