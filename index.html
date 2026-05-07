@@ -70,6 +70,18 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 .saving-box{background:#fff;border-radius:20px;padding:24px 32px;text-align:center;box-shadow:0 8px 32px rgba(0,0,0,0.12);}
 .spinner{width:32px;height:32px;border:3px solid #eee;border-top-color:#1C1C1E;border-radius:50%;animation:spin 0.7s linear infinite;margin:0 auto 12px;}
 @keyframes spin{to{transform:rotate(360deg)}}
+/* ── Loading overlay ── */
+#loading-overlay{transition:opacity 0.35s ease;}
+#loading-arc{transform-origin:36px 36px;transform:rotate(-90deg);animation:donaGiro 1s linear infinite;transition:stroke 0.4s ease,stroke-dasharray 0.55s cubic-bezier(0.4,0,0.2,1);}
+#loading-arc.dona-progreso{animation:none;stroke:#4CD964;}
+@keyframes donaGiro{to{stroke-dashoffset:-226.2;}}
+#loading-check{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity 0.3s ease;}
+#loading-check.visible{opacity:1;}
+#loading-title{color:#fff;font-size:16px;font-weight:700;letter-spacing:-0.3px;transition:opacity 0.22s ease;}
+#loading-sub{color:rgba(255,255,255,0.55);font-size:13px;min-height:18px;transition:opacity 0.22s ease;}
+.loading-dot{width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,0.25);transition:background 0.3s,transform 0.3s;}
+.loading-dot.activo{background:#fff;transform:scale(1.35);}
+.loading-dot.hecho{background:#4CD964;transform:scale(1);}
 .alert-banner{padding:12px 14px;border-radius:12px;font-size:17px;margin-bottom:8px;display:flex;align-items:flex-start;gap:8px;font-weight:500;}
 .alert-warn{background:#FFF8E0;color:#7A5500;}
 .alert-danger{background:#FFE8E8;color:#A0200A;}
@@ -3188,6 +3200,60 @@ function loginComo(usuario) {
   _entrarApp();
 }
 
+// ── Helpers del overlay de carga ──────────────────────────────
+var _lovTimers = [];
+function _lovSetFase(n) {
+  [0,1,2].forEach(function(i) {
+    var d = document.getElementById('ldot-'+i);
+    if(!d) return;
+    d.className = 'loading-dot' + (i < n ? ' hecho' : i === n ? ' activo' : '');
+  });
+}
+function _lovSetTexto(title, sub) {
+  var t = document.getElementById('loading-title');
+  var s = document.getElementById('loading-sub');
+  if(!t || !s) return;
+  t.style.opacity='0'; s.style.opacity='0';
+  var tid = setTimeout(function(){
+    t.textContent = title; s.textContent = sub || '';
+    t.style.opacity='1'; s.style.opacity='1';
+  }, 220);
+  _lovTimers.push(tid);
+}
+function _lovProgreso(pct) {
+  var arc = document.getElementById('loading-arc');
+  if(!arc) return;
+  var circ = 188.5; // 2π×30
+  arc.classList.add('dona-progreso');
+  arc.setAttribute('stroke-dasharray', (pct/100*circ).toFixed(1)+' '+circ.toFixed(1));
+  arc.setAttribute('stroke-dashoffset','0');
+}
+function _lovCheck() {
+  _lovProgreso(100);
+  var ck = document.getElementById('loading-check');
+  if(ck) ck.classList.add('visible');
+}
+function _lovReset() {
+  _lovTimers.forEach(clearTimeout); _lovTimers=[];
+  var arc = document.getElementById('loading-arc');
+  if(arc) { arc.classList.remove('dona-progreso'); arc.setAttribute('stroke-dasharray','56.5 188.5'); arc.setAttribute('stroke-dashoffset','0'); }
+  var ck = document.getElementById('loading-check');
+  if(ck) ck.classList.remove('visible');
+}
+function _lovMostrar() {
+  _lovReset();
+  _lovSetFase(0);
+  var lov = document.getElementById('loading-overlay');
+  if(lov) { lov.style.opacity='1'; lov.style.display='flex'; }
+}
+function _lovOcultar(cb) {
+  var lov = document.getElementById('loading-overlay');
+  if(!lov) { if(cb) cb(); return; }
+  lov.style.opacity='0';
+  var tid = setTimeout(function(){ lov.style.display='none'; lov.style.opacity='1'; if(cb) cb(); }, 380);
+  _lovTimers.push(tid);
+}
+
 function _entrarApp() {
   var loginEl = document.getElementById('screen-login');
   if(loginEl) { loginEl.style.opacity='0'; loginEl.style.pointerEvents='none'; }
@@ -3199,29 +3265,66 @@ function _entrarApp() {
   aplicarRol(usuarioActual.rol);
   var tn = document.getElementById('topbar-nombre');
   if(tn) tn.textContent = CONFIG.nombreTambo;
-  setSyncStatus('⟳ Cargando padrón...');
-  // Mostrar overlay de carga
-  var lov = document.getElementById('loading-overlay');
-  if(lov) { lov.style.display='flex'; }
-  setTimeout(function(){
-    init();
-    // Ir a inicio
-    goTo('dashboard');
-    var topbar2 = document.querySelector('.topbar');
-    var nav2 = document.getElementById('main-nav');
-    if(topbar2 && nav2) {
-      nav2.style.top = topbar2.offsetHeight + 'px';
-      var totalH = Math.max(topbar2.offsetHeight + nav2.offsetHeight, 120);
-      document.body.style.paddingTop = totalH + 'px';
-      window._fixedBarsH = totalH;
+
+  // Inicializar UI sin padrón (solo lo que no depende de datos)
+  init();
+  goTo('dashboard');
+  var topbar2 = document.querySelector('.topbar');
+  var nav2 = document.getElementById('main-nav');
+  if(topbar2 && nav2) {
+    nav2.style.top = topbar2.offsetHeight + 'px';
+    var totalH = Math.max(topbar2.offsetHeight + nav2.offsetHeight, 120);
+    document.body.style.paddingTop = totalH + 'px';
+    window._fixedBarsH = totalH;
+  }
+
+  // ── CASO A: hay caché válida → sin overlay, carga instantánea ──
+  var desdeCache = cargarCacheLocal();
+  if(desdeCache) {
+    actualizarCats(); poblarSelects(); renderDashboard(); renderRodeo();
+    setSyncStatus('● '+(usuarioActual&&usuarioActual.nombre?usuarioActual.nombre:rodeo.length+' animales'));
+    // Refresh background silencioso si TTL venció
+    if(cacheTTLVencido()) {
+      setSyncStatus('● '+rodeo.length+' · actualizando...');
+      _fetchPadronBackground(function(ok){
+        if(ok) setSyncStatus('● '+(usuarioActual&&usuarioActual.nombre?usuarioActual.nombre:rodeo.length+' animales'));
+      });
     }
-    cargarPadronDesdeSheets(function(ok){
-      // Ocultar overlay con animación
-      var lov2 = document.getElementById('loading-overlay');
-      if(lov2) { lov2.style.opacity='0'; lov2.style.transition='opacity 0.4s'; setTimeout(function(){ lov2.style.display='none'; lov2.style.opacity='1'; }, 400); }
-      if(!ok) setSyncStatus('● Padrón local');
-    });
-  }, 100);
+    return;
+  }
+
+  // ── CASO B: sin caché → overlay con 2 fases ──────────────────
+  _lovMostrar();
+  _lovSetFase(0);
+  _lovSetTexto('Cargando padrón...', 'Conectando con el servidor');
+  setSyncStatus('⟳ Cargando padrón...');
+
+  _fetchPadronBackground(function(ok) {
+    if(!ok) {
+      // Error de red
+      _lovOcultar(function(){ setSyncStatus('● Padrón local'); });
+      return;
+    }
+    // FASE 2 — procesamiento visual
+    _lovSetFase(1);
+    _lovSetTexto('Procesando animales...', 'Clasificando rodeo y estado reproductivo');
+    _lovProgreso(35);
+    var t1 = setTimeout(function(){ _lovProgreso(70); }, 280);
+    var t2 = setTimeout(function(){ _lovProgreso(95); }, 600);
+    var t3 = setTimeout(function(){
+      _lovSetFase(2);
+      _lovSetTexto('Listo', '');
+      _lovCheck();
+      // Cierre final
+      var t4 = setTimeout(function(){
+        _lovOcultar(function(){
+          setSyncStatus('● '+(usuarioActual&&usuarioActual.nombre?usuarioActual.nombre:rodeo.length+' animales'));
+        });
+      }, 650);
+      _lovTimers.push(t4);
+    }, 900);
+    _lovTimers.push(t1,t2,t3);
+  });
 }
 
 function aplicarRol(rol) {
@@ -3321,12 +3424,7 @@ function cargarPadronDesdeSheets(callback) {
   setSyncStatus('⟳ Cargando padrón...');
   _fetchPadronBackground(callback);
 }
-function _actualizarLoadingArc(pct) {
-  var arc = document.getElementById('loading-arc');
-  if(!arc) return;
-  var circ = 2 * Math.PI * 24;
-  arc.setAttribute('stroke-dasharray', (pct/100*circ).toFixed(1)+' '+circ.toFixed(1));
-}
+function _actualizarLoadingArc(pct) { _lovProgreso(pct); }
 function _fetchPadronBackground(callback) {
   var cbName = '_padronCB_' + Date.now();
   var script = document.createElement('script');
@@ -5374,15 +5472,27 @@ function cerrarJovenFab() {
   </div>
 </div>
 <!-- Overlay de carga -->
-<div id="loading-overlay" style="display:none;position:fixed;inset:0;background:rgba(28,28,30,0.75);z-index:600;flex-direction:column;align-items:center;justify-content:center;gap:20px;">
-  <svg width="60" height="60" viewBox="0 0 60 60">
-    <circle cx="30" cy="30" r="24" fill="none" stroke="#3C3C43" stroke-width="5"/>
-    <circle id="loading-arc" cx="30" cy="30" r="24" fill="none" stroke="#fff" stroke-width="5"
-      stroke-linecap="round" stroke-dasharray="40 111" stroke-dashoffset="38"
-      style="transform:rotate(-90deg);transform-origin:30px 30px;animation:donaGiro 1.2s linear infinite;"/>
-  <style>@keyframes donaGiro{0%{stroke-dashoffset:38;}100%{stroke-dashoffset:-113;}}</style>
-  </svg>
-  <div style="color:#fff;font-size:15px;font-weight:600;letter-spacing:-0.2px;" id="loading-msg">Cargando padrón...</div>
+<div id="loading-overlay" style="display:none;position:fixed;inset:0;background:rgba(28,28,30,0.82);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);z-index:600;flex-direction:column;align-items:center;justify-content:center;gap:22px;">
+  <div style="position:relative;width:72px;height:72px;">
+    <svg width="72" height="72" viewBox="0 0 72 72" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="36" cy="36" r="30" fill="none" stroke="rgba(255,255,255,0.12)" stroke-width="5"/>
+      <circle id="loading-arc" cx="36" cy="36" r="30" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round" stroke-dasharray="56.5 188.5" stroke-dashoffset="0"/>
+    </svg>
+    <div id="loading-check">
+      <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+        <polyline points="5,14 11,20 23,8" stroke="#4CD964" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </div>
+  </div>
+  <div style="display:flex;flex-direction:column;align-items:center;gap:6px;">
+    <div id="loading-title">Cargando padrón...</div>
+    <div id="loading-sub">Conectando con el servidor</div>
+  </div>
+  <div style="display:flex;gap:7px;">
+    <div class="loading-dot activo" id="ldot-0"></div>
+    <div class="loading-dot" id="ldot-1"></div>
+    <div class="loading-dot" id="ldot-2"></div>
+  </div>
 </div>
 <script>initLogin();</script>
 </body>
