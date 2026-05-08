@@ -3682,22 +3682,34 @@ function cargarPadronDesdeSheets(callback) {
   _fetchPadronBackground(callback);
 }
 function _actualizarLoadingArc(pct) { _lovProgreso(pct); }
+var _fetchPadronController = null; // AbortController activo
+
 function _fetchPadronBackground(callback) {
-  var cbName = '_padronCB_' + Date.now();
-  var script = document.createElement('script');
+  // Cancelar fetch anterior si existe
+  if(_fetchPadronController) {
+    try { _fetchPadronController.abort(); } catch(e) {}
+  }
+  _fetchPadronController = new AbortController();
+  var signal = _fetchPadronController.signal;
   var done = false;
+
+  // Timeout manual de 15s
   var timer = setTimeout(function(){
-    if(done) return; done=true;
-    delete window[cbName];
-    if(script.parentNode) script.parentNode.removeChild(script);
-    setSyncStatus('✕ Sin conexión con Sheets');
+    if(done) return; done = true;
+    try { _fetchPadronController.abort(); } catch(e) {}
+    setSyncStatus('✕ Sin acceso a Sheets');
     if(callback) callback(false);
   }, 15000);
-  window[cbName] = function(data) {
-    if(done) return; done=true;
-    clearTimeout(timer);
-    delete window[cbName];
-    if(script.parentNode) script.parentNode.removeChild(script);
+
+  fetch(SCRIPT_URL + '?accion=padron', { signal: signal })
+    .then(function(res) {
+      if(!res.ok) throw new Error('HTTP ' + res.status);
+      return res.json();
+    })
+    .then(function(data) {
+      if(done) return; done = true;
+      clearTimeout(timer);
+      _fetchPadronController = null;
     if(!data.ok || !data.datos || data.datos.length < 2) {
       setSyncStatus('● Sin padrón en Sheets');
       if(callback) callback(false);
@@ -3809,9 +3821,15 @@ function _fetchPadronBackground(callback) {
     setSyncStatus('● '+importados+' animales');
     guardarCacheLocal();
     if(callback) callback(true);
-  };
-  script.src = SCRIPT_URL + '?accion=padron&callback=' + cbName;
-  document.head.appendChild(script);
+    })
+    .catch(function(err) {
+      if(done) return; done = true;
+      clearTimeout(timer);
+      _fetchPadronController = null;
+      if(err && err.name === 'AbortError') return; // cancelado intencionalmente
+      setSyncStatus('✕ Sin acceso a Sheets');
+      if(callback) callback(false);
+    });
 }
 // ---- REGISTROS RECIENTES ----
 function renderRecientes(tipo) {
