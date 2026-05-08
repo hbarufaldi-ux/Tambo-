@@ -2391,7 +2391,21 @@ function onMadreParto() {
   var div=document.getElementById('p-madre-info'); if(!div) return;
   if(!a){div.innerHTML='';return;}
   if(a.estadoRepro!=='Preñada'&&a.estadoProd!=='Seca'){div.innerHTML='<div class="danger-block">⛔ '+a.nombre+' no tiene preñez confirmada. Estado: '+a.estadoRepro+'</div>';return;}
-  if(a.ultimaInsemToro){var sel=document.getElementById('p-toro');if(sel){var opt=Array.from(sel.options).find(function(o){return o.text===a.ultimaInsemToro||o.value==a.ultimaInsemToro;});if(opt){sel.value=opt.value;}else{var newOpt=document.createElement('option');newOpt.value=a.ultimaInsemToro;newOpt.text=a.ultimaInsemToro;sel.appendChild(newOpt);sel.value=a.ultimaInsemToro;}}}
+  // Preseleccionar toro — con retry si el select aún no está poblado
+  function _setToro() {
+    if(!a.ultimaInsemToro) return;
+    var sel=document.getElementById('p-toro'); if(!sel) return;
+    var opt=Array.from(sel.options).find(function(o){return o.text===a.ultimaInsemToro||o.value==a.ultimaInsemToro;});
+    if(opt){ sel.value=opt.value; }
+    else {
+      // Si el select tiene solo la opción vacía, poblar primero y reintentar
+      if(sel.options.length<=1) { poblarSelects(); setTimeout(_setToro, 100); return; }
+      var newOpt=document.createElement('option');
+      newOpt.value=a.ultimaInsemToro; newOpt.text=a.ultimaInsemToro;
+      sel.appendChild(newOpt); sel.value=a.ultimaInsemToro;
+    }
+  }
+  _setToro();
   div.innerHTML='<div class="info-box">'+a.estadoProd+' · '+a.estadoRepro+(a.ultimaInsemToro?' · Padre: <strong>'+a.ultimaInsemToro+'</strong>':'')+'</div>';
 }
 function onSexoCria() {
@@ -2752,7 +2766,7 @@ function abrirModalEventoVaca(a) {
     {label:'Registrar aborto', visible: a.estadoRepro==='Preñada', fn: function(){ cerrarMEV(); goToNav('aborto'); setTimeout(function(){ var s=document.getElementById('ab-animal'); if(s){s.value=a.rp; onAnimalAborto();} },50); }},
     {label:'Registrar celo', visible: a.estadoRepro==='Preñada'||a.estadoRepro==='Vacía'||a.estadoRepro==='Rechazo', fn: function(){ cerrarMEV(); goToNav('celo'); setTimeout(function(){ var s=document.getElementById('c-animal'); if(s){s.value=a.rp; onAnimalCelo();} },50); }},
     {label:'Registrar tacto', visible: a.estadoRepro==='Inseminada'||a.estadoRepro==='Preñada'||a.estadoRepro==='Vacía', fn: function(){ cerrarMEV(); goToNav('tacto'); setTimeout(function(){ var s=document.getElementById('t-animal'); if(s){s.value=a.rp; onAnimalTacto();} },50); }},
-    {label:'Registrar parto', visible: a.estadoRepro==='Preñada'||a.estadoProd==='Seca', fn: function(){ cerrarMEV(); goToNav('parto'); setTimeout(function(){ var s=document.getElementById('p-madre'); if(s){s.value=a.rp; onMadreParto();} },50); }},
+    {label:'Registrar parto', visible: a.estadoRepro==='Preñada'||a.estadoProd==='Seca', fn: function(){ cerrarMEV(); goToNav('parto'); setTimeout(function(){ var s=document.getElementById('p-madre'); if(s){s.value=a.rp; onMadreParto();} var rpCria=document.getElementById('p-rp-cria'); if(rpCria) rpCria.value=nextRP(); },150); }},
     {label:'Registrar producción', visible: a.estadoProd==='En Ordeñe', fn: function(){ cerrarMEV(); goToNav('produccion'); setTimeout(function(){ var s=document.getElementById('pr-animal'); if(s){s.value=a.rp; onAnimalProd();} },50); }},
     {label:'Secar', visible: a.estadoProd==='En Ordeñe', fn: function(){ cerrarMEV(); goToNav('secado'); setTimeout(function(){ var s=document.getElementById('s-animal'); if(s){s.value=a.rp; onAnimalSecado();} },50); }},
     {label: a.enSanitario?'Quitar de R5 Sanitario':'Pasar a R5 Sanitario', visible: a.estadoProd==='En Ordeñe', fn: function(){ a.enSanitario=!a.enSanitario; cerrarMEV(); renderRodeo(); abrirFicha(a.rp); showToast(a.enSanitario?a.nombre+' en R5 Sanitario':a.nombre+' fuera de sanitario'); }},
@@ -3272,6 +3286,8 @@ function _cargarUsuarios() {
     var s = JSON.parse(localStorage.getItem('tambo_usuarios') || 'null');
     if(s && Array.isArray(s) && s.length) return s;
   } catch(e) {}
+  // Si no hay usuarios guardados, marcar para avisar al admin después de entrar
+  window._usuariosPINReseteados = true;
   return USUARIOS_DEFAULT.map(function(u){ return Object.assign({},u); });
 }
 function _guardarUsuarios(lista) {
@@ -3446,6 +3462,14 @@ function _entrarApp() {
   if(navInicio) {
     document.querySelectorAll('.nav-btn').forEach(function(b){b.classList.remove('active');});
     navInicio.classList.add('active');
+  }
+
+  // Aviso si los PINs fueron reseteados (caché limpiada)
+  if(window._usuariosPINReseteados && usuarioActual && usuarioActual.rol === 'admin') {
+    setTimeout(function(){
+      showToast('⚠️ PINs reseteados — configurá los usuarios en Más → Configuración');
+    }, 2000);
+    window._usuariosPINReseteados = false;
   }
 
   var topbar2 = document.querySelector('.topbar');
