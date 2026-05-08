@@ -1345,41 +1345,7 @@ function renderDashboard() {
     drawDonut('donut-secas',tvx>0?Math.round(nSecas/tvx*100):0,'rgba(255,255,255,0.6)');
   });});
   var nRecria=recria.filter(function(a){return a.activo;}).length;
-  if(document.getElementById('m-recria-total')) document.getElementById('m-recria-total').textContent=nRecria;
   var gAct=guachera.filter(function(c){return !c.salio;}).length;
-  var gBaj=guachera.filter(function(c){return c.salio==='baja';}).length;
-  var gTot=guachera.length;
-  document.getElementById('m-guachera').textContent=gAct;
-  var mortPct = gTot>0 ? Math.round(gBaj/gTot*100) : 0;
-  document.getElementById('m-mortandad').textContent = mortPct+'%';
-  var mortCard = document.getElementById('m-mort-card');
-  var mortLabel = document.getElementById('m-mort-label');
-  var mortVal = document.getElementById('m-mortandad');
-  if(mortPct > 5) {
-    mortCard.style.background = '#FFD6D6';
-    mortLabel.style.color = '#A0200A';
-    mortVal.style.color = '#A0200A';
-  } else {
-    mortCard.style.background = '#D1F2E0';
-    mortLabel.style.color = '#1A7A40';
-    mortVal.style.color = '#1A7A40';
-  }
-
-  var enRecria=recria.filter(function(a){return a.activo;});
-  var drEl=document.getElementById('dash-recria');
-  if(enRecria.length===0) { drEl.innerHTML='<div style="color:#8E8E93;font-size:13px;">Sin animales en recría</div>'; }
-  else {
-    var listos=enRecria.filter(estaListo).length;
-    drEl.innerHTML='';
-    var rows=[['En recría',enRecria.length,''],['Hembras',enRecria.filter(function(a){return a.sexo==='H';}).length,''],['Machos',enRecria.filter(function(a){return a.sexo==='M';}).length,''],['Listos para incorporar/vender',listos,listos>0?'ok':'']];
-    rows.forEach(function(r) {
-      var row=document.createElement('div');
-      row.style.cssText='display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid #C8D0D8;';
-      var k=document.createElement('span'); k.style.cssText='font-size:14px;color:#8E8E93;'; k.textContent=r[0];
-      var v=document.createElement('span'); v.style.cssText='font-size:14px;font-weight:600;color:'+(r[2]==='ok'?'#1A7A40':'#1C1C1E')+';'; v.textContent=r[1];
-      row.appendChild(k); row.appendChild(v); drEl.appendChild(row);
-    });
-  }
 
   var allAlerts = calcAlertas();
   var guacheraAlerts = calcGuacheraAlertas();
