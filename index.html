@@ -1971,7 +1971,7 @@ function abrirFicha(rp) {
     }
     var to=toros.map(function(t){return '<option value="'+t.rp+'">'+t.nombre+'<\/option>';}).join('');
     var rb=['Pre\xf1ada','Vac\xeda','Repetici\xf3n','IATF','PG','Anestro','Hormonal'].map(function(r){return '<button onclick="fichaSelTacto(this)" data-val="'+r+'" style="padding:10px;border:1px solid #B0BCC8;border-radius:10px;font-size:14px;background:#EBF0F5;color:#3C3C43;cursor:pointer;">'+r+'<\/button>';}).join('');
-    mkS('ficha-sheet-parto','Parto','<div style="'+g2+'"><div><label style="'+lb+'">Fecha<\/label><input id="fsp2-fecha" type="date" value="'+td+'" oninput="fichaCheck(\'ficha-sheet-parto\')" style="'+sa+'"><\/div><div><label style="'+lb+'">Tipo parto<\/label><select id="fsp2-tipo" style="'+si+'"><option>Normal<\/option><option>Distócico<\/option><option>Cesárea<\/option><\/select><\/div><\/div><div style="'+g2+'"><div><label style="'+lb+'">Sexo cría<\/label><select id="fsp2-sexo" style="'+si+'"><option value="">Seleccionar...<\/option><option>Macho<\/option><option>Hembra<\/option><\/select><\/div><div><label style="'+lb+'">RP cría (opcional)<\/label><input id="fsp2-rp" type="text" placeholder="RP..." style="'+si+'"><\/div><\/div><div style="margin-bottom:8px;"><label style="'+lb+'">Observaciones<\/label><input id="fsp2-obs" type="text" placeholder="Opcional..." style="'+si+'"><\/div>');
+    mkS('ficha-sheet-parto','Parto','<div style="'+g2+'"><div><label style="'+lb+'">Fecha<\/label><input id="fsp2-fecha" type="date" value="'+td+'" oninput="fichaCheck(\'ficha-sheet-parto\')" style="'+sa+'"><\/div><div><label style="'+lb+'">Tipo parto<\/label><select id="fsp2-tipo" style="'+si+'"><option>Normal<\/option><option>Distócico<\/option><option>Cesárea<\/option><\/select><\/div><\/div><div style="'+g2+'"><div><label style="'+lb+'">Sexo cría<\/label><select id="fsp2-sexo" style="'+si+'"><option value="">Seleccionar...<\/option><option>Macho<\/option><option>Hembra<\/option><\/select><\/div><div><label style="'+lb+'">RP cría (opcional)<\/label><input id="fsp2-rp" type="text" placeholder="RP..." style="'+si+'"><\/div><\/div><div style=\"'+g2+'\"><div><label style=\"'+lb+'\">Toro/Embrión<\/label><select id=\"fsp2-toro\" onchange=\"fichaCheck(\\'ficha-sheet-parto\\')\" style=\"'+si+'\"><option value=\"\">Seleccionar...<\/option>'+to+'<\/select><\/div><\/div><div style="margin-bottom:8px;"><label style="'+lb+'">Observaciones<\/label><input id="fsp2-obs" type="text" placeholder="Opcional..." style="'+si+'"><\/div>');
     mkS('ficha-sheet-aborto','Aborto','<div style="margin-bottom:12px;"><label style="'+lb+'">Fecha<\/label><input id="fsa2-fecha" type="date" value="'+td+'" oninput="fichaCheck(\'ficha-sheet-aborto\')" style="'+sa+'"><\/div><div style="background:#FFD6D6;border-radius:12px;padding:12px 14px;margin-bottom:12px;font-size:13px;color:#A0200A;">Esta acción marca la vaca como Vacía y registra el aborto.<\/div><div style="margin-bottom:8px;"><label style="'+lb+'">Observaciones<\/label><input id="fsa2-obs" type="text" placeholder="Opcional..." style="'+si+'"><\/div>');
     mkS('ficha-sheet-celo','Celo','<div style="'+g2+'"><div><label style="'+lb+'">Fecha<\/label><input id="fsc-fecha" type="date" value="'+td+'" oninput="fichaCheck(\'ficha-sheet-celo\')" style="'+sa+'"><\/div><div><label style="'+lb+'">Obs<\/label><input id="fsc-obs" type="text" placeholder="Opcional..." style="'+si+'"><\/div><\/div>');
     mkS('ficha-sheet-inseminar','Inseminar','<div style="'+g2+'"><div><label style="'+lb+'">Fecha<\/label><input id="fsi-fecha" type="date" value="'+td+'" oninput="fichaCheck(\'ficha-sheet-inseminar\')" style="'+sa+'"><\/div><div><label style="'+lb+'">Toro *<\/label><select id="fsi-toro" onchange="fichaCheck(\'ficha-sheet-inseminar\')" style="'+si+'"><option value="">Seleccionar...<\/option>'+to+'<\/select><\/div><\/div><div style="'+g2+'"><div><label style="'+lb+'">Tipo<\/label><select id="fsi-tipo" style="'+si+'"><option>IA<\/option><option>IATF<\/option><option>TE<\/option><option>Monta natural<\/option><\/select><\/div><div><label style="'+lb+'">Inseminador<\/label><input id="fsi-insem" type="text" placeholder="Opcional" style="'+si+'"><\/div><\/div>');
@@ -5196,10 +5196,14 @@ async function fichaGuardar(sheetId, rp) {
     var tipo=document.getElementById('fsp2-tipo').value||'Normal';
     var sexo=document.getElementById('fsp2-sexo').value||'';
     var rpCria=document.getElementById('fsp2-rp').value||'';
+    var toroEl=document.getElementById('fsp2-toro');
+    var toroVal=toroEl?toroEl.value:'';
+    var toroNombre=toros.find(function(t){return String(t.rp)===String(toroVal);})?toros.find(function(t){return String(t.rp)===String(toroVal);}).nombre:toroVal;
     var obs=document.getElementById('fsp2-obs').value||'';
     a.nPartos=(a.nPartos||0)+1; a.ultimoParto=fecha; a.estadoRepro='Vacía'; a.estadoProd='En Ordeñe';
+    if(toroNombre) a.ultimaInsemToro=toroNombre;
     guardarCacheLocal();
-    await enviarASheets('Reg_Partos',[generarID('Par',rp),fecha,rp,a.nombre,tipo,sexo,rpCria,obs]);
+    await enviarASheets('Reg_Partos',[generarID('Par',rp),fecha,rp,a.nombre,tipo,sexo,rpCria,toroNombre,obs]);
     showToast('Parto registrado ✓'); renderDashboard(); renderRodeo(); goBack(); return;
   } else if(sheetId==='ficha-sheet-celo') {
     var celoEnPreniada = a.estadoRepro && a.estadoRepro.normalize('NFC')==='Preñada';
@@ -5292,17 +5296,20 @@ function abrirFormLeche(tipo) {
     titulo = 'Registrar calidad';
     body = '<div style="'+g2+'">'
       + '<div><label style="'+lbl+'">Fecha</label><input type="date" id="lf-cal-fecha" value="'+hoy+'" oninput="lecheFmCheck()" style="'+inpAm+'"></div>'
-      + '<div><label style="'+lbl+'">Empresa</label><select id="lf-cal-empresa" onchange="lecheFmCheck()" style="'+inp+'"><option value="">Seleccionar...</option><option>Ucalac SA</option><option>Saputo</option></select></div>'
+      + '<div><label style="'+lbl+'">Empresa *</label><select id="lf-cal-empresa" onchange="lecheFmCalColor(this);lecheFmCheck()" style="'+inp+'"><option value="">Seleccionar...</option><option>Ucalac SA</option><option>Saputo</option></select></div>'
       + '</div>'
       + '<div style="'+g2+'">'
-      + '<div><label style="'+lbl+'">UFC</label><input type="number" id="lf-ufc" inputmode="decimal" placeholder="0" style="'+inp+'"></div>'
-      + '<div><label style="'+lbl+'">Células somáticas</label><input type="number" id="lf-cs" inputmode="decimal" placeholder="0" style="'+inp+'"></div>'
+      + '<div><label style="'+lbl+'">UFC *</label><input type="number" id="lf-ufc" inputmode="decimal" placeholder="0" oninput="lecheFmCalColor(this);lecheFmCheck()" style="'+inp+'"></div>'
+      + '<div><label style="'+lbl+'">Células somáticas *</label><input type="number" id="lf-cs" inputmode="decimal" placeholder="0" oninput="lecheFmCalColor(this);lecheFmCheck()" style="'+inp+'"></div>'
       + '</div>'
       + '<div style="'+g2+'">'
-      + '<div><label style="'+lbl+'">Grasa %</label><input type="number" id="lf-grasa" inputmode="decimal" placeholder="0.0" style="'+inp+'"></div>'
-      + '<div><label style="'+lbl+'">Proteína %</label><input type="number" id="lf-proteina" inputmode="decimal" placeholder="0.0" style="'+inp+'"></div>'
-      + '</div>';
+      + '<div><label style="'+lbl+'">Grasa % *</label><input type="number" id="lf-grasa" inputmode="decimal" placeholder="0.0" oninput="lecheFmCalColor(this);lecheFmCheck()" style="'+inp+'"></div>'
+      + '<div><label style="'+lbl+'">Proteína % *</label><input type="number" id="lf-proteina" inputmode="decimal" placeholder="0.0" oninput="lecheFmCalColor(this);lecheFmCheck()" style="'+inp+'"></div>'
+      + '</div>'
+      + '<div style="margin-bottom:4px;"><label style="'+lbl+'">Observaciones</label>'
+      + '<textarea id="lf-cal-obs" rows="2" placeholder="Opcional..." style="width:100%;padding:12px 14px;border:1px solid #D0D5DC;border-radius:12px;font-size:15px;background:#EBF0F5;resize:none;box-sizing:border-box;"></textarea></div>';
   }
+
 
   sheet.innerHTML = '<div style="width:36px;height:4px;background:#C7CDD6;border-radius:2px;margin:12px auto 0;flex-shrink:0;"></div>'
     + '<div style="font-size:17px;font-weight:700;color:#1C1C1E;padding:14px 20px 0;flex-shrink:0;">'+titulo+'</div>'
@@ -5413,12 +5420,25 @@ function lecheFmCheck() {
       else { vEl.style.background='#EBF0F5'; vEl.style.borderColor='#D0D5DC'; }
     }
   } else {
-    ok = !!(document.getElementById('lf-cal-fecha').value && document.getElementById('lf-cal-empresa').value);
+    // Calidad: todos los campos numéricos obligatorios + empresa
+    var calFecha = !!(document.getElementById('lf-cal-fecha') && document.getElementById('lf-cal-fecha').value);
+    var calEmpresa = !!(document.getElementById('lf-cal-empresa') && document.getElementById('lf-cal-empresa').value);
+    var calUfc = !!(document.getElementById('lf-ufc') && document.getElementById('lf-ufc').value !== '');
+    var calCs = !!(document.getElementById('lf-cs') && document.getElementById('lf-cs').value !== '');
+    var calGrasa = !!(document.getElementById('lf-grasa') && document.getElementById('lf-grasa').value !== '');
+    var calProt = !!(document.getElementById('lf-proteina') && document.getElementById('lf-proteina').value !== '');
+    ok = calFecha && calEmpresa && calUfc && calCs && calGrasa && calProt;
   }
   btn.disabled = !ok;
   btn.style.background = ok ? '#1C1C1E' : '#C7CDD6';
   btn.style.color = ok ? '#fff' : '#8E8E93';
   btn.style.cursor = ok ? 'pointer' : 'not-allowed';
+}
+
+function lecheFmCalColor(el) {
+  if(!el) return;
+  if(el.value && el.value !== ''){ el.style.background='#FFF8E8'; el.style.borderColor='#E8A020'; }
+  else { el.style.background='#EBF0F5'; el.style.borderColor='#D0D5DC'; }
 }
 
 async function lecheFmGuardar(tipo) {
@@ -5461,15 +5481,15 @@ async function lecheFmGuardar(tipo) {
     var cs = parseFloat(document.getElementById('lf-cs').value)||0;
     var grasa = parseFloat(document.getElementById('lf-grasa').value)||0;
     var proteina = parseFloat(document.getElementById('lf-proteina').value)||0;
-    // Sync inputs legacy
-    var lcf = document.getElementById('l-cal-fecha'); if(lcf) lcf.value = fecha;
-    var lce = document.getElementById('l-cal-empresa'); if(lce) lce.value = empresa;
-    var lu = document.getElementById('l-ufc'); if(lu) lu.value = ufc;
-    var lcs = document.getElementById('l-cs'); if(lcs) lcs.value = cs;
-    var lg = document.getElementById('l-grasa'); if(lg) lg.value = grasa;
-    var lp = document.getElementById('l-proteina'); if(lp) lp.value = proteina;
+    var obs = (document.getElementById('lf-cal-obs') && document.getElementById('lf-cal-obs').value) || '';
+    if(!empresa){ showToast('Seleccioná una empresa', true); return; }
+    // Guardar directo sin sistema legacy
+    calidadLeche.push({fecha:fecha, empresa:empresa, ufc:ufc, cs:cs, grasa:grasa, proteina:proteina, obs:obs});
+    guardarCacheLeche();
+    var fila = [generarID('Cal',0), fecha, empresa, ufc, cs, grasa, proteina, obs];
     cerrarFormLeche();
-    await guardarCalidad();
+    await enviarASheets('Calidad_Leche', fila);
+    renderLeche();
     showToast('Calidad registrada ✓');
   }
 }
