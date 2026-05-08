@@ -1649,7 +1649,7 @@ function renderRodeo() {
   var buscar=(document.getElementById('rodeo-buscar')?document.getElementById('rodeo-buscar').value:'').toLowerCase();
   var lista=rodeo.filter(function(a) {
     if(a.cat!=='Vaca') return false;
-    if(buscar&&!a.nombre.toLowerCase().includes(buscar)&&!String(a.rp).includes(buscar)) return false;
+    if(buscar&&!String(a.rp).startsWith(buscar)) return false;
     if(filtroRodeo.prod && a.estadoProd !== filtroRodeo.prod) return false;
     if(filtroRodeo.repro && a.estadoRepro !== filtroRodeo.repro) return false;
     return true;
@@ -4529,7 +4529,7 @@ function lecheFmModoEdicion() {
   var footer = sheet.querySelector('div[style*="border-top"]');
   if(footer) {
     footer.innerHTML = ''
-      + '<button id="lf-btn-guardar" data-tipo="prod" onclick="lecheFmGuardar('prod')" style="flex:1;padding:15px;background:#1C1C1E;color:#fff;border:none;border-radius:14px;font-size:16px;font-weight:700;cursor:pointer;">Guardar</button>'
+      + '<button id="lf-btn-guardar" data-tipo="prod" onclick="lecheFmGuardar(&quot;prod&quot;)" style="flex:1;padding:15px;background:#1C1C1E;color:#fff;border:none;border-radius:14px;font-size:16px;font-weight:700;cursor:pointer;">Guardar</button>'
       + '<button onclick="cerrarFormLeche()" style="flex:1;padding:15px;background:none;color:#1C1C1E;border:1.5px solid #1C1C1E;border-radius:14px;font-size:16px;font-weight:600;cursor:pointer;">Cancelar</button>';
     footer.style.display = 'flex';
     footer.style.gap = '10px';
