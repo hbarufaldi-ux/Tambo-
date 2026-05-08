@@ -905,6 +905,7 @@ function drawDonut(id,pct,color){
 var SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxPT8TP7gpxNsVBXTbNIjW70SQtJdIu2iYOiBvvFKbxtQCPXZZ0DEUMfz241U7tVrEPEQ/exec';
 var TODAY = new Date().toISOString().split('T')[0];
 document.addEventListener('visibilitychange', function(){ if(!document.hidden) TODAY = new Date().toISOString().split('T')[0]; });
+document.addEventListener('DOMContentLoaded', function(){ var hoy = TODAY; document.querySelectorAll('input[type="date"]').forEach(function(el){ el.max = hoy; }); });
 var CONFIG_DEFAULT = {
   // General
   nombreTambo: 'Cañada Negra',
@@ -1966,6 +1967,7 @@ function abrirFicha(rp) {
         +'<button data-sheet="'+id+'" onclick="cerrarFichaSheet(this.dataset.sheet)" style="flex:1;padding:14px;background:none;color:#1C1C1E;border:1.5px solid #1C1C1E;border-radius:12px;font-size:15px;font-weight:600;cursor:pointer;">Cancelar<\/button>'
         +'<\/div>';
       document.body.appendChild(s);
+      s.querySelectorAll('input[type="date"]').forEach(function(el){ el.max = td; });
     }
     var to=toros.map(function(t){return '<option value="'+t.rp+'">'+t.nombre+'<\/option>';}).join('');
     var rb=['Pre\xf1ada','Vac\xeda','Repetici\xf3n','IATF','PG','Anestro','Hormonal'].map(function(r){return '<button onclick="fichaSelTacto(this)" data-val="'+r+'" style="padding:10px;border:1px solid #B0BCC8;border-radius:10px;font-size:14px;background:#EBF0F5;color:#3C3C43;cursor:pointer;">'+r+'<\/button>';}).join('');
@@ -5316,8 +5318,25 @@ function abrirFormLeche(tipo) {
   // Init empresas para producción
   if(tipo === 'prod') {
     setTimeout(function(){
+      // max=hoy en campo fecha
+      var lfFecha = document.getElementById('lf-fecha');
+      if(lfFecha) lfFecha.max = TODAY;
+      // Color en campo vacas
+      var lfVacas = document.getElementById('lf-vacas');
+      if(lfVacas) {
+        lfVacas.addEventListener('input', function(){
+          if(this.value){ this.style.background='#FFF8E8'; this.style.borderColor='#E8A020'; }
+          else { this.style.background='#EBF0F5'; this.style.borderColor='#D0D5DC'; }
+          lecheFmCheck();
+        });
+      }
       lecheFmAgregarEmpresa();
       lecheFmCheck();
+    }, 50);
+  } else {
+    setTimeout(function(){
+      var lfCalFecha = document.getElementById('lf-cal-fecha');
+      if(lfCalFecha) lfCalFecha.max = TODAY;
     }, 50);
   }
 }
@@ -5336,8 +5355,9 @@ function lecheFmAgregarEmpresa() {
     + '<option value="">Empresa...</option><option>Ucalac SA</option><option>Saputo</option>'
     + '</select>'
     + '<input type="number" inputmode="decimal" placeholder="Litros" style="width:100%;padding:11px 12px;border:1px solid #D0D5DC;border-radius:10px;font-size:14px;background:#EBF0F5;box-sizing:border-box;">'
-    + '<button type="button" onclick="this.parentNode.remove();lecheFmCheck()" style="width:32px;height:32px;border:none;background:#FFD6D6;border-radius:8px;font-size:16px;cursor:pointer;color:#A32D2D;flex-shrink:0;">x</button>';
+    + '<button type="button" class="lf-remove-btn" onclick="lecheFmRemoveEmpresa(this)" style="width:32px;height:32px;border:none;background:#FFD6D6;border-radius:8px;font-size:16px;cursor:pointer;color:#A32D2D;flex-shrink:0;">×</button>';
   cont.appendChild(row);
+  lecheFmUpdateRemoveBtns();
   var sel = row.querySelector('select');
   var inp = row.querySelector('input');
   sel.addEventListener('change', function(){
@@ -5356,12 +5376,42 @@ function lecheFmAgregarEmpresa() {
   });
 }
 
+function lecheFmRemoveEmpresa(btn) {
+  btn.parentNode.remove();
+  lecheFmUpdateRemoveBtns();
+  lecheFmCheck();
+}
+
+function lecheFmUpdateRemoveBtns() {
+  var cont = document.getElementById('lf-empresas'); if(!cont) return;
+  var rows = cont.querySelectorAll('div');
+  rows.forEach(function(r){
+    var btn = r.querySelector('.lf-remove-btn');
+    if(btn) btn.style.visibility = rows.length > 1 ? 'visible' : 'hidden';
+  });
+}
+
 function lecheFmCheck() {
   var btn = document.getElementById('lf-btn-guardar'); if(!btn) return;
   var tipo = btn.getAttribute('data-tipo');
   var ok = false;
   if(tipo === 'prod') {
-    ok = !!document.getElementById('lf-fecha').value;
+    var fechaOk = !!document.getElementById('lf-fecha').value;
+    // Al menos una fila con empresa Y litros > 0
+    var cont = document.getElementById('lf-empresas');
+    var empresaOk = false;
+    if(cont) cont.querySelectorAll('div').forEach(function(row){
+      var sel = row.querySelector('select');
+      var inp = row.querySelector('input');
+      if(sel && inp && sel.value && parseFloat(inp.value) > 0) empresaOk = true;
+    });
+    ok = fechaOk && empresaOk;
+    // Color campo vacas
+    var vEl = document.getElementById('lf-vacas');
+    if(vEl) {
+      if(vEl.value){ vEl.style.background='#FFF8E8'; vEl.style.borderColor='#E8A020'; }
+      else { vEl.style.background='#EBF0F5'; vEl.style.borderColor='#D0D5DC'; }
+    }
   } else {
     ok = !!(document.getElementById('lf-cal-fecha').value && document.getElementById('lf-cal-empresa').value);
   }
