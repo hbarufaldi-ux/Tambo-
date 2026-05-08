@@ -1949,7 +1949,7 @@ function abrirFicha(rp) {
         item.style.opacity='0.35';
         item.style.cursor='default';
       } else {
-        item.onclick=(function(sid){return function(){cerrarFichaFab();var s=document.getElementById(sid);if(s){var _ov=document.getElementById('ficha-fab-overlay');_ov.style.display='block';_ov.style.zIndex='202';_ov.onclick=function(){cerrarFichaSheet(sid);};s.style.display='block';lockScroll();if(sid==='ficha-sheet-parto'){setTimeout(function(){var toroSel=document.getElementById('fsp2-toro');if(toroSel&&a.ultimaInsemToro){var opt=Array.from(toroSel.options).find(function(o){return o.text===a.ultimaInsemToro||o.value==a.ultimaInsemToro;});if(opt){toroSel.value=opt.value;toroSel.style.background='#FFF8E8';toroSel.style.borderColor='#E8A020';}}},50);}}};})(op.s);
+        item.onclick=(function(sid,_a){return function(){cerrarFichaFab();var s=document.getElementById(sid);if(s){var _ov=document.getElementById('ficha-fab-overlay');_ov.style.display='block';_ov.style.zIndex='202';_ov.onclick=function(){cerrarFichaSheet(sid);};s.style.display='block';lockScroll();if(sid==='ficha-sheet-parto'){setTimeout(function(){var toroSel=document.getElementById('fsp2-toro');if(toroSel&&_a.ultimaInsemToro){var opt=Array.from(toroSel.options).find(function(o){return o.text===_a.ultimaInsemToro||o.value==_a.ultimaInsemToro;});if(opt){toroSel.value=opt.value;toroSel.style.background='#FFF8E8';toroSel.style.borderColor='#E8A020';}}},50);}}};})(op.s,a);
       }
       fabMenu.appendChild(item);
     });
@@ -4443,49 +4443,106 @@ function editarProduccion(fecha) {
 function editarProduccionFab(fecha) {
   var reg = produccionDiaria.find(function(r){ return r.fecha === fecha; });
   if(!reg) return;
-  // Abrir el form nuevo y precargarlo
   abrirFormLeche('prod');
   setTimeout(function(){
+    var sheet = document.getElementById('leche-form-sheet');
+    if(!sheet) return;
+
+    // Marcar como edicion
+    sheet.setAttribute('data-edit-fecha', fecha);
+
+    // Titulo
+    var tit = sheet.querySelector('div[style*="font-size:17px"]');
+    if(tit) tit.textContent = 'Producción · ' + diaSemana(fecha) + ' ' + fmtFecha(fecha);
+
+    // Precargar datos
     var fEl = document.getElementById('lf-fecha');
-    if(fEl) { fEl.value = fecha; fEl.style.background='#FFF8E8'; fEl.style.borderColor='#E8A020'; }
+    if(fEl) { fEl.value = fecha; }
     var vEl = document.getElementById('lf-vacas');
-    if(vEl && reg.vacas) { vEl.value = reg.vacas; vEl.style.background='#FFF8E8'; vEl.style.borderColor='#E8A020'; }
+    if(vEl && reg.vacas) { vEl.value = reg.vacas; }
     var obsEl = document.getElementById('lf-obs');
-    if(obsEl && reg.obs) obsEl.value = reg.obs;
-    // Limpiar empresas y precargar
+    if(obsEl) obsEl.value = reg.obs || '';
+
     var cont = document.getElementById('lf-empresas');
     if(cont) cont.innerHTML = '';
     if(reg.ucalac > 0) {
       lecheFmAgregarEmpresa();
-      var rows = document.getElementById('lf-empresas').querySelectorAll('div');
-      var lastRow = rows[rows.length-1];
-      if(lastRow) {
-        var sel = lastRow.querySelector('select');
-        var inp = lastRow.querySelector('input');
-        if(sel) { sel.value = 'Ucalac SA'; sel.style.background='#FFF8E8'; sel.style.borderColor='#E8A020'; }
-        if(inp) { inp.value = reg.ucalac; inp.style.background='#FFF8E8'; inp.style.borderColor='#E8A020'; }
-      }
+      var r1 = document.getElementById('lf-empresas').querySelectorAll('div');
+      var lr1 = r1[r1.length-1];
+      if(lr1) { var s1=lr1.querySelector('select'); var i1=lr1.querySelector('input'); if(s1)s1.value='Ucalac SA'; if(i1)i1.value=reg.ucalac; }
     }
     if(reg.saputo > 0) {
       lecheFmAgregarEmpresa();
-      var rows2 = document.getElementById('lf-empresas').querySelectorAll('div');
-      var lastRow2 = rows2[rows2.length-1];
-      if(lastRow2) {
-        var sel2 = lastRow2.querySelector('select');
-        var inp2 = lastRow2.querySelector('input');
-        if(sel2) { sel2.value = 'Saputo'; sel2.style.background='#FFF8E8'; sel2.style.borderColor='#E8A020'; }
-        if(inp2) { inp2.value = reg.saputo; inp2.style.background='#FFF8E8'; inp2.style.borderColor='#E8A020'; }
-      }
+      var r2 = document.getElementById('lf-empresas').querySelectorAll('div');
+      var lr2 = r2[r2.length-1];
+      if(lr2) { var s2=lr2.querySelector('select'); var i2=lr2.querySelector('input'); if(s2)s2.value='Saputo'; if(i2)i2.value=reg.saputo; }
     }
-    // Marcar como edicion para que sobreescriba en lugar de agregar
-    var sheet = document.getElementById('leche-form-sheet');
-    if(sheet) sheet.setAttribute('data-edit-fecha', fecha);
-    // Cambiar titulo
-    var tit = sheet && sheet.querySelector('div[style*="font-size:17px"]');
-    if(tit) tit.textContent = 'Editar producción · ' + fmtFecha(fecha);
     lecheFmUpdateRemoveBtns();
-    lecheFmCheck();
+
+    // Modo LECTURA: deshabilitar campos, boton = "Editar"
+    lecheFmModoLectura(sheet, fecha);
   }, 80);
+}
+
+function lecheFmModoLectura(sheet, fecha) {
+  // Deshabilitar todos los campos
+  sheet.querySelectorAll('input, select, textarea, button.lf-remove-btn').forEach(function(el){
+    el.disabled = true;
+    if(el.tagName !== 'BUTTON') {
+      el.style.opacity = '0.75';
+      el.style.cursor = 'default';
+    }
+  });
+  // Ocultar boton + Agregar empresa
+  var addBtn = sheet.querySelector('button[onclick*="lecheFmAgregarEmpresa"]');
+  if(addBtn) addBtn.style.display = 'none';
+
+  // Cambiar botones
+  var footer = sheet.querySelector('div[style*="border-top"]');
+  if(footer) {
+    footer.innerHTML = ''
+      + '<button onclick="lecheFmModoEdicion()" style="flex:1;padding:15px;background:#1C1C1E;color:#fff;border:none;border-radius:14px;font-size:16px;font-weight:700;cursor:pointer;">Editar</button>'
+      + '<button onclick="cerrarFormLeche()" style="flex:1;padding:15px;background:none;color:#1C1C1E;border:1.5px solid #1C1C1E;border-radius:14px;font-size:16px;font-weight:600;cursor:pointer;">Cerrar</button>';
+    footer.style.display = 'flex';
+    footer.style.gap = '10px';
+    footer.style.padding = '14px 20px 16px';
+  }
+}
+
+function lecheFmModoEdicion() {
+  var sheet = document.getElementById('leche-form-sheet');
+  if(!sheet) return;
+  // Habilitar campos (excepto fecha — no se puede cambiar la fecha de un registro)
+  sheet.querySelectorAll('input, select, textarea').forEach(function(el){
+    if(el.id === 'lf-fecha') return; // fecha bloqueada en edicion
+    el.disabled = false;
+    el.style.opacity = '';
+    el.style.cursor = '';
+  });
+  // Mostrar boton + Agregar empresa
+  var addBtn = sheet.querySelector('button[onclick*="lecheFmAgregarEmpresa"]');
+  if(addBtn) addBtn.style.display = '';
+  // Mostrar X en filas si hay mas de una
+  lecheFmUpdateRemoveBtns();
+
+  // Cambiar botones
+  var footer = sheet.querySelector('div[style*="border-top"]');
+  if(footer) {
+    footer.innerHTML = ''
+      + '<button id="lf-btn-guardar" data-tipo="prod" onclick="lecheFmGuardar('prod')" style="flex:1;padding:15px;background:#1C1C1E;color:#fff;border:none;border-radius:14px;font-size:16px;font-weight:700;cursor:pointer;">Guardar</button>'
+      + '<button onclick="cerrarFormLeche()" style="flex:1;padding:15px;background:none;color:#1C1C1E;border:1.5px solid #1C1C1E;border-radius:14px;font-size:16px;font-weight:600;cursor:pointer;">Cancelar</button>';
+    footer.style.display = 'flex';
+    footer.style.gap = '10px';
+    footer.style.padding = '14px 20px 16px';
+  }
+  // Colorear campos que tienen valor
+  sheet.querySelectorAll('input, select').forEach(function(el){
+    if(el.value && el.value !== '') {
+      el.style.background = '#FFF8E8';
+      el.style.borderColor = '#E8A020';
+    }
+  });
+  lecheFmCheck();
 }
 
 async function guardarProduccion() {
