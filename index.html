@@ -282,27 +282,15 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
     </div>
   </div>
 
-  <!-- CICLO DE CRÍA -->
+  <!-- ACTIVIDAD DE HOY -->
   <div style="background:#fff;border-radius:18px;padding:14px;margin-bottom:10px;">
-    <div style="font-size:18px;font-weight:800;color:#1C1C1E;margin-bottom:12px;">Ciclo de Cría</div>
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:9px;">
-      <div style="background:#D8E0E8;border-radius:14px;padding:20px 14px;text-align:center;min-height:110px;">
-        <div style="font-size:22px;margin-bottom:4px;">🍼</div>
-        <div style="font-size:38px;font-weight:900;color:#6B35D4;line-height:1;letter-spacing:-0.5px;" id="m-guachera">—</div>
-        <div style="font-size:12px;color:#8E8E93;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;margin-top:4px;">Guachera</div>
-      </div>
-      <div style="background:#D8E0E8;border-radius:14px;padding:20px 14px;text-align:center;min-height:110px;">
-        <div style="font-size:22px;margin-bottom:4px;">🐄</div>
-        <div style="font-size:38px;font-weight:900;color:#1C1C1E;line-height:1;letter-spacing:-0.5px;" id="m-recria-total">—</div>
-        <div style="font-size:12px;color:#8E8E93;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;margin-top:4px;">Recría</div>
-      </div>
-      <div id="m-mort-card" style="background:#D4F0E0;border-radius:14px;padding:20px 14px;text-align:center;min-height:110px;">
-        <div style="font-size:22px;margin-bottom:4px;">📊</div>
-        <div style="font-size:38px;font-weight:900;color:#0F6E56;line-height:1;letter-spacing:-0.5px;" id="m-mortandad">—</div>
-        <div style="font-size:12px;color:#0F6E56;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;margin-top:4px;" id="m-mort-label">% mort.</div>
-      </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+      <div style="font-size:18px;font-weight:800;color:#1C1C1E;">Actividad de hoy</div>
+      <div id="actividad-badge" style="display:none;background:#1C1C1E;color:#fff;font-size:12px;font-weight:700;padding:3px 9px;border-radius:20px;"></div>
     </div>
-    <div id="dash-recria" style="margin-top:10px;"></div>
+    <div id="actividad-hoy-lista">
+      <div style="color:#8E8E93;font-size:14px;text-align:center;padding:12px 0;">Sin registros hoy</div>
+    </div>
   </div>
 
   <!-- ALERTAS -->
@@ -1465,6 +1453,7 @@ function renderDashboard() {
       });
     }
   }
+  renderActividadHoy();
 }
 
 // ---- RENDER RODEO ----
@@ -3817,10 +3806,24 @@ function _fetchPadronBackground(callback) {
       }
       importados++;
     }
-    actualizarCats(); poblarSelects(); renderDashboard(); renderRodeo();
-    setSyncStatus('● '+importados+' animales');
-    guardarCacheLocal();
-    if(callback) callback(true);
+    // Liberar hilo principal antes de renderizar — evita congelamiento visual
+    var _importados = importados;
+    _lovSetTexto('Procesando animales...', 'Clasificando rodeo y estado reproductivo');
+    _lovProgreso(60);
+    setTimeout(function() {
+      actualizarCats();
+      _lovProgreso(80);
+      setTimeout(function() {
+        poblarSelects();
+        _lovProgreso(95);
+        setTimeout(function() {
+          renderDashboard(); renderRodeo();
+          setSyncStatus('● '+_importados+' animales');
+          guardarCacheLocal();
+          if(callback) callback(true);
+        }, 0);
+      }, 0);
+    }, 0);
     })
     .catch(function(err) {
       if(done) return; done = true;
@@ -3868,7 +3871,81 @@ function renderRecientes(tipo) {
 function agregarReciente(tipo, rp, detalle) {
   if(!registrosRecientes[tipo]) registrosRecientes[tipo] = [];
   registrosRecientes[tipo].unshift({fecha: TODAY, rp: rp, detalle: detalle});
+  // Persistir en localStorage
+  _guardarRecientes();
   renderRecientes(tipo);
+  renderActividadHoy();
+}
+
+function _guardarRecientes() {
+  try { localStorage.setItem('tambo_recientes', JSON.stringify({fecha: TODAY, datos: registrosRecientes})); } catch(e) {}
+}
+
+function _cargarRecientes() {
+  try {
+    var s = JSON.parse(localStorage.getItem('tambo_recientes') || 'null');
+    // Solo cargar si son de hoy
+    if(s && s.fecha === TODAY && s.datos) {
+      Object.keys(s.datos).forEach(function(k){ registrosRecientes[k] = s.datos[k]; });
+    }
+  } catch(e) {}
+}
+
+var TIPO_LABELS = {
+  parto: {icon:'🐄', label:'Parto'},
+  insem: {icon:'🧬', label:'Inseminación'},
+  celo:  {icon:'♀️', label:'Celo'},
+  prod:  {icon:'💧', label:'Producción'},
+  guachera: {icon:'🍼', label:'Guachera'},
+  recria:   {icon:'🌱', label:'Recría'},
+  tacto:    {icon:'🔬', label:'Tacto'},
+  secado:   {icon:'🔒', label:'Secado'},
+  baja:     {icon:'⬇️', label:'Baja'},
+  aborto:   {icon:'⚠️', label:'Aborto'},
+};
+
+function renderActividadHoy() {
+  var cont = document.getElementById('actividad-hoy-lista');
+  var badge = document.getElementById('actividad-badge');
+  if(!cont) return;
+
+  // Juntar todos los registros de hoy de todos los tipos
+  var todos = [];
+  Object.keys(registrosRecientes).forEach(function(tipo) {
+    (registrosRecientes[tipo] || []).forEach(function(r) {
+      if(r.fecha === TODAY) todos.push({tipo: tipo, rp: r.rp, detalle: r.detalle});
+    });
+  });
+
+  if(todos.length === 0) {
+    cont.innerHTML = '<div style="color:#8E8E93;font-size:14px;text-align:center;padding:12px 0;">Sin registros hoy</div>';
+    if(badge) badge.style.display = 'none';
+    return;
+  }
+
+  if(badge) { badge.style.display = 'block'; badge.textContent = todos.length + (todos.length === 1 ? ' registro' : ' registros'); }
+
+  cont.innerHTML = '';
+  todos.forEach(function(r) {
+    var cfg = TIPO_LABELS[r.tipo] || {icon:'📝', label: r.tipo};
+    var animal = getAnimal ? getAnimal(r.rp) : null;
+    var nombreAnimal = animal ? (animal.nombre || 'RP '+r.rp) : 'RP '+r.rp;
+    var row = document.createElement('div');
+    row.style.cssText = 'display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid #F0F0F5;cursor:pointer;';
+    row.innerHTML =
+      '<div style="width:34px;height:34px;border-radius:10px;background:#F2F2F7;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0;">'+cfg.icon+'</div>'+
+      '<div style="flex:1;min-width:0;">'+
+        '<div style="font-size:14px;font-weight:700;color:#1C1C1E;">'+cfg.label+'</div>'+
+        '<div style="font-size:13px;color:#8E8E93;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+nombreAnimal+' · '+r.detalle+'</div>'+
+      '</div>'+
+      '<div style="font-size:12px;color:#34C759;font-weight:600;flex-shrink:0;">RP '+r.rp+'</div>';
+    row.onclick = (function(rp){ return function(){ if(abrirFicha) abrirFicha(rp); }; })(r.rp);
+    row.lastChild.style.cssText += ';';
+    // quitar border al último
+    cont.appendChild(row);
+  });
+  // Sacar border al último
+  if(cont.lastChild) cont.lastChild.style.borderBottom = 'none';
 }
 
 // ---- RESUMEN TAMBO ----
@@ -3948,6 +4025,7 @@ function posicionarSearchBar() {
 function init() {
   var dateFields=['p-fecha','i-fecha','t-fecha','pr-fecha','b-fecha','c-fecha','s-fecha','ab-fecha'];
   dateFields.forEach(function(id){var el=document.getElementById(id);if(el)el.value=TODAY;});
+  _cargarRecientes(); // cargar actividad del día desde localStorage
   cargarCacheLeche();
   cargarProduccionDesdeSheets();
   actualizarCats();
