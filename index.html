@@ -982,6 +982,13 @@ function fmtFecha(f) {
   if(!f) return '—';
   var p=f.split('-'); return p[2]+'/'+p[1]+'/'+p[0];
 }
+function diaSemana(f) {
+  if(!f) return '';
+  var dias = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+  var parts = f.split('-');
+  var d = new Date(parseInt(parts[0]), parseInt(parts[1])-1, parseInt(parts[2]));
+  return dias[d.getDay()];
+}
 function edadMeses(f) {
   if(!f) return 0;
   var h=new Date(), n=new Date(f);
@@ -1942,7 +1949,7 @@ function abrirFicha(rp) {
         item.style.opacity='0.35';
         item.style.cursor='default';
       } else {
-        item.onclick=(function(sid){return function(){cerrarFichaFab();var s=document.getElementById(sid);if(s){var _ov=document.getElementById('ficha-fab-overlay');_ov.style.display='block';_ov.style.zIndex='202';_ov.onclick=function(){cerrarFichaSheet(sid);};s.style.display='block';lockScroll();}};})(op.s);
+        item.onclick=(function(sid){return function(){cerrarFichaFab();var s=document.getElementById(sid);if(s){var _ov=document.getElementById('ficha-fab-overlay');_ov.style.display='block';_ov.style.zIndex='202';_ov.onclick=function(){cerrarFichaSheet(sid);};s.style.display='block';lockScroll();if(sid==='ficha-sheet-parto'){setTimeout(function(){var toroSel=document.getElementById('fsp2-toro');if(toroSel&&a.ultimaInsemToro){var opt=Array.from(toroSel.options).find(function(o){return o.text===a.ultimaInsemToro||o.value==a.ultimaInsemToro;});if(opt){toroSel.value=opt.value;toroSel.style.background='#FFF8E8';toroSel.style.borderColor='#E8A020';}}},50);}}};})(op.s);
       }
       fabMenu.appendChild(item);
     });
@@ -2483,6 +2490,21 @@ function agregarPendiente(hoja,fila){var l=leerPendientes();l.push({hoja:hoja,fi
 async function reintentarPendientes(){var lista=leerPendientes();if(lista.length===0)return;setSyncStatus('⟳ Sincronizando '+lista.length+' eventos...');var err=0;for(var i=lista.length-1;i>=0;i--){try{await fetch(SCRIPT_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain'},body:JSON.stringify({hoja:lista[i].hoja,fila:lista[i].fila})});var l=leerPendientes();l.splice(i,1);guardarPendientes(l);}catch(e){err++;}}setSyncStatus(err===0?'● Sincronizado':'⚠ '+err+' pendientes');}
 function limpiarCache(){['tambo_rodeo','tambo_rodeo_ts','tambo_guachera','tambo_recria','tambo_pending'].forEach(function(k){localStorage.removeItem(k);});showToast('Caché limpiada — recargando...');setTimeout(function(){location.reload();},1200);}
 // ============================================================
+
+async function enviarASheetsEditar(hoja, buscarFecha, fila) {
+  // Edicion: envia con flag editar:true y fecha para buscar la fila en el GAS
+  guardarCacheLocal();
+  showSaving(true); setSyncStatus('⟳ Guardando...');
+  try {
+    var payload = {hoja:hoja, fila:fila, rp:String(fila[2]||''), editar:true, buscarFecha:buscarFecha, datos:{}};
+    await fetch(SCRIPT_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain'},body:JSON.stringify(payload)});
+    setSyncStatus('● '+rodeo.length+' animales'); showSaving(false); return true;
+  } catch(e) {
+    var nPend = leerPendientes().length;
+    setSyncStatus('⚠ Sin red ('+nPend+' pend.)');
+    showSaving(false); showToast('Sin conexión — guardado localmente'); return true;
+  }
+}
 
 async function enviarASheets(hoja, fila, datosExtra) {
   guardarCacheLocal();
@@ -4353,26 +4375,34 @@ function renderLeche() {
   // Historial últimos 7 días
   var hist = document.getElementById('l-historial');
   hist.innerHTML = '';
-  var ultimos7 = produccionDiaria
-    .filter(function(r){ return r.fecha >= sumarDias(TODAY,-7); })
+  // Todos los registros ordenados por fecha descendente
+  var todos = produccionDiaria
+    .slice()
     .sort(function(a,b){ return b.fecha.localeCompare(a.fecha); });
 
-  if(ultimos7.length === 0) {
+  if(todos.length === 0) {
     hist.innerHTML = '<div style="color:#8E8E93;font-size:14px;text-align:center;padding:8px 0;">Sin registros</div>';
     return;
   }
-  ultimos7.forEach(function(r) {
+  todos.forEach(function(r) {
     var row = document.createElement('div');
-    row.style.cssText = 'display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid #C8D0D8;cursor:pointer;';
-    row.onclick = function(){ editarProduccion(r.fecha); };
+    row.style.cssText = 'display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid #C8D0D8;cursor:pointer;';
+    row.onclick = function(){ editarProduccionFab(r.fecha); };
     var esHoy = r.fecha === TODAY;
+    var fechaLabel = esHoy ? 'Hoy' : fmtFecha(r.fecha);
+    var dia = esHoy ? '' : diaSemana(r.fecha);
     row.innerHTML = '<div>'
-      + '<div style="font-size:15px;font-weight:700;color:#1C1C1E;">'+(esHoy?'Hoy':fmtFecha(r.fecha))+'</div>'
+      + '<div style="font-size:15px;font-weight:700;color:#1C1C1E;">'
+      + (dia ? '<span style="font-size:12px;font-weight:600;color:#8E8E93;margin-right:6px;text-transform:uppercase;">'+dia+'</span>' : '')
+      + fechaLabel + '</div>'
       + '<div style="font-size:12px;color:#8E8E93;">Ucalac: '+fmtNum(r.ucalac||0)+' · Saputo: '+fmtNum(r.saputo||0)+'</div>'
       + '</div>'
+      + '<div style="display:flex;align-items:center;gap:10px;">'
       + '<div style="text-align:right;">'
       + '<div style="font-size:20px;font-weight:800;color:#1060C0;">'+fmtNum(r.total||0)+'</div>'
       + '<div style="font-size:11px;color:#8E8E93;">lts</div>'
+      + '</div>'
+      + '<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M9 18l6-6-6-6" stroke="#B0BCC8" stroke-width="2" stroke-linecap="round"/></svg>'
       + '</div>';
     hist.appendChild(row);
   });
@@ -4406,36 +4436,56 @@ function validarCalidad() {
 }
 
 function editarProduccion(fecha) {
+  // Legacy - kept for compatibility
+  editarProduccionFab(fecha);
+}
+
+function editarProduccionFab(fecha) {
   var reg = produccionDiaria.find(function(r){ return r.fecha === fecha; });
   if(!reg) return;
-  // Precargar el formulario con los datos del registro
-  var fEl = document.getElementById('l-fecha');
-  if(fEl) fEl.value = fecha;
-  var vEl = document.getElementById('l-vacas');
-  if(vEl) vEl.value = reg.vacas || '';
-  var obsEl = document.getElementById('l-obs');
-  if(obsEl) obsEl.value = reg.obs || '';
-  // Limpiar filas y precargar empresas
-  iniciarFilasEmpresa();
-  // Precargar Ucalac si hay
-  if(reg.ucalac > 0) {
-    var emp1 = document.getElementById('l-emp-1');
-    var lts1 = document.getElementById('l-lts-1');
-    if(emp1) { emp1.value = 'Ucalac SA'; emp1.style.background='#FFF8E8'; emp1.style.borderColor='#E8A020'; }
-    if(lts1) { lts1.value = reg.ucalac; lts1.style.background='#FFF8E8'; lts1.style.borderColor='#E8A020'; }
-  }
-  // Precargar Saputo si hay
-  if(reg.saputo > 0) {
-    agregarFilaEmpresa();
-    var emp2 = document.getElementById('l-emp-2');
-    var lts2 = document.getElementById('l-lts-2');
-    if(emp2) { emp2.value = 'Saputo'; emp2.style.background='#FFF8E8'; emp2.style.borderColor='#E8A020'; }
-    if(lts2) { lts2.value = reg.saputo; lts2.style.background='#FFF8E8'; lts2.style.borderColor='#E8A020'; }
-  }
-  // Scroll al formulario
-  var form = document.querySelector('#screen-leche .card');
-  if(form) form.scrollIntoView({behavior:'smooth'});
-  showToast('Editando registro del ' + fmtFecha(fecha));
+  // Abrir el form nuevo y precargarlo
+  abrirFormLeche('prod');
+  setTimeout(function(){
+    var fEl = document.getElementById('lf-fecha');
+    if(fEl) { fEl.value = fecha; fEl.style.background='#FFF8E8'; fEl.style.borderColor='#E8A020'; }
+    var vEl = document.getElementById('lf-vacas');
+    if(vEl && reg.vacas) { vEl.value = reg.vacas; vEl.style.background='#FFF8E8'; vEl.style.borderColor='#E8A020'; }
+    var obsEl = document.getElementById('lf-obs');
+    if(obsEl && reg.obs) obsEl.value = reg.obs;
+    // Limpiar empresas y precargar
+    var cont = document.getElementById('lf-empresas');
+    if(cont) cont.innerHTML = '';
+    if(reg.ucalac > 0) {
+      lecheFmAgregarEmpresa();
+      var rows = document.getElementById('lf-empresas').querySelectorAll('div');
+      var lastRow = rows[rows.length-1];
+      if(lastRow) {
+        var sel = lastRow.querySelector('select');
+        var inp = lastRow.querySelector('input');
+        if(sel) { sel.value = 'Ucalac SA'; sel.style.background='#FFF8E8'; sel.style.borderColor='#E8A020'; }
+        if(inp) { inp.value = reg.ucalac; inp.style.background='#FFF8E8'; inp.style.borderColor='#E8A020'; }
+      }
+    }
+    if(reg.saputo > 0) {
+      lecheFmAgregarEmpresa();
+      var rows2 = document.getElementById('lf-empresas').querySelectorAll('div');
+      var lastRow2 = rows2[rows2.length-1];
+      if(lastRow2) {
+        var sel2 = lastRow2.querySelector('select');
+        var inp2 = lastRow2.querySelector('input');
+        if(sel2) { sel2.value = 'Saputo'; sel2.style.background='#FFF8E8'; sel2.style.borderColor='#E8A020'; }
+        if(inp2) { inp2.value = reg.saputo; inp2.style.background='#FFF8E8'; inp2.style.borderColor='#E8A020'; }
+      }
+    }
+    // Marcar como edicion para que sobreescriba en lugar de agregar
+    var sheet = document.getElementById('leche-form-sheet');
+    if(sheet) sheet.setAttribute('data-edit-fecha', fecha);
+    // Cambiar titulo
+    var tit = sheet && sheet.querySelector('div[style*="font-size:17px"]');
+    if(tit) tit.textContent = 'Editar producción · ' + fmtFecha(fecha);
+    lecheFmUpdateRemoveBtns();
+    lecheFmCheck();
+  }, 80);
 }
 
 async function guardarProduccion() {
@@ -5462,18 +5512,31 @@ async function lecheFmGuardar(tipo) {
     var ucalac = (empresas.find(function(e){return e.empresa==='Ucalac SA';})||{}).litros||0;
     var saputo = (empresas.find(function(e){return e.empresa==='Saputo';})||{}).litros||0;
 
-    // Guardar directo sin pasar por sistema legacy
+    // Detectar si es edicion o nuevo registro
+    var sheet = document.getElementById('leche-form-sheet');
+    var editFecha = sheet ? sheet.getAttribute('data-edit-fecha') : null;
+    var esEdicion = !!(editFecha);
+
     var idx = produccionDiaria.findIndex(function(r){ return r.fecha === fecha; });
     var reg = {fecha:fecha, ucalac:ucalac, saputo:saputo, total:total, vacas:vacas, obs:obs};
     if(idx >= 0) produccionDiaria[idx] = reg;
     else produccionDiaria.push(reg);
     guardarCacheLeche();
 
-    var fila = [generarID('Prod',0), fecha, ucalac, saputo, total, vacas, obs];
     cerrarFormLeche();
-    await enviarASheets('Reg_Produccion_Tambo', fila);
+
+    if(esEdicion) {
+      // Sobreescribir — el GAS evita duplicados por ID en col1
+      // Enviamos con flag editar:true para que el GAS actualice la fila existente
+      var fila = [generarID('Prod',0), fecha, ucalac, saputo, total, vacas, obs];
+      await enviarASheetsEditar('Reg_Produccion_Tambo', fecha, fila);
+      showToast('Producción actualizada ✓');
+    } else {
+      var fila = [generarID('Prod',0), fecha, ucalac, saputo, total, vacas, obs];
+      await enviarASheets('Reg_Produccion_Tambo', fila);
+      showToast('Producción registrada ✓');
+    }
     renderLeche();
-    showToast('Producción registrada ✓');
   } else {
     var fecha = document.getElementById('lf-cal-fecha').value || hoy;
     var empresa = document.getElementById('lf-cal-empresa').value;
