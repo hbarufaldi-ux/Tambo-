@@ -3336,9 +3336,10 @@ function _cargarUsuarios() {
     var s = JSON.parse(localStorage.getItem('tambo_usuarios') || 'null');
     if(s && Array.isArray(s) && s.length) return s;
   } catch(e) {}
-  // Si no hay usuarios guardados, marcar para avisar al admin después de entrar
-  window._usuariosPINReseteados = true;
-  return USUARIOS_DEFAULT.map(function(u){ return Object.assign({},u); });
+  // Primera instalación: guardar defaults silenciosamente, sin avisar
+  var defaults = USUARIOS_DEFAULT.map(function(u){ return Object.assign({},u); });
+  try { localStorage.setItem('tambo_usuarios', JSON.stringify(defaults)); } catch(e) {}
+  return defaults;
 }
 function _guardarUsuarios(lista) {
   try { localStorage.setItem('tambo_usuarios', JSON.stringify(lista)); } catch(e) {}
@@ -3512,14 +3513,6 @@ function _entrarApp() {
   if(navInicio) {
     document.querySelectorAll('.nav-btn').forEach(function(b){b.classList.remove('active');});
     navInicio.classList.add('active');
-  }
-
-  // Aviso si los PINs fueron reseteados (caché limpiada)
-  if(window._usuariosPINReseteados && usuarioActual && usuarioActual.rol === 'admin') {
-    setTimeout(function(){
-      showToast('⚠️ PINs reseteados — configurá los usuarios en Más → Configuración');
-    }, 2000);
-    window._usuariosPINReseteados = false;
   }
 
   var topbar2 = document.querySelector('.topbar');
@@ -3849,13 +3842,15 @@ function _fetchPadronBackground(callback) {
       _lovProgreso(80);
       setTimeout(function() {
         poblarSelects();
-        _lovProgreso(95);
+        // Pintar check verde ANTES del render pesado — el browser tiene 1 frame para actualizar
+        _lovProgreso(100);
+        _lovCheck();
         setTimeout(function() {
           renderDashboard(); renderRodeo();
           setSyncStatus('● '+_importados+' animales');
           guardarCacheLocal();
           if(callback) callback(true);
-        }, 0);
+        }, 32);
       }, 0);
     }, 0);
     })
