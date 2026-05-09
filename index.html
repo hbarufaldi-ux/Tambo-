@@ -742,6 +742,15 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
     <button onclick="volverDeSecundaria()" style="background:none;border:none;font-size:22px;color:#1C1C1E;cursor:pointer;padding:4px 8px 4px 0;font-weight:600;line-height:1;">‹</button>
     <div style="font-size:19px;font-weight:800;color:#1C1C1E;letter-spacing:-0.3px;">Reportes</div>
   </div>
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+      <div class="section-title" style="margin:0;">Producción de leche</div>
+      <button onclick="exportarReporteMensual()" style="background:#EEE0FF;color:#6B35D4;border:1px solid #D4B0FF;border-radius:10px;padding:6px 12px;font-size:13px;font-weight:600;cursor:pointer;">⬇ Excel</button>
+    </div>
+    <div id="reporte-leche-selector" style="display:flex;gap:8px;margin-bottom:12px;overflow-x:auto;padding-bottom:4px;"></div>
+    <div id="reporte-leche-contenido"></div>
+  </div>
+
   <div class="card" id="card-dirsa-upload">
     <div class="section-title">Importar desde DIRSA</div>
     <div style="margin-bottom:14px;">
@@ -820,14 +829,6 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
     </div>
     <button class="btn-primary" id="btn-dirsa-importar" onclick="confirmarImportDIRSA()">Importar ahora</button>
     <button class="btn-secondary" style="margin-top:8px;" onclick="resetearImportDIRSA()">Cancelar</button>
-  </div>
-  <div class="card">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
-      <div class="section-title" style="margin:0;">Producción de leche</div>
-      <button onclick="exportarReporteMensual()" style="background:#EEE0FF;color:#6B35D4;border:1px solid #D4B0FF;border-radius:10px;padding:6px 12px;font-size:13px;font-weight:600;cursor:pointer;">⬇ Excel</button>
-    </div>
-    <div id="reporte-leche-selector" style="display:flex;gap:8px;margin-bottom:12px;overflow-x:auto;padding-bottom:4px;"></div>
-    <div id="reporte-leche-contenido"></div>
   </div>
 
   <div class="card">
