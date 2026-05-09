@@ -3530,28 +3530,27 @@ function _entrarApp() {
   _lovSetTexto('Cargando padrón...', 'Conectando con el servidor');
   setSyncStatus('⟳ Cargando padrón...');
 
-  // ── CASO A: hay caché válida → overlay breve, luego entrar ──
+  // ── CASO A: hay caché válida → mostrar overlay, render después del paint ──
   var desdeCache = cargarCacheLocal();
   if(desdeCache) {
-    actualizarCats(); poblarSelects(); renderDashboard(); renderRodeo();
-    // Mostrar fase 2 rápida para dar feedback visual
-    _lovSetFase(1);
-    _lovSetTexto('Actualizando animales...', '');
-    _lovProgreso(60);
-    var tA1 = setTimeout(function(){ _lovProgreso(100); _lovCheck(); }, 300);
-    var tA2 = setTimeout(function(){
-      _lovOcultar(function(){
-        setSyncStatus('● '+(usuarioActual&&usuarioActual.nombre?usuarioActual.nombre:rodeo.length+' animales'));
-      });
-      // Refresh background si TTL venció
-      if(cacheTTLVencido()) {
-        setSyncStatus('● '+rodeo.length+' · actualizando...');
-        _fetchPadronBackground(function(ok){
-          if(ok) setSyncStatus('● '+(usuarioActual&&usuarioActual.nombre?usuarioActual.nombre:rodeo.length+' animales'));
+    // El overlay ya está visible. Dar 1 frame al browser para pintarlo
+    // ANTES del render pesado, así el usuario ve la animación y no el freeze.
+    setTimeout(function() {
+      actualizarCats(); poblarSelects(); renderDashboard(); renderRodeo();
+      _lovProgreso(100); _lovCheck();
+      var tA2 = setTimeout(function(){
+        _lovOcultar(function(){
+          setSyncStatus('● '+(usuarioActual&&usuarioActual.nombre?usuarioActual.nombre:rodeo.length+' animales'));
         });
-      }
-    }, 800);
-    _lovTimers.push(tA1, tA2);
+        if(cacheTTLVencido()) {
+          setSyncStatus('● '+rodeo.length+' · actualizando...');
+          _fetchPadronBackground(function(ok){
+            if(ok) setSyncStatus('● '+(usuarioActual&&usuarioActual.nombre?usuarioActual.nombre:rodeo.length+' animales'));
+          });
+        }
+      }, 400);
+      _lovTimers.push(tA2);
+    }, 50);
     return;
   }
 
