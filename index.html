@@ -3562,29 +3562,23 @@ function _entrarApp() {
     return;
   }
 
-  // ── CASO B: sin caché → overlay con 2 fases completas ──────
+  // ── CASO B: sin caché → overlay, cierra al completar fetch ──
   _fetchPadronBackground(function(ok) {
     if(!ok) {
-      _lovOcultar(function(){ setSyncStatus('● Padrón local'); });
+      _lovOcultar(function(){ setSyncStatus('● Sin conexión — datos locales'); });
       return;
     }
-    _lovSetFase(1);
-    _lovSetTexto('Procesando animales...', 'Clasificando rodeo y estado reproductivo');
-    _lovProgreso(35);
-    var t1 = setTimeout(function(){ _lovProgreso(70); }, 280);
-    var t2 = setTimeout(function(){ _lovProgreso(95); }, 600);
-    var t3 = setTimeout(function(){
-      _lovSetFase(2);
-      _lovSetTexto('Listo', '');
-      _lovCheck();
-      var t4 = setTimeout(function(){
-        _lovOcultar(function(){
-          setSyncStatus('● '+(usuarioActual&&usuarioActual.nombre?usuarioActual.nombre:rodeo.length+' animales'));
-        });
-      }, 650);
-      _lovTimers.push(t4);
-    }, 900);
-    _lovTimers.push(t1,t2,t3);
+    _lovTimers.forEach(clearTimeout); _lovTimers = [];
+    _lovSetFase(2);
+    _lovSetTexto('Listo', '');
+    _lovProgreso(100);
+    _lovCheck();
+    var t = setTimeout(function(){
+      _lovOcultar(function(){
+        setSyncStatus('● '+(usuarioActual&&usuarioActual.nombre?usuarioActual.nombre:rodeo.length+' animales'));
+      });
+    }, 600);
+    _lovTimers.push(t);
   });
 }
 
