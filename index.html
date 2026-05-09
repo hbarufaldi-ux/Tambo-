@@ -3842,15 +3842,17 @@ function _fetchPadronBackground(callback) {
       _lovProgreso(80);
       setTimeout(function() {
         poblarSelects();
-        // Pintar check verde ANTES del render pesado — el browser tiene 1 frame para actualizar
+        // Mostrar check verde, esperar 1 frame, ocultar overlay, y RECIÉN renderizar
         _lovProgreso(100);
         _lovCheck();
         setTimeout(function() {
-          renderDashboard(); renderRodeo();
-          setSyncStatus('● '+_importados+' animales');
-          guardarCacheLocal();
-          if(callback) callback(true);
-        }, 32);
+          _lovOcultar(function() {
+            renderDashboard(); renderRodeo();
+            setSyncStatus('● '+_importados+' animales');
+            guardarCacheLocal();
+            if(callback) callback(true);
+          });
+        }, 400);
       }, 0);
     }, 0);
     })
