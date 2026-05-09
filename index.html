@@ -3809,7 +3809,7 @@ function _fetchPadronBackground(callback) {
         fechaNac: fechaNac,
         ultimoParto: ultimoParto,
         ultimaInsem: ultimaInsem,
-        ultimaInsemToro: String(row['Padre'] || row['Nombre Padre'] || '').trim(),
+        ultimaInsemToro: String(row['Toro/Embrion'] || row['Toro/Embrión'] || row['Padre'] || row['Nombre Padre'] || '').trim(),
         partoEstimado: partoEstimado,
         nroServicios: parseInt(row['Nro.Servicio'] || row['Nro Servicio'] || 0) || 0,
         produccionUltima: parseFloat(String(row['Leche Ultimo Control'] || '').replace(',','.')) || null,
