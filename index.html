@@ -3535,8 +3535,12 @@ function _entrarApp() {
   if(desdeCache) {
     // El overlay ya está visible. Dar 1 frame al browser para pintarlo
     // ANTES del render pesado, así el usuario ve la animación y no el freeze.
-    setTimeout(function() {
-      actualizarCats(); poblarSelects(); renderDashboard(); renderRodeo();
+    renderEnChunks([
+      function actualizarCats_() { actualizarCats(); },
+      function poblarSelects_()  { poblarSelects(); },
+      function renderDash_()     { renderDashboard(); },
+      function renderRodeo_()    { renderRodeo(); }
+    ], function() {
       _lovProgreso(100); _lovCheck();
       var tA2 = setTimeout(function(){
         _lovOcultar(function(){
@@ -3550,7 +3554,7 @@ function _entrarApp() {
         }
       }, 400);
       _lovTimers.push(tA2);
-    }, 50);
+    });
     return;
   }
 
@@ -3678,13 +3682,34 @@ function cerrarSesion() {
 }
 
 // ---- CARGAR PADRON DESDE SHEETS (con caché) ----
+// ── Render fragmentado: cada tarea corre en su propio frame ──
+function renderEnChunks(tareas, onDone) {
+  function siguiente(i) {
+    if (i >= tareas.length) {
+      if (onDone) onDone();
+      return;
+    }
+    requestAnimationFrame(function() {
+      try { tareas[i](); } catch(e) { console.error('renderEnChunks tarea '+i, e); }
+      siguiente(i + 1);
+    });
+  }
+  siguiente(0);
+}
+
 function cargarPadronDesdeSheets(callback) {
   // 1. Intentar caché primero
   var desdeCache = cargarCacheLocal();
   if(desdeCache) {
-    actualizarCats(); poblarSelects(); renderDashboard(); renderRodeo();
-    setSyncStatus('● '+(usuarioActual&&usuarioActual.nombre?usuarioActual.nombre:rodeo.length+' animales'));
-    if(callback) callback(true);
+    renderEnChunks([
+      function actualizarCats_() { actualizarCats(); },
+      function poblarSelects_()  { poblarSelects(); },
+      function renderDash_()     { renderDashboard(); },
+      function renderRodeo_()    { renderRodeo(); }
+    ], function() {
+      setSyncStatus('● '+(usuarioActual&&usuarioActual.nombre?usuarioActual.nombre:rodeo.length+' animales'));
+      if(callback) callback(true);
+    });
     // 2. Refrescar en background si TTL venció
     if(cacheTTLVencido()) {
       setSyncStatus('● '+rodeo.length+' · actualizando...');
