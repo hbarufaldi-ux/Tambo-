@@ -699,7 +699,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
   </div>
   <!-- HISTORIAL ÚLTIMOS 7 DÍAS -->
 <div class="card" style="margin-top:8px;">
-<div class="section-title">Últimos 7 días</div>
+<div class="section-title" id="l-historial-titulo">Registros</div>
 <div id="l-historial"></div>
 </div>
 
@@ -821,6 +821,15 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
     <button class="btn-primary" id="btn-dirsa-importar" onclick="confirmarImportDIRSA()">Importar ahora</button>
     <button class="btn-secondary" style="margin-top:8px;" onclick="resetearImportDIRSA()">Cancelar</button>
   </div>
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+      <div class="section-title" style="margin:0;">Producción de leche</div>
+      <button onclick="exportarReporteMensual()" style="background:#EEE0FF;color:#6B35D4;border:1px solid #D4B0FF;border-radius:10px;padding:6px 12px;font-size:13px;font-weight:600;cursor:pointer;">⬇ Excel</button>
+    </div>
+    <div id="reporte-leche-selector" style="display:flex;gap:8px;margin-bottom:12px;overflow-x:auto;padding-bottom:4px;"></div>
+    <div id="reporte-leche-contenido"></div>
+  </div>
+
   <div class="card">
     <div class="section-title">Resumen Tambo</div>
     <div id="resumen-tambo-contenido"></div>
@@ -1990,7 +1999,7 @@ function abrirFicha(rp) {
     var to=getToros().map(function(t){return '<option value="'+t.rp+'">'+t.nombre+'<\/option>';}).join('');
     var rb=['Pre\xf1ada','Vac\xeda','Repetici\xf3n','IATF','PG','Anestro','Hormonal'].map(function(r){return '<button onclick="fichaSelTacto(this)" data-val="'+r+'" style="padding:10px;border:1px solid #B0BCC8;border-radius:10px;font-size:14px;background:#EBF0F5;color:#3C3C43;cursor:pointer;">'+r+'<\/button>';}).join('');
     ['ficha-sheet-parto','ficha-sheet-aborto','ficha-sheet-celo','ficha-sheet-inseminar','ficha-sheet-tacto','ficha-sheet-secar','ficha-sheet-produccion','ficha-sheet-baja','ficha-sheet-tratamiento','ficha-sheet-sanidad'].forEach(function(sid){var el=document.getElementById(sid);if(el)el.remove();});
-    mkS('ficha-sheet-parto','Parto','<div style="'+g2+'"><div><label style="'+lb+'">Fecha<\/label><input id="fsp2-fecha" type="date" value="'+td+'" oninput="fichaCheck(\'ficha-sheet-parto\')" style="'+sa+'"><\/div><div><label style="'+lb+'">Tipo parto<\/label><select id="fsp2-tipo" style="'+si+'"><option>Normal<\/option><option>Distócico<\/option><option>Cesárea<\/option><\/select><\/div><\/div><div style="'+g2+'"><div><label style="'+lb+'">Sexo cría<\/label><select id="fsp2-sexo" style="'+si+'"><option value="">Seleccionar...<\/option><option>Macho<\/option><option>Hembra<\/option><\/select><\/div><div><label style="'+lb+'">RP cría (opcional)<\/label><input id="fsp2-rp" type="text" placeholder="RP..." style="'+si+'"><\/div><\/div><div style="'+g2+'"><div><label style="'+lb+'">Toro\/Embrión<\/label><input id="fsp2-toro" type="text" readonly style="'+si+';background:#D8E0E8;cursor:default;font-weight:600;"><\/div><\/div><div style="margin-bottom:8px;"><label style="'+lb+'">Observaciones<\/label><input id="fsp2-obs" type="text" placeholder="Opcional..." style="'+si+'"><\/div>');
+    mkS('ficha-sheet-parto','Parto','<div style="'+g2+'"><div><label style="'+lb+'">Fecha<\/label><input id="fsp2-fecha" type="date" value="'+td+'" oninput="fichaCheck(\'ficha-sheet-parto\')" style="'+sa+'"><\/div><div><label style="'+lb+'">Tipo parto<\/label><select id="fsp2-tipo" style="'+si+'"><option>Normal<\/option><option>Distócico<\/option><option>Cesárea<\/option><\/select><\/div><\/div><div style="'+g2+'"><div><label style="'+lb+'">Sexo cría<\/label><select id="fsp2-sexo" onchange="fichaCheck(\'ficha-sheet-parto\')" style="'+si+'"><option value="">Seleccionar...<\/option><option>Macho<\/option><option>Hembra<\/option><\/select><\/div><div><label style="'+lb+'">RP cría (opcional)<\/label><input id="fsp2-rp" type="text" placeholder="RP..." style="'+si+'"><\/div><\/div><div style="'+g2+'"><div><label style="'+lb+'">Toro\/Embrión<\/label><input id="fsp2-toro" type="text" readonly style="'+si+';background:#D8E0E8;cursor:default;font-weight:600;"><\/div><\/div><div style="margin-bottom:8px;"><label style="'+lb+'">Observaciones<\/label><input id="fsp2-obs" type="text" placeholder="Opcional..." style="'+si+'"><\/div>');
     mkS('ficha-sheet-aborto','Aborto','<div style="margin-bottom:12px;"><label style="'+lb+'">Fecha<\/label><input id="fsa2-fecha" type="date" value="'+td+'" oninput="fichaCheck(\'ficha-sheet-aborto\')" style="'+sa+'"><\/div><div style="background:#FFD6D6;border-radius:12px;padding:12px 14px;margin-bottom:12px;font-size:13px;color:#A0200A;">Esta acción marca la vaca como Vacía y registra el aborto.<\/div><div style="margin-bottom:8px;"><label style="'+lb+'">Observaciones<\/label><input id="fsa2-obs" type="text" placeholder="Opcional..." style="'+si+'"><\/div>');
     mkS('ficha-sheet-celo','Celo','<div style="'+g2+'"><div><label style="'+lb+'">Fecha<\/label><input id="fsc-fecha" type="date" value="'+td+'" oninput="fichaCheck(\'ficha-sheet-celo\')" style="'+sa+'"><\/div><div><label style="'+lb+'">Obs<\/label><input id="fsc-obs" type="text" placeholder="Opcional..." style="'+si+'"><\/div><\/div>');
     mkS('ficha-sheet-inseminar','Inseminar','<div style="'+g2+'"><div><label style="'+lb+'">Fecha<\/label><input id="fsi-fecha" type="date" value="'+td+'" oninput="fichaCheck(\'ficha-sheet-inseminar\')" style="'+sa+'"><\/div><div><label style="'+lb+'">Toro *<\/label><select id="fsi-toro" onchange="fichaCheck(\'ficha-sheet-inseminar\')" style="'+si+'"><option value="">Seleccionar...<\/option>'+to+'<\/select><\/div><\/div><div style="'+g2+'"><div><label style="'+lb+'">Tipo<\/label><select id="fsi-tipo" style="'+si+'"><option>IA<\/option><option>IATF<\/option><option>TE<\/option><option>Monta natural<\/option><\/select><\/div><div><label style="'+lb+'">Inseminador<\/label><input id="fsi-insem" type="text" placeholder="Opcional" style="'+si+'"><\/div><\/div>');
@@ -2677,7 +2686,11 @@ function goTo(screen, btn) {
   var SCREENS_SIN_NAV = ['config', 'reportes'];
   var esSinNav = SCREENS_SIN_NAV.indexOf(screen) >= 0;
 
-  if(screen==='reportes'){ setTimeout(function(){ renderResumenTambo(); }, 50); }
+  if(screen==='reportes'){
+    cargarCacheLeche();
+    cargarProduccionDesdeSheets();
+    setTimeout(function(){ renderResumenTambo(); renderReporteLecheApp(); }, 300);
+  }
   if(screen==='leche'){
     cargarCacheLeche();
     cargarProduccionDesdeSheets();
@@ -4384,11 +4397,18 @@ function renderLeche() {
   validarProduccion();
   validarCalidad();
 
-  // Historial últimos 7 días
+  // Historial del mes en curso
+  var meses = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  var mesActual = new Date().getMonth();
+  var anioActual = new Date().getFullYear();
+  var tituloHist = document.getElementById('l-historial-titulo');
+  if(tituloHist) tituloHist.textContent = meses[mesActual] + ' ' + anioActual;
   var hist = document.getElementById('l-historial');
   hist.innerHTML = '';
-  // Todos los registros ordenados por fecha descendente
+  // Solo registros del mes en curso, ordenados por fecha descendente
+  var mesStr = anioActual + '-' + String(mesActual+1).padStart(2,'0');
   var todos = produccionDiaria
+    .filter(function(r){ return r.fecha && r.fecha.substring(0,7) === mesStr; })
     .slice()
     .sort(function(a,b){ return b.fecha.localeCompare(a.fecha); });
 
@@ -4625,6 +4645,115 @@ async function guardarCalidad() {
 // ============================================================
 // REPORTE MENSUAL LECHE
 // ============================================================
+
+function renderReporteLecheApp() {
+  var sel = document.getElementById('reporte-leche-selector');
+  var cont = document.getElementById('reporte-leche-contenido');
+  if(!sel || !cont) return;
+
+  // Obtener meses disponibles de produccionDiaria
+  var mesesDisp = {};
+  produccionDiaria.forEach(function(r){
+    if(r.fecha) mesesDisp[r.fecha.substring(0,7)] = true;
+  });
+  var mesesArr = Object.keys(mesesDisp).sort().reverse();
+
+  if(mesesArr.length === 0) {
+    cont.innerHTML = '<div style="color:#8E8E93;font-size:14px;text-align:center;padding:12px;">Sin registros</div>';
+    return;
+  }
+
+  // Selector de mes
+  var mesSeleccionado = mesesArr[0]; // por defecto el más reciente
+  sel.innerHTML = '';
+  mesesArr.forEach(function(m) {
+    var parts = m.split('-');
+    var nombres = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+    var label = nombres[parseInt(parts[1])-1] + ' ' + parts[0];
+    var btn = document.createElement('button');
+    btn.textContent = label;
+    btn.setAttribute('data-mes', m);
+    btn.style.cssText = 'padding:6px 14px;border-radius:20px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;border:1.5px solid ' + (m===mesSeleccionado?'#1C1C1E':'#C8D0D8') + ';background:' + (m===mesSeleccionado?'#1C1C1E':'#fff') + ';color:' + (m===mesSeleccionado?'#fff':'#1C1C1E') + ';';
+    btn.onclick = function() {
+      sel.querySelectorAll('button').forEach(function(b){
+        b.style.background='#fff'; b.style.color='#1C1C1E'; b.style.borderColor='#C8D0D8';
+      });
+      btn.style.background='#1C1C1E'; btn.style.color='#fff'; btn.style.borderColor='#1C1C1E';
+      renderReporteMes(btn.getAttribute('data-mes'));
+    };
+    sel.appendChild(btn);
+  });
+
+  renderReporteMes(mesSeleccionado);
+}
+
+function renderReporteMes(mes) {
+  var cont = document.getElementById('reporte-leche-contenido');
+  if(!cont) return;
+
+  var dias = produccionDiaria
+    .filter(function(r){ return r.fecha && r.fecha.startsWith(mes); })
+    .sort(function(a,b){ return b.fecha.localeCompare(a.fecha); });
+
+  if(dias.length === 0) {
+    cont.innerHTML = '<div style="color:#8E8E93;font-size:14px;text-align:center;padding:12px;">Sin registros para este mes</div>';
+    return;
+  }
+
+  var totalMes = dias.reduce(function(s,r){return s+(r.total||0);},0);
+  var ucalacMes = dias.reduce(function(s,r){return s+(r.ucalac||0);},0);
+  var saputoMes = dias.reduce(function(s,r){return s+(r.saputo||0);},0);
+  var promDia = dias.length > 0 ? Math.round(totalMes/dias.length) : 0;
+
+  var html = '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:14px;">'
+    + '<div style="background:#EBF5FF;border-radius:10px;padding:10px;text-align:center;">'
+    + '<div style="font-size:18px;font-weight:800;color:#1060C0;">'+fmtNum(totalMes)+'</div>'
+    + '<div style="font-size:11px;color:#8E8E93;font-weight:600;">TOTAL lts</div></div>'
+    + '<div style="background:#F0FFF4;border-radius:10px;padding:10px;text-align:center;">'
+    + '<div style="font-size:18px;font-weight:800;color:#1C7C3C;">'+fmtNum(promDia)+'</div>'
+    + '<div style="font-size:11px;color:#8E8E93;font-weight:600;">PROM/DÍA</div></div>'
+    + '<div style="background:#F7F7F7;border-radius:10px;padding:10px;text-align:center;">'
+    + '<div style="font-size:18px;font-weight:800;color:#1C1C1E;">'+dias.length+'</div>'
+    + '<div style="font-size:11px;color:#8E8E93;font-weight:600;">DÍAS REG.</div></div>'
+    + '</div>';
+
+  // Detalle por empresa
+  if(ucalacMes > 0 || saputoMes > 0) {
+    html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;">';
+    if(ucalacMes > 0) html += '<div style="background:#EBF0F5;border-radius:10px;padding:8px 12px;">'
+      + '<div style="font-size:11px;color:#8E8E93;font-weight:600;margin-bottom:2px;">UCALAC SA</div>'
+      + '<div style="font-size:16px;font-weight:700;color:#1C1C1E;">'+fmtNum(ucalacMes)+' lts</div></div>';
+    if(saputoMes > 0) html += '<div style="background:#EBF0F5;border-radius:10px;padding:8px 12px;">'
+      + '<div style="font-size:11px;color:#8E8E93;font-weight:600;margin-bottom:2px;">SAPUTO</div>'
+      + '<div style="font-size:16px;font-weight:700;color:#1C1C1E;">'+fmtNum(saputoMes)+' lts</div></div>';
+    html += '</div>';
+  }
+
+  // Lista de días
+  html += '<div style="border-top:1px solid #E5E5EA;padding-top:10px;">';
+  dias.forEach(function(r) {
+    var esHoy = r.fecha === TODAY;
+    var dia = diaSemana(r.fecha);
+    html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid #F0F0F5;">'
+      + '<div>'
+      + '<div style="font-size:14px;font-weight:600;color:#1C1C1E;">'
+      + (dia?'<span style="font-size:11px;color:#8E8E93;margin-right:5px;text-transform:uppercase;">'+dia+'</span>':'')
+      + (esHoy?'Hoy':fmtFecha(r.fecha))+'</div>'
+      + '<div style="font-size:12px;color:#8E8E93;">'
+      + (r.ucalac>0?'Ucalac: '+fmtNum(r.ucalac):'')
+      + (r.ucalac>0&&r.saputo>0?' · ':'')
+      + (r.saputo>0?'Saputo: '+fmtNum(r.saputo):'')
+      + (r.vacas?' · '+r.vacas+' vacas':'')
+      + '</div>'
+      + '</div>'
+      + '<div style="font-size:18px;font-weight:800;color:#1060C0;">'+fmtNum(r.total||0)+'<span style="font-size:11px;font-weight:400;color:#8E8E93;margin-left:2px;">lts</span></div>'
+      + '</div>';
+  });
+  html += '</div>';
+
+  cont.innerHTML = html;
+}
+
 function exportarReporteMensual() {
   // Pedir mes a exportar
   var mes = prompt('¿Qué mes exportar? (YYYY-MM)', TODAY.substring(0,7));
@@ -5053,9 +5182,10 @@ function cargarProduccionDesdeSheets() {
       });
       produccionDiaria = Object.values(porFecha);
       guardarCacheLeche();
-      // Refrescar si estamos en leche
+      // Refrescar si estamos en leche o reportes
       var active = document.querySelector('.screen.active');
       if(active && active.id === 'screen-leche') renderLeche();
+      if(active && active.id === 'screen-reportes') renderReporteLecheApp();
     })
     .catch(function(e){ console.log('Error cargando producción:', e); });
 
