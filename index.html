@@ -957,7 +957,18 @@ var BADGE = {
 
 var rodeo = [];
 
-var toros = [{rp:3001,nombre:'Toro Alfa'},{rp:3002,nombre:'Toro Beta'},{rp:3003,nombre:'Toro Gamma'}];
+var toros = []; // lista dinámica, se construye desde el padrón
+function getToros() {
+  var nombres = {};
+  rodeo.forEach(function(a){
+    if(a.ultimaInsemToro && a.ultimaInsemToro.trim()) {
+      nombres[a.ultimaInsemToro.trim()] = true;
+    }
+  });
+  return Object.keys(nombres).sort().map(function(n, i){
+    return {rp: 9000+i, nombre: n};
+  });
+}
 
 var historialPartos = {};
 
@@ -1949,7 +1960,7 @@ function abrirFicha(rp) {
         item.style.opacity='0.35';
         item.style.cursor='default';
       } else {
-        item.onclick=(function(sid,_a){return function(){cerrarFichaFab();var s=document.getElementById(sid);if(s){var _ov=document.getElementById('ficha-fab-overlay');_ov.style.display='block';_ov.style.zIndex='202';_ov.onclick=function(){cerrarFichaSheet(sid);};s.style.display='block';lockScroll();if(sid==='ficha-sheet-parto'){setTimeout(function(){var toroSel=document.getElementById('fsp2-toro');if(toroSel&&_a.ultimaInsemToro){var opt=Array.from(toroSel.options).find(function(o){return o.text===_a.ultimaInsemToro||o.value==_a.ultimaInsemToro;});if(opt){toroSel.value=opt.value;toroSel.style.background='#FFF8E8';toroSel.style.borderColor='#E8A020';}}var rpCriaEl=document.getElementById('fsp2-rp');if(rpCriaEl&&!rpCriaEl.value){rpCriaEl.placeholder='Sugerido: '+nextRP();}},50);}}};})(op.s,a);
+        item.onclick=(function(sid,_a){return function(){cerrarFichaFab();var s=document.getElementById(sid);if(s){var _ov=document.getElementById('ficha-fab-overlay');_ov.style.display='block';_ov.style.zIndex='202';_ov.onclick=function(){cerrarFichaSheet(sid);};s.style.display='block';lockScroll();if(sid==='ficha-sheet-parto'){setTimeout(function(){var toroSel=document.getElementById('fsp2-toro');if(toroSel&&_a.ultimaInsemToro){var opt=Array.from(toroSel.options).find(function(o){return o.text.trim()===_a.ultimaInsemToro.trim();});if(opt){toroSel.value=opt.value;toroSel.style.background='#FFF8E8';toroSel.style.borderColor='#E8A020';}}var rpCriaEl=document.getElementById('fsp2-rp');if(rpCriaEl&&!rpCriaEl.value){rpCriaEl.placeholder='Sugerido: '+nextRP();}},50);}}};})(op.s,a);
       }
       fabMenu.appendChild(item);
     });
@@ -1976,7 +1987,7 @@ function abrirFicha(rp) {
       document.body.appendChild(s);
       s.querySelectorAll('input[type="date"]').forEach(function(el){ el.max = td; });
     }
-    var to=toros.map(function(t){return '<option value="'+t.rp+'">'+t.nombre+'<\/option>';}).join('');
+    var to=getToros().map(function(t){return '<option value="'+t.rp+'">'+t.nombre+'<\/option>';}).join('');
     var rb=['Pre\xf1ada','Vac\xeda','Repetici\xf3n','IATF','PG','Anestro','Hormonal'].map(function(r){return '<button onclick="fichaSelTacto(this)" data-val="'+r+'" style="padding:10px;border:1px solid #B0BCC8;border-radius:10px;font-size:14px;background:#EBF0F5;color:#3C3C43;cursor:pointer;">'+r+'<\/button>';}).join('');
     ['ficha-sheet-parto','ficha-sheet-aborto','ficha-sheet-celo','ficha-sheet-inseminar','ficha-sheet-tacto','ficha-sheet-secar','ficha-sheet-produccion','ficha-sheet-baja','ficha-sheet-tratamiento','ficha-sheet-sanidad'].forEach(function(sid){var el=document.getElementById(sid);if(el)el.remove();});
     mkS('ficha-sheet-parto','Parto','<div style="'+g2+'"><div><label style="'+lb+'">Fecha<\/label><input id="fsp2-fecha" type="date" value="'+td+'" oninput="fichaCheck(\'ficha-sheet-parto\')" style="'+sa+'"><\/div><div><label style="'+lb+'">Tipo parto<\/label><select id="fsp2-tipo" style="'+si+'"><option>Normal<\/option><option>Distócico<\/option><option>Cesárea<\/option><\/select><\/div><\/div><div style="'+g2+'"><div><label style="'+lb+'">Sexo cría<\/label><select id="fsp2-sexo" style="'+si+'"><option value="">Seleccionar...<\/option><option>Macho<\/option><option>Hembra<\/option><\/select><\/div><div><label style="'+lb+'">RP cría (opcional)<\/label><input id="fsp2-rp" type="text" placeholder="RP..." style="'+si+'"><\/div><\/div><div style="'+g2+'"><div><label style="'+lb+'">Toro\/Embrión<\/label><select id="fsp2-toro" onchange="fichaCheck(\'ficha-sheet-parto\')" style="'+si+'"><option value="">Seleccionar...<\/option>'+to+'<\/select><\/div><\/div><div style="margin-bottom:8px;"><label style="'+lb+'">Observaciones<\/label><input id="fsp2-obs" type="text" placeholder="Opcional..." style="'+si+'"><\/div>');
@@ -2379,7 +2390,7 @@ function poblarSelects() {
   ['p-toro','i-toro'].forEach(function(id){
     var sel=document.getElementById(id); if(!sel) return;
     sel.innerHTML='<option value="">Seleccionar...</option>';
-    toros.forEach(function(t){sel.innerHTML+='<option value="'+t.rp+'">'+t.nombre+'</option>';});
+    getToros().forEach(function(t){sel.innerHTML+='<option value="'+t.rp+'">'+t.nombre+'</option>';});
   });
 }
 
@@ -5325,7 +5336,10 @@ async function fichaGuardar(sheetId, rp) {
     var fecha=document.getElementById('fsi-fecha').value||hoy;
     a.estadoRepro='Inseminada'; a.ultimaInsem=fecha; a.nroServicios=(a.nroServicios||0)+1;
     guardarCacheLocal();
-    await enviarASheets('Reg_Inseminaciones',[generarID('Ins',rp),fecha,rp,a.nombre,document.getElementById('fsi-toro').value,document.getElementById('fsi-tipo').value,document.getElementById('fsi-insem').value||'','']);
+    var fsiToroEl=document.getElementById('fsi-toro');
+    var fsiToroNombre=fsiToroEl.options[fsiToroEl.selectedIndex]?fsiToroEl.options[fsiToroEl.selectedIndex].text:fsiToroEl.value;
+    a.ultimaInsemToro=fsiToroNombre;
+    await enviarASheets('Reg_Inseminaciones',[generarID('Ins',rp),fecha,rp,a.nombre,fsiToroNombre,document.getElementById('fsi-tipo').value,document.getElementById('fsi-insem').value||'','']);
     showToast('Inseminación registrada ✓'); renderDashboard(); renderRodeo();
   } else if(sheetId==='ficha-sheet-tacto') {
     var fecha=document.getElementById('fst-fecha').value||hoy;
