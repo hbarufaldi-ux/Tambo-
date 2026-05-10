@@ -2345,33 +2345,57 @@ function exportar(tipo) {
 }
 
 // ---- SELECTS ----
+// Flag: selects desactualizados — se pueblan al abrir formulario, no al login
+var _selectsSucios = true;
+function poblarSelectsSiSucios() {
+  if(!_selectsSucios) return;
+  poblarSelects();
+  _selectsSucios = false;
+}
+
 function poblarSelects() {
-  var hembras=rodeo.filter(function(a){return a.sexo==='H'&&a.cat!=='Baja';});
-  var enOrdene=hembras.filter(function(a){return a.estadoProd==='En Ordeñe';});
+  // Helper: llena un <select> con DocumentFragment — O(n) en lugar de O(n²) con innerHTML+=
+  function _llenar(sel, items, labelFn) {
+    if(!sel) return;
+    var frag = document.createDocumentFragment();
+    var def = document.createElement('option');
+    def.value = ''; def.textContent = 'Seleccionar...';
+    frag.appendChild(def);
+    items.forEach(function(v) {
+      var o = document.createElement('option');
+      o.value = v.rp || v; o.textContent = labelFn(v);
+      frag.appendChild(o);
+    });
+    sel.innerHTML = '';
+    sel.appendChild(frag);
+  }
 
-  var prSel=document.getElementById('pr-animal');
-  if(prSel){prSel.innerHTML='<option value="">Seleccionar...</option>';enOrdene.forEach(function(v){prSel.innerHTML+='<option value="'+v.rp+'">RP '+v.rp+'</option>';});}
+  var hembras    = rodeo.filter(function(a){return a.sexo==='H'&&a.cat!=='Baja';});
+  var enOrdene   = hembras.filter(function(a){return a.estadoProd==='En Ordeñe';});
+  var insemAptas = hembras.filter(function(a){return a.estadoProd!=='Seca'&&a.estadoRepro!=='Preñada';});
+  var prenadas   = hembras.filter(function(v){return v.estadoRepro==='Preñada'||v.estadoProd==='Seca';});
+  var soloPreni  = hembras.filter(function(v){return v.estadoRepro==='Preñada';});
 
-  var insemAptas=hembras.filter(function(a){return a.estadoProd!=='Seca' && a.estadoRepro!=='Preñada';});
-  var iSel=document.getElementById('i-animal');
-  if(iSel){iSel.innerHTML='<option value="">Seleccionar...</option>';insemAptas.forEach(function(v){iSel.innerHTML+='<option value="'+v.rp+'">RP '+v.rp+' ('+v.estadoRepro+')</option>';});}
+  _llenar(document.getElementById('pr-animal'), enOrdene,   function(v){return 'RP '+v.rp;});
+  _llenar(document.getElementById('i-animal'),  insemAptas, function(v){return 'RP '+v.rp+' ('+v.estadoRepro+')';});
+  _llenar(document.getElementById('p-madre'),   prenadas,   function(v){return 'RP '+v.rp+' ('+v.estadoProd+')';});
+  _llenar(document.getElementById('ab-animal'), soloPreni,  function(v){return 'RP '+v.rp+' ('+v.estadoRepro+')';});
 
   ['c-animal','s-animal','b-animal','t-animal'].forEach(function(id){
-    var sel=document.getElementById(id); if(!sel) return;
-    sel.innerHTML='<option value="">Seleccionar...</option>';
-    hembras.forEach(function(v){sel.innerHTML+='<option value="'+v.rp+'">RP '+v.rp+' ('+v.estadoRepro+')</option>';});
+    _llenar(document.getElementById(id), hembras, function(v){return 'RP '+v.rp+' ('+v.estadoRepro+')';});
   });
 
-  var pSel=document.getElementById('p-madre');
-  if(pSel){pSel.innerHTML='<option value="">Seleccionar...</option>';hembras.filter(function(v){return v.estadoRepro==='Preñada'||v.estadoProd==='Seca';}).forEach(function(v){pSel.innerHTML+='<option value="'+v.rp+'">RP '+v.rp+' ('+v.estadoProd+')</option>';});}
-
-  var abSel=document.getElementById('ab-animal');
-  if(abSel){abSel.innerHTML='<option value="">Seleccionar...</option>';hembras.filter(function(v){return v.estadoRepro==='Preñada';}).forEach(function(v){abSel.innerHTML+='<option value="'+v.rp+'">RP '+v.rp+' ('+v.estadoRepro+')</option>';});}
-
+  var toros = getToros();
   ['p-toro','i-toro'].forEach(function(id){
-    var sel=document.getElementById(id); if(!sel) return;
-    sel.innerHTML='<option value="">Seleccionar...</option>';
-    getToros().forEach(function(t){sel.innerHTML+='<option value="'+t.rp+'">'+t.nombre+'</option>';});
+    var sel = document.getElementById(id); if(!sel) return;
+    var frag = document.createDocumentFragment();
+    var def = document.createElement('option'); def.value=''; def.textContent='Seleccionar...';
+    frag.appendChild(def);
+    toros.forEach(function(t){
+      var o = document.createElement('option'); o.value=t.rp; o.textContent=t.nombre;
+      frag.appendChild(o);
+    });
+    sel.innerHTML = ''; sel.appendChild(frag);
   });
 }
 
@@ -2585,7 +2609,7 @@ async function guardarParto() {
 
   var fila=[generarID('Par',madre),fecha,madre,a.nombre,nombreToro,sexoCria,rpCria,nombreCria,document.getElementById('p-tipo').value,getRadio('viva'),getRadio('mellizo'),document.getElementById('p-obs').value||'',getRadio('placenta'),catCria];
   var ok=await enviarASheets('Reg_Partos',fila);
-  if(ok){agregarReciente('parto', parseInt(madre), 'Cría RP '+rpCria+' · '+getRadio('sexo'));poblarSelects();renderDashboard();renderRodeo();renderGuachera();document.getElementById('p-rp-cria').value=nextRP();document.getElementById('parto-ok-msg').textContent=a.nombre+' pasó a En Ordeñe. Cría RP '+rpCria+' en guachera.';document.getElementById('parto-form').style.display='none';document.getElementById('parto-ok').style.display='block';}
+  if(ok){agregarReciente('parto', parseInt(madre), 'Cría RP '+rpCria+' · '+getRadio('sexo'));poblarSelects(); _selectsSucios=false; renderDashboard();renderRodeo();renderGuachera();document.getElementById('p-rp-cria').value=nextRP();document.getElementById('parto-ok-msg').textContent=a.nombre+' pasó a En Ordeñe. Cría RP '+rpCria+' en guachera.';document.getElementById('parto-form').style.display='none';document.getElementById('parto-ok').style.display='block';}
 }
 
 async function guardarInsem() {
@@ -2597,7 +2621,7 @@ async function guardarInsem() {
   a.estadoRepro='Inseminada'; a.ultimaInsem=fecha; a.ultimaInsemToro=nombreToro; a.nroServicios=(a.nroServicios||0)+1; a.partoEstimado=null;
   var fila=[generarID('Ins',animal),fecha,animal,a.nombre,nombreToro,document.getElementById('i-tipo').value,document.getElementById('i-inseminador').value,getRadio('celo'),a.nroServicios,document.getElementById('i-obs').value||''];
   var ok=await enviarASheets('Reg_Inseminaciones',fila);
-  if(ok){agregarReciente('insem', animal, nombreToro+' — '+document.getElementById('i-tipo').value);poblarSelects();renderDashboard();document.getElementById('insem-form').style.display='none';document.getElementById('insem-ok').style.display='block';}
+  if(ok){agregarReciente('insem', animal, nombreToro+' — '+document.getElementById('i-tipo').value);poblarSelects(); _selectsSucios=false; renderDashboard();document.getElementById('insem-form').style.display='none';document.getElementById('insem-ok').style.display='block';}
 }
 
 async function guardarCelo() {
@@ -2624,7 +2648,7 @@ async function guardarTacto() {
   var metodo=resultado==='Vacía'?document.getElementById('t-metodo-v').value:document.getElementById('t-metodo').value;
   var fila=[generarID('Tac',animal),fecha,animal,a.nombre,resultado,document.getElementById('t-dias').value||'',document.getElementById('t-vet').value,metodo,document.getElementById('t-obs').value||'',a.partoEstimado||''];
   var ok=await enviarASheets('Reg_Tactos',fila,{resultado:resultado});
-  if(ok){poblarSelects();renderDashboard();renderRodeo();var msgTacto = resultado==='Preñada' ? a.nombre+' confirmada preñada. Parto est: '+fmtFecha(a.partoEstimado)+'.' : (eraPreniada ? a.nombre+' pasó a Vacía — aborto registrado. Ya puede ser inseminada.' : a.nombre+' pasó a Vacía.');
+  if(ok){poblarSelects(); _selectsSucios=false; renderDashboard();renderRodeo();var msgTacto = resultado==='Preñada' ? a.nombre+' confirmada preñada. Parto est: '+fmtFecha(a.partoEstimado)+'.' : (eraPreniada ? a.nombre+' pasó a Vacía — aborto registrado. Ya puede ser inseminada.' : a.nombre+' pasó a Vacía.');
 document.getElementById('tacto-ok-msg').textContent=msgTacto;document.getElementById('tacto-form').style.display='none';document.getElementById('tacto-ok').style.display='block';}
 }
 
@@ -2635,7 +2659,7 @@ async function guardarSecado() {
   a.estadoProd='Seca'; if(a.cat==='Vaquillona') a.cat='Vaca';
   var fila=[generarID('Sec',animal),document.getElementById('s-fecha').value,animal,a.nombre,estadoAnt,document.getElementById('s-obs').value||''];
   var ok=await enviarASheets('Reg_Secados',fila);
-  if(ok){poblarSelects();renderDashboard();renderRodeo();document.getElementById('secado-form').style.display='none';document.getElementById('secado-ok').style.display='block';}
+  if(ok){poblarSelects(); _selectsSucios=false; renderDashboard();renderRodeo();document.getElementById('secado-form').style.display='none';document.getElementById('secado-ok').style.display='block';}
 }
 
 async function guardarBaja() {
@@ -2644,7 +2668,7 @@ async function guardarBaja() {
   var a=getAnimal(animal); a.cat='Baja';
   var fila=[generarID('Baj',animal),document.getElementById('b-fecha').value,animal,a.nombre,document.getElementById('b-motivo').value,document.getElementById('b-destino').value||'',document.getElementById('b-peso').value||'',document.getElementById('b-precio').value||'',document.getElementById('b-obs').value||''];
   var ok=await enviarASheets('Reg_Bajas',fila);
-  if(ok){poblarSelects();renderDashboard();renderRodeo();document.getElementById('baja-form').style.display='none';document.getElementById('baja-ok').style.display='block';}
+  if(ok){poblarSelects(); _selectsSucios=false; renderDashboard();renderRodeo();document.getElementById('baja-form').style.display='none';document.getElementById('baja-ok').style.display='block';}
 }
 
 // ---- NAV ----
@@ -2751,11 +2775,12 @@ function goTo(screen, btn) {
   });
 
   if(screen==='guachera') renderGuachera();
-  if(screen==='celo') renderRecientes('celo');
-  if(screen==='inseminacion') renderRecientes('insem');
-  if(screen==='parto') renderRecientes('parto');
-  if(screen==='produccion') renderRecientes('prod');
+  if(screen==='celo')        { renderRecientes('celo');  poblarSelectsSiSucios(); }
+  if(screen==='inseminacion'){ renderRecientes('insem'); poblarSelectsSiSucios(); }
+  if(screen==='parto')       { renderRecientes('parto'); poblarSelectsSiSucios(); }
+  if(screen==='produccion')  { renderRecientes('prod');  poblarSelectsSiSucios(); }
   if(screen==='recria') renderRecria();
+  if(['tacto','secado','baja','aborto'].indexOf(screen)>=0) poblarSelectsSiSucios();
   if(screen==='dashboard') renderDashboard();
   if(screen==='config') renderConfig();
   if(screen==='leche') { setTimeout(function(){ renderLeche(); }, 100); }
@@ -2794,7 +2819,7 @@ async function guardarAborto() {
   var fila = [generarID('Ab',animal), fecha, animal, a.rp, estadoAnt, causa, obs];
   var ok = await enviarASheets('Reg_Abortos', fila);
   if(ok){
-    poblarSelects(); renderDashboard(); renderRodeo();
+    poblarSelects(); _selectsSucios=false; renderDashboard(); renderRodeo();
     document.getElementById('aborto-ok-msg').textContent = 'RP '+a.rp+' pasó a Vacía. Causa: '+causa;
     document.getElementById('aborto-form').style.display='none';
     document.getElementById('aborto-ok').style.display='block';
@@ -3201,7 +3226,7 @@ function confirmarImportDIRSA() {
       rodeo.push(a);
     });
 
-    actualizarCats(); poblarSelects(); renderDashboard();
+    actualizarCats(); _selectsSucios = true; renderDashboard();
     progress.style.width = '100%';
 
     // Ocultar cards
@@ -3461,7 +3486,7 @@ function _entrarApp() {
     // El overlay ya está visible. Dar 1 frame al browser para pintarlo
     // ANTES del render pesado, así el usuario ve la animación y no el freeze.
     setTimeout(function() {
-      actualizarCats(); poblarSelects(); renderDashboard();
+      actualizarCats(); _selectsSucios = true; renderDashboard();
       _lovProgreso(100); _lovCheck();
       var tA2 = setTimeout(function(){
         _lovOcultar(function(){
@@ -3607,7 +3632,7 @@ function cargarPadronDesdeSheets(callback) {
   // 1. Intentar caché primero
   var desdeCache = cargarCacheLocal();
   if(desdeCache) {
-    actualizarCats(); poblarSelects(); renderDashboard();
+    actualizarCats(); _selectsSucios = true; renderDashboard();
     setSyncStatus('● '+(usuarioActual&&usuarioActual.nombre?usuarioActual.nombre:rodeo.length+' animales'));
     if(callback) callback(true);
     // 2. Refrescar en background si TTL venció
@@ -3976,7 +4001,7 @@ function init() {
   actualizarCats();
   poblarGuachera();
   poblarRecria();
-  poblarSelects();
+  _selectsSucios = true;
   document.getElementById('p-rp-cria').value=nextRP();
   renderDashboard();
   renderRodeo();
