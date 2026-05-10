@@ -4528,6 +4528,8 @@ async function guardarEdicionCalidad() {
   showToast('Calidad actualizada ✓');
   renderHistorialCalidad();
 }
+
+function validarProduccion() {
   var btn = document.getElementById('btn-guardar-prod');
   if(!btn) return;
   // Buscar cualquier input de litros con valor
