@@ -703,6 +703,12 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 <div id="l-historial"></div>
 </div>
 
+<!-- HISTORIAL CALIDAD -->
+<div class="card" style="margin-top:8px;">
+<div class="section-title">Calidad de leche</div>
+<div id="l-historial-calidad"></div>
+</div>
+
 <!-- FAB Leche -->
 <div id="leche-fab-btn" style="position:fixed;bottom:24px;right:24px;z-index:300;">
   <button onclick="toggleLecheFab()" id="leche-fab-toggle" style="width:68px;height:68px;border-radius:50%;background:#1C1C1E;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 16px rgba(0,0,0,0.3);transition:transform 0.2s;opacity:0.5;">
@@ -934,6 +940,13 @@ var CONFIG_DEFAULT = {
   diasAlertaSecado: 10,
   // Padrón
   diasR4: 7,
+  // Calidad de leche
+  calUfcAlerta: 30,
+  calUfcMal: 50,
+  calCsAlerta: 250,
+  calCsMal: 400,
+  calGrasaMin: 3.5,
+  calProtMin: 3.0,
 };
 
 var CONFIG = Object.assign({}, CONFIG_DEFAULT);
@@ -1526,7 +1539,8 @@ function ajustarMarginPadron(){
 function renderConfig() {
   var fields = ['nombreTambo','superficie','ubicacion','unidad','litrosR1',
     'umbralBajaProduccion','litrosVentaRechazo','diasEsperaPosparto',
-    'umbralServicios','diasAntesPartoSecar','diasAlertaSecado'];
+    'umbralServicios','diasAntesPartoSecar','diasAlertaSecado',
+    'calUfcAlerta','calUfcMal','calCsAlerta','calCsMal','calGrasaMin','calProtMin'];
   fields.forEach(function(k) {
     var el = document.getElementById('cfg-' + k);
     if (el) el.value = CONFIG[k] !== undefined ? CONFIG[k] : '';
@@ -1570,6 +1584,12 @@ function guardarConfigUI() {
   CONFIG.umbralServicios    = parseInt(document.getElementById('cfg-umbralServicios').value) || CONFIG_DEFAULT.umbralServicios;
   CONFIG.diasAntesPartoSecar= parseInt(document.getElementById('cfg-diasAntesPartoSecar').value) || CONFIG_DEFAULT.diasAntesPartoSecar;
   CONFIG.diasAlertaSecado   = parseInt(document.getElementById('cfg-diasAlertaSecado').value) || CONFIG_DEFAULT.diasAlertaSecado;
+  CONFIG.calUfcAlerta       = parseFloat(document.getElementById('cfg-calUfcAlerta').value) || CONFIG_DEFAULT.calUfcAlerta;
+  CONFIG.calUfcMal          = parseFloat(document.getElementById('cfg-calUfcMal').value) || CONFIG_DEFAULT.calUfcMal;
+  CONFIG.calCsAlerta        = parseFloat(document.getElementById('cfg-calCsAlerta').value) || CONFIG_DEFAULT.calCsAlerta;
+  CONFIG.calCsMal           = parseFloat(document.getElementById('cfg-calCsMal').value) || CONFIG_DEFAULT.calCsMal;
+  CONFIG.calGrasaMin        = parseFloat(document.getElementById('cfg-calGrasaMin').value) || CONFIG_DEFAULT.calGrasaMin;
+  CONFIG.calProtMin         = parseFloat(document.getElementById('cfg-calProtMin').value) || CONFIG_DEFAULT.calProtMin;
   guardarConfig();
   // Actualizar nombre en topbar
   var el = document.getElementById('topbar-nombre');
@@ -2564,6 +2584,19 @@ async function enviarASheets(hoja, fila, datosExtra) {
     var nPend = leerPendientes().length;
     setSyncStatus('⚠ Sin red ('+nPend+' pend.)');
     showSaving(false); showToast('Sin conexión — guardado localmente'); return true;
+  }
+}
+
+// Actualiza una fila existente en el Sheet por ID (para edición de producción y calidad)
+async function enviarUpdateASheets(hoja, id, fila) {
+  showSaving(true); setSyncStatus('⟳ Guardando...');
+  try {
+    var payload = {accion:'update', hoja:hoja, id:id, fila:fila};
+    await fetch(SCRIPT_URL, {method:'POST', mode:'no-cors', headers:{'Content-Type':'text/plain'}, body:JSON.stringify(payload)});
+    setSyncStatus('● '+(usuarioActual&&usuarioActual.nombre?usuarioActual.nombre:rodeo.length+' animales'));
+    showSaving(false); return true;
+  } catch(e) {
+    showSaving(false); showToast('Sin conexión — guardado localmente'); return false;
   }
 }
 
@@ -4369,10 +4402,132 @@ function renderLeche() {
       + '</div>';
     hist.appendChild(row);
   });
+
+  renderHistorialCalidad();
 }
 
+function renderHistorialCalidad() {
+  var cont = document.getElementById('l-historial-calidad');
+  if(!cont) return;
+  var sorted = calidadLeche.slice().sort(function(a,b){ return b.fecha.localeCompare(a.fecha); });
+  if(sorted.length === 0) {
+    cont.innerHTML = '<div style="color:#8E8E93;font-size:14px;text-align:center;padding:8px 0;">Sin registros</div>';
+    return;
+  }
+  cont.innerHTML = '';
+  sorted.forEach(function(r) {
+    var ufc = r.ufc||0; var cs = r.cs||0;
+    var ufcColor  = ufc >= (CONFIG.calUfcMal||50)   ? '#A32D2D' : ufc >= (CONFIG.calUfcAlerta||30)  ? '#B07000' : '#1C7C3C';
+    var csColor   = cs  >= (CONFIG.calCsMal||400)    ? '#A32D2D' : cs  >= (CONFIG.calCsAlerta||250)  ? '#B07000' : '#1C7C3C';
+    var grasaColor = (r.grasa||0)    < (CONFIG.calGrasaMin||3.5) ? '#A32D2D' : '#1C7C3C';
+    var protColor  = (r.proteina||0) < (CONFIG.calProtMin||3.0)  ? '#A32D2D' : '#1C7C3C';
+    var badgeBg    = r.empresa === 'Ucalac SA' ? '#D6EAFF' : '#D1F2E0';
+    var badgeColor = r.empresa === 'Ucalac SA' ? '#0A4FA6' : '#0A5C2A';
+    var row = document.createElement('div');
+    row.style.cssText = 'display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid #C8D0D8;cursor:pointer;';
+    row.onclick = (function(reg){ return function(){ editarCalidad(reg); }; })(r);
+    row.innerHTML = '<div style="flex:1;">'
+      + '<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">'
+      + '<span style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:20px;background:'+badgeBg+';color:'+badgeColor+';">'+r.empresa+'</span>'
+      + '<span style="font-size:13px;color:#8E8E93;">'+fmtFecha(r.fecha)+'</span>'
+      + '</div>'
+      + '<div style="display:flex;gap:10px;flex-wrap:wrap;font-size:12px;font-weight:600;">'
+      + '<span style="color:'+ufcColor+';">UFC: '+ufc+'</span>'
+      + '<span style="color:'+csColor+';">CS: '+cs+'</span>'
+      + '<span style="color:'+grasaColor+';">G: '+(r.grasa||0)+'%</span>'
+      + '<span style="color:'+protColor+';">P: '+(r.proteina||0)+'%</span>'
+      + '</div>'
+      + (r.obs ? '<div style="font-size:12px;color:#8E8E93;margin-top:2px;">'+r.obs+'</div>' : '')
+      + '</div>'
+      + '<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M9 18l6-6-6-6" stroke="#B0BCC8" stroke-width="2" stroke-linecap="round"/></svg>';
+    cont.appendChild(row);
+  });
+}
 
-function validarProduccion() {
+function editarCalidad(r) {
+  var old = document.getElementById('cal-edit-sheet'); if(old) old.remove();
+  var oldOv = document.getElementById('cal-edit-overlay'); if(oldOv) oldOv.remove();
+
+  var ov = document.createElement('div');
+  ov.id = 'cal-edit-overlay';
+  ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.80);z-index:400;';
+  ov.onclick = function(){ cerrarEditCalidad(); };
+  lockScroll(); document.body.appendChild(ov);
+
+  var inp = 'width:100%;padding:12px 14px;border:1px solid #D0D5DC;border-radius:12px;font-size:15px;background:#EBF0F5;box-sizing:border-box;';
+  var lbl = 'display:block;font-size:12px;font-weight:600;color:#3C3C43;margin-bottom:5px;';
+  var g2  = 'display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;';
+
+  var sheet = document.createElement('div');
+  sheet.id = 'cal-edit-sheet';
+  sheet.setAttribute('data-id', r.id || '');
+  sheet.setAttribute('data-empresa-orig', r.empresa || '');
+  sheet.setAttribute('data-fecha-orig', r.fecha || '');
+  sheet.style.cssText = 'position:fixed;bottom:0;left:0;right:0;z-index:401;background:#fff;border-radius:20px 20px 0 0;max-height:92vh;display:flex;flex-direction:column;';
+  sheet.innerHTML = '<div style="width:36px;height:4px;background:#C7CDD6;border-radius:2px;margin:12px auto 0;flex-shrink:0;"></div>'
+    + '<div style="font-size:17px;font-weight:700;color:#1C1C1E;padding:14px 20px 0;flex-shrink:0;">Editar calidad · '+r.empresa+'</div>'
+    + '<div style="overflow-y:auto;padding:14px 20px 0;flex:1;">'
+    + '<div style="'+g2+'">'
+    + '<div><label style="'+lbl+'">Fecha</label><input type="date" id="ced-fecha" value="'+r.fecha+'" style="'+inp+'"></div>'
+    + '<div><label style="'+lbl+'">Empresa</label><select id="ced-empresa" style="'+inp+'">'
+    + '<option'+(r.empresa==='Ucalac SA'?' selected':'')+'>Ucalac SA</option>'
+    + '<option'+(r.empresa==='Saputo'?' selected':'')+'>Saputo</option>'
+    + '</select></div>'
+    + '</div>'
+    + '<div style="'+g2+'">'
+    + '<div><label style="'+lbl+'">UFC (miles)</label><input type="number" id="ced-ufc" value="'+r.ufc+'" inputmode="decimal" style="'+inp+'"></div>'
+    + '<div><label style="'+lbl+'">Células somáticas</label><input type="number" id="ced-cs" value="'+r.cs+'" inputmode="decimal" style="'+inp+'"></div>'
+    + '</div>'
+    + '<div style="'+g2+'">'
+    + '<div><label style="'+lbl+'">Grasa %</label><input type="number" id="ced-grasa" value="'+r.grasa+'" inputmode="decimal" step="0.01" style="'+inp+'"></div>'
+    + '<div><label style="'+lbl+'">Proteína %</label><input type="number" id="ced-prot" value="'+r.proteina+'" inputmode="decimal" step="0.01" style="'+inp+'"></div>'
+    + '</div>'
+    + '<div style="margin-bottom:4px;"><label style="'+lbl+'">Observaciones</label>'
+    + '<textarea id="ced-obs" rows="2" placeholder="Opcional..." style="width:100%;padding:12px 14px;border:1px solid #D0D5DC;border-radius:12px;font-size:15px;background:#EBF0F5;resize:none;box-sizing:border-box;">'+((r.obs)||'')+'</textarea>'
+    + '</div></div>'
+    + '<div style="display:flex;gap:10px;padding:14px 20px 16px;border-top:0.5px solid #E5E5EA;flex-shrink:0;">'
+    + '<button onclick="guardarEdicionCalidad()" style="flex:1;padding:15px;background:#1C1C1E;color:#fff;border:none;border-radius:14px;font-size:16px;font-weight:700;cursor:pointer;">Guardar</button>'
+    + '<button onclick="cerrarEditCalidad()" style="flex:1;padding:15px;background:none;color:#1C1C1E;border:1.5px solid #1C1C1E;border-radius:14px;font-size:16px;font-weight:600;cursor:pointer;">Cancelar</button>'
+    + '</div>';
+  document.body.appendChild(sheet);
+}
+
+function cerrarEditCalidad() {
+  var s = document.getElementById('cal-edit-sheet'); if(s) s.remove();
+  var o = document.getElementById('cal-edit-overlay'); if(o) o.remove();
+  unlockScroll();
+}
+
+async function guardarEdicionCalidad() {
+  var sheet = document.getElementById('cal-edit-sheet');
+  if(!sheet) return;
+  var id          = sheet.getAttribute('data-id');
+  var empresaOrig = sheet.getAttribute('data-empresa-orig');
+  var fechaOrig   = sheet.getAttribute('data-fecha-orig');
+  var fecha    = document.getElementById('ced-fecha').value || fechaOrig;
+  var empresa  = document.getElementById('ced-empresa').value;
+  var ufc      = parseFloat(document.getElementById('ced-ufc').value) || 0;
+  var cs       = parseFloat(document.getElementById('ced-cs').value) || 0;
+  var grasa    = parseFloat(document.getElementById('ced-grasa').value) || 0;
+  var proteina = parseFloat(document.getElementById('ced-prot').value) || 0;
+  var obs      = document.getElementById('ced-obs').value || '';
+
+  // Actualizar caché local
+  var idx = calidadLeche.findIndex(function(r){ return r.id === id || (r.fecha === fechaOrig && r.empresa === empresaOrig); });
+  var reg = {id:id, fecha:fecha, empresa:empresa, ufc:ufc, cs:cs, grasa:grasa, proteina:proteina, obs:obs};
+  if(idx >= 0) calidadLeche[idx] = reg;
+  guardarCacheLeche();
+
+  // Sincronizar con Sheet
+  if(id) {
+    var fila = [id, fecha, empresa, ufc, cs, grasa, proteina, obs];
+    await enviarUpdateASheets('Calidad_Leche', id, fila);
+  }
+
+  cerrarEditCalidad();
+  showToast('Calidad actualizada ✓');
+  renderHistorialCalidad();
+}
   var btn = document.getElementById('btn-guardar-prod');
   if(!btn) return;
   // Buscar cualquier input de litros con valor
@@ -4522,9 +4677,18 @@ async function guardarProduccion() {
 
   guardarCacheLeche();
 
-  // Enviar a Sheets
-  var fila = [generarID('Prod',0), fecha, ucalac, saputo, total, vacas, obs];
-  await enviarASheets('Reg_Produccion_Tambo', fila);
+  // Enviar a Sheets — si es edición usar update, si es nuevo usar append
+  var esEdicion = idx >= 0 && produccionDiaria[idx] && produccionDiaria[idx].id;
+  if(esEdicion) {
+    var idOriginal = produccionDiaria[idx].id;
+    var fila = [idOriginal, fecha, ucalac, saputo, total, vacas, obs];
+    await enviarUpdateASheets('Reg_Produccion_Tambo', idOriginal, fila);
+  } else {
+    var nuevoId = generarID('Prod',0);
+    if(idx >= 0) produccionDiaria[idx].id = nuevoId; else produccionDiaria[produccionDiaria.length-1].id = nuevoId;
+    var fila = [nuevoId, fecha, ucalac, saputo, total, vacas, obs];
+    await enviarASheets('Reg_Produccion_Tambo', fila);
+  }
 
   // Limpiar form
   limpiarFilasEmpresa();
@@ -5099,7 +5263,7 @@ function cargarProduccionDesdeSheets() {
         var obs = String(f[6] || '');
         // Acumular por fecha (puede haber múltiples registros del mismo día)
         if(!porFecha[fecha]) {
-          porFecha[fecha] = {fecha:fecha, ucalac:0, saputo:0, total:0, vacas:vacas, obs:obs};
+          porFecha[fecha] = {id:f[0], fecha:fecha, ucalac:0, saputo:0, total:0, vacas:vacas, obs:obs};
         }
         porFecha[fecha].ucalac += ucalac;
         porFecha[fecha].saputo += saputo;
@@ -5125,8 +5289,9 @@ function cargarProduccionDesdeSheets() {
         var fecha = f[1] ? String(f[1]).substring(0,10) : null;
         if(!fecha) return;
         calidadLeche.push({
-          fecha:fecha, empresa:f[2]||'', ufc:parseFloat(f[3])||0,
-          cs:parseFloat(f[4])||0, grasa:parseFloat(f[5])||0, proteina:parseFloat(f[6])||0
+          id:f[0], fecha:fecha, empresa:f[2]||'', ufc:parseFloat(f[3])||0,
+          cs:parseFloat(f[4])||0, grasa:parseFloat(f[5])||0, proteina:parseFloat(f[6])||0,
+          obs:String(f[7]||'')
         });
       });
       guardarCacheLeche();
@@ -5956,6 +6121,37 @@ function cerrarJovenFab() {
         <span style="font-size:13px;color:#8E8E93;flex-shrink:0;">días antes</span>
       </div>
       <div style="font-size:12px;color:#8E8E93;margin-top:4px;">La alerta aparece cuando faltan <span id="cfg-alerta-preview">70</span> días para el parto</div>
+    </div>
+  </div>
+
+  <!-- CALIDAD DE LECHE -->
+  <div class="card">
+    <div class="section-title">🧪 Calidad de leche</div>
+    <div class="form-row">
+      <label class="form-label">UFC alerta (miles)</label>
+      <input type="number" id="cfg-calUfcAlerta" class="form-input" inputmode="decimal">
+    </div>
+    <div class="form-row">
+      <label class="form-label">UFC crítico (miles)</label>
+      <input type="number" id="cfg-calUfcMal" class="form-input" inputmode="decimal">
+    </div>
+    <div class="form-row">
+      <label class="form-label">Células somáticas alerta</label>
+      <input type="number" id="cfg-calCsAlerta" class="form-input" inputmode="decimal">
+    </div>
+    <div class="form-row">
+      <label class="form-label">Células somáticas crítico</label>
+      <input type="number" id="cfg-calCsMal" class="form-input" inputmode="decimal">
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label class="form-label">Grasa mínima %</label>
+        <input type="number" id="cfg-calGrasaMin" class="form-input" inputmode="decimal" step="0.1">
+      </div>
+      <div class="field">
+        <label class="form-label">Proteína mínima %</label>
+        <input type="number" id="cfg-calProtMin" class="form-input" inputmode="decimal" step="0.1">
+      </div>
     </div>
   </div>
 
