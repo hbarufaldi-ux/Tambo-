@@ -3201,7 +3201,7 @@ function confirmarImportDIRSA() {
       rodeo.push(a);
     });
 
-    actualizarCats(); poblarSelects(); renderDashboard(); renderRodeo();
+    actualizarCats(); poblarSelects(); renderDashboard();
     progress.style.width = '100%';
 
     // Ocultar cards
@@ -3461,7 +3461,7 @@ function _entrarApp() {
     // El overlay ya está visible. Dar 1 frame al browser para pintarlo
     // ANTES del render pesado, así el usuario ve la animación y no el freeze.
     setTimeout(function() {
-      actualizarCats(); poblarSelects(); renderDashboard(); renderRodeo();
+      actualizarCats(); poblarSelects(); renderDashboard();
       _lovProgreso(100); _lovCheck();
       var tA2 = setTimeout(function(){
         _lovOcultar(function(){
@@ -3607,7 +3607,7 @@ function cargarPadronDesdeSheets(callback) {
   // 1. Intentar caché primero
   var desdeCache = cargarCacheLocal();
   if(desdeCache) {
-    actualizarCats(); poblarSelects(); renderDashboard(); renderRodeo();
+    actualizarCats(); poblarSelects(); renderDashboard();
     setSyncStatus('● '+(usuarioActual&&usuarioActual.nombre?usuarioActual.nombre:rodeo.length+' animales'));
     if(callback) callback(true);
     // 2. Refrescar en background si TTL venció
@@ -3770,7 +3770,7 @@ function _fetchPadronBackground(callback) {
         _lovCheck();
         setTimeout(function() {
           _lovOcultar(function() {
-            renderDashboard(); renderRodeo();
+            renderDashboard();
             setSyncStatus('● '+_importados+' animales');
             guardarCacheLocal();
             if(callback) callback(true);
