@@ -920,6 +920,107 @@ function drawDonut(id,pct,color){
 }
 </script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script>
+// ── Firebase init ──
+var _fbConfig = {
+  apiKey: "AIzaSyBwdt1Z_k3j8XVlpM7LBZGe5Ft_UK_6d4c",
+  authDomain: "tambo-9247a.firebaseapp.com",
+  projectId: "tambo-9247a",
+  storageBucket: "tambo-9247a.firebasestorage.app",
+  messagingSenderId: "804919944701",
+  appId: "1:804919944701:web:a226c67708c8d13c75e594"
+};
+firebase.initializeApp(_fbConfig);
+var _db = firebase.firestore();
+// Habilitar persistencia offline
+_db.enablePersistence({synchronizeTabs: true}).catch(function(e){
+  console.warn('Persistencia offline no disponible:', e.code);
+});
+
+// ── Capa de abstracción Firestore ──
+
+// USUARIOS
+async function fb_cargarUsuarios() {
+  try {
+    var snap = await _db.collection('usuarios').orderBy('orden').get();
+    if(snap.empty) return null;
+    return snap.docs.map(function(d){ return Object.assign({id: d.id}, d.data()); });
+  } catch(e) { console.warn('fb_cargarUsuarios:', e); return null; }
+}
+
+async function fb_guardarTodosUsuarios(lista) {
+  try {
+    var batch = _db.batch();
+    var snap = await _db.collection('usuarios').get();
+    snap.docs.forEach(function(d){ batch.delete(d.ref); });
+    lista.forEach(function(u, i) {
+      var id = u.id || String(u.nombre).toLowerCase().replace(/\s/g,'_');
+      var ref = _db.collection('usuarios').doc(id);
+      batch.set(ref, {nombre:u.nombre, rol:u.rol, pin:u.pin, orden:i});
+    });
+    await batch.commit();
+    return true;
+  } catch(e) { console.warn('fb_guardarTodosUsuarios:', e); return false; }
+}
+
+async function fb_eliminarUsuario(id) {
+  try { await _db.collection('usuarios').doc(id).delete(); return true; }
+  catch(e) { console.warn('fb_eliminarUsuario:', e); return false; }
+}
+
+// PADRÓN
+async function fb_guardarAnimal(animal) {
+  try {
+    await _db.collection('padron').doc(String(animal.rp)).set(animal);
+    return true;
+  } catch(e) { console.warn('fb_guardarAnimal:', e); return false; }
+}
+
+async function fb_cargarPadron() {
+  try {
+    var snap = await _db.collection('padron').get();
+    return snap.docs.map(function(d){ return d.data(); });
+  } catch(e) { console.warn('fb_cargarPadron:', e); return null; }
+}
+
+// EVENTOS
+async function fb_guardarEvento(coleccion, evento) {
+  try {
+    var id = evento.id || _db.collection(coleccion).doc().id;
+    await _db.collection(coleccion).doc(id).set(evento);
+    return id;
+  } catch(e) { console.warn('fb_guardarEvento:', e); return null; }
+}
+
+async function fb_actualizarEvento(coleccion, id, datos) {
+  try {
+    await _db.collection(coleccion).doc(id).update(datos);
+    return true;
+  } catch(e) { console.warn('fb_actualizarEvento:', e); return false; }
+}
+
+// PRODUCCIÓN Y CALIDAD
+async function fb_guardarProduccion(registro) {
+  try {
+    var id = registro.id || registro.fecha;
+    await _db.collection('produccion').doc(id).set(registro);
+    return true;
+  } catch(e) { console.warn('fb_guardarProduccion:', e); return false; }
+}
+
+async function fb_guardarCalidad(registro) {
+  try {
+    var id = registro.id || (registro.fecha+'_'+registro.empresa).replace(/\s+/g,'_');
+    await _db.collection('calidad').doc(id).set(registro);
+    return true;
+  } catch(e) { console.warn('fb_guardarCalidad:', e); return false; }
+}
+</script>
+
 <script>
 var SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxPT8TP7gpxNsVBXTbNIjW70SQtJdIu2iYOiBvvFKbxtQCPXZZ0DEUMfz241U7tVrEPEQ/exec';
 var TODAY = new Date().toISOString().split('T')[0];
@@ -2575,6 +2676,27 @@ async function enviarASheetsEditar(hoja, buscarFecha, fila) {
 }
 
 async function enviarASheets(hoja, fila, datosExtra) {
+  // Guardar en Firebase en paralelo (sin bloquear)
+  try {
+    var colMap = {
+      'Reg_Inseminaciones':'eventos_inseminaciones',
+      'Reg_Tactos':'eventos_tactos',
+      'Reg_Celos':'eventos_celos',
+      'Reg_Partos':'eventos_partos',
+      'Reg_Abortos':'eventos_abortos',
+      'Reg_Secados':'eventos_secados',
+      'Reg_Bajas':'eventos_bajas',
+      'Guachera_Eventos':'eventos_guachera',
+      'Reg_Produccion_Tambo':'produccion',
+      'Calidad_Leche':'calidad',
+    };
+    var col = colMap[hoja];
+    if(col && fila && fila[0]) {
+      var obj = {id: String(fila[0]), hoja: hoja, fila: fila, ts: Date.now()};
+      fb_guardarEvento(col, obj).catch(function(e){ console.warn('Firebase evento:', e); });
+    }
+  } catch(e) { console.warn('Firebase paralelo:', e); }
+  // continuar con Sheet normalmente
   guardarCacheLocal();
   showSaving(true); setSyncStatus('⟳ Guardando...');
 
@@ -3315,29 +3437,51 @@ function mostrarResultadoImport(tipo, msg) {
 
 // ── LOGIN CON PIN ─────────────────────────────────────────────
 var USUARIOS_DEFAULT = [
-  {nombre:'Hernán',    rol:'admin',           pin:'0000'},
-  {nombre:'Marcelo',   rol:'tambero',         pin:'0000'},
-  {nombre:'Marcelito', rol:'ayudante',        pin:'0000'},
-  {nombre:'Oscar',     rol:'control_lechero', pin:'0000'},
+  {nombre:'Hernán',    rol:'admin',    pin:'0000', orden:0},
+  {nombre:'Marcelo',   rol:'tambero',  pin:'0000', orden:1},
 ];
 var ROL_LABELS = {
   admin:'Admin', tambero:'Tambero', veterinario:'Veterinario',
   ayudante:'Ayudante', control_lechero:'Control lechero'
 };
-function _cargarUsuarios() {
+
+// Usuarios en memoria — se cargan desde Firebase al iniciar
+var USUARIOS = USUARIOS_DEFAULT.slice();
+
+// Carga usuarios desde Firebase; si no hay, sube los defaults
+async function _inicializarUsuarios() {
   try {
-    var s = JSON.parse(localStorage.getItem('tambo_usuarios') || 'null');
-    if(s && Array.isArray(s) && s.length) return s;
-  } catch(e) {}
-  // Primera instalación: guardar defaults silenciosamente, sin avisar
-  var defaults = USUARIOS_DEFAULT.map(function(u){ return Object.assign({},u); });
-  try { localStorage.setItem('tambo_usuarios', JSON.stringify(defaults)); } catch(e) {}
-  return defaults;
+    var fbUsuarios = await fb_cargarUsuarios();
+    if(fbUsuarios && fbUsuarios.length > 0) {
+      USUARIOS = fbUsuarios;
+    } else {
+      // Primera vez: subir defaults a Firebase
+      await fb_guardarTodosUsuarios(USUARIOS_DEFAULT);
+      USUARIOS = USUARIOS_DEFAULT.slice();
+    }
+    // Fallback localStorage por si acaso
+    try { localStorage.setItem('tambo_usuarios', JSON.stringify(USUARIOS)); } catch(e) {}
+  } catch(e) {
+    // Sin conexión — usar localStorage
+    console.warn('Firebase no disponible, usando localStorage:', e);
+    try {
+      var s = JSON.parse(localStorage.getItem('tambo_usuarios') || 'null');
+      if(s && Array.isArray(s) && s.length) USUARIOS = s;
+    } catch(e2) {}
+  }
 }
+
+function _cargarUsuarios() {
+  // Compatibilidad — devuelve lo que hay en memoria
+  return USUARIOS;
+}
+
 function _guardarUsuarios(lista) {
+  USUARIOS = lista;
+  // Guardar en Firebase y localStorage como backup
+  fb_guardarTodosUsuarios(lista).catch(function(e){ console.warn('Error guardando usuarios en Firebase:', e); });
   try { localStorage.setItem('tambo_usuarios', JSON.stringify(lista)); } catch(e) {}
 }
-var USUARIOS = _cargarUsuarios();
 var usuarioActual = null;
 var _pinActual = '';
 var _pinUsuario = null;
@@ -6345,6 +6489,14 @@ function cerrarJovenFab() {
     <div class="loading-dot" id="ldot-2"></div>
   </div>
 </div>
-<script>initLogin();</script>
+<script>
+// Cargar usuarios desde Firebase antes de mostrar el login
+_inicializarUsuarios().then(function(){
+  initLogin();
+}).catch(function(e){
+  console.error('Error inicializando usuarios:', e);
+  initLogin(); // igual arrancar
+});
+</script>
 </body>
 </html>
