@@ -1769,9 +1769,11 @@ function guardarUsuarioModal() {
   if(!nombre) { showToast('Ingresá un nombre'); return; }
   if(!/^\d{4}$/.test(pin)) { showToast('El PIN debe tener 4 dígitos numéricos'); return; }
   if(_editUsuarioIdx === null) {
-    USUARIOS.push({nombre:nombre, rol:rol, pin:pin});
+    var id = nombre.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,'_');
+    USUARIOS.push({id:id, nombre:nombre, rol:rol, pin:pin, orden:USUARIOS.length});
   } else {
-    USUARIOS[_editUsuarioIdx] = {nombre:nombre, rol:rol, pin:pin};
+    var orig = USUARIOS[_editUsuarioIdx];
+    USUARIOS[_editUsuarioIdx] = {id:orig.id||orig.nombre.toLowerCase().replace(/\s+/g,'_'), nombre:nombre, rol:rol, pin:pin, orden:_editUsuarioIdx};
   }
   _guardarUsuarios(USUARIOS);
   renderCfgUsuarios();
@@ -1782,6 +1784,8 @@ function eliminarUsuarioModal() {
   if(_editUsuarioIdx===null) return;
   var u = USUARIOS[_editUsuarioIdx];
   if(!confirm('¿Eliminar a '+u.nombre+'?')) return;
+  // Borrar de Firebase
+  if(u.id) fb_eliminarUsuario(u.id).catch(function(e){ console.warn('Firebase eliminar usuario:', e); });
   USUARIOS.splice(_editUsuarioIdx,1);
   _guardarUsuarios(USUARIOS);
   renderCfgUsuarios();
