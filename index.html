@@ -2716,6 +2716,14 @@ async function enviarASheets(hoja, fila, datosExtra) {
   }
 }
 
+// Sincronizar animal actualizado a Firestore después de un evento
+function fb_syncAnimal(rp) {
+  var a = rodeo.find(function(x){ return String(x.rp) === String(rp); });
+  if(!a) return;
+  _db.collection('padron').doc(String(rp)).set(a, {merge: true})
+    .catch(function(e){ console.warn('fb_syncAnimal error:', e); });
+}
+
 // Actualiza una fila existente en el Sheet por ID (para edición de producción y calidad)
 async function enviarUpdateASheets(hoja, id, fila) {
   showSaving(true); setSyncStatus('⟳ Guardando...');
@@ -3813,24 +3821,97 @@ function cerrarSesion() {
 
 // ---- CARGAR PADRON DESDE SHEETS (con caché) ----
 function cargarPadronDesdeSheets(callback) {
-  // 1. Intentar caché primero
+  // 1. Intentar caché local primero (respuesta inmediata)
   var desdeCache = cargarCacheLocal();
   if(desdeCache) {
     actualizarCats(); _selectsSucios = true; renderDashboard();
     setSyncStatus('● '+(usuarioActual&&usuarioActual.nombre?usuarioActual.nombre:rodeo.length+' animales'));
     if(callback) callback(true);
-    // 2. Refrescar en background si TTL venció
+    // 2. Refrescar desde Firebase en background si TTL venció
     if(cacheTTLVencido()) {
       setSyncStatus('● '+rodeo.length+' · actualizando...');
-      _fetchPadronBackground(null);
+      _fetchPadronFirebase(null);
     }
     return;
   }
-  // 3. Sin caché: cargar bloqueante (primera vez)
+  // 3. Sin caché: cargar desde Firebase (primera vez o caché vencida)
   setSyncStatus('⟳ Cargando padrón...');
-  _fetchPadronBackground(callback);
+  _fetchPadronFirebase(callback);
 }
 var _fetchPadronController = null; // AbortController activo
+
+// Carga el padrón desde Firestore y popula rodeo/guachera/recria
+async function _fetchPadronFirebase(callback) {
+  try {
+    var snap = await _db.collection('padron').get();
+    if(snap.empty) {
+      console.warn('Firestore padron vacio — fallback a Sheet');
+      _fetchPadronBackground(callback);
+      return;
+    }
+
+    var toros_backup = rodeo.filter(function(a){ return a.cat === 'Toro'; });
+    rodeo.length = 0; guachera.length = 0; recria.length = 0;
+    toros_backup.forEach(function(t){ rodeo.push(t); });
+
+    var importados = 0;
+    snap.docs.forEach(function(doc) {
+      var a = doc.data();
+      if(!a.rp) return;
+      if(a.cat === 'Baja') return;
+
+      var animal = {
+        rp:              Number(a.rp),
+        nombre:          a.nombre || '',
+        sexo:            a.sexo || 'H',
+        raza:            a.raza || 'Holando',
+        cat:             a.cat || 'Vaca',
+        estadoRepro:     a.estadoRepro || 'Vacia',
+        estadoProd:      a.estadoProd || 'En Ordene',
+        fechaNac:        a.fechaNac || null,
+        ultimoParto:     a.fechaParto || a.ultimoParto || null,
+        ultimaInsem:     a.fechaInsem || a.ultimaInsem || null,
+        ultimaInsemToro: a.ultimaInsemToro || '',
+        partoEstimado:   a.partoEstimado || null,
+        nroServicios:    Number(a.nroInsem || a.nroServicios) || 0,
+        produccionUltima:Number(a.prodUltima || a.produccionUltima) || null,
+        diasNR:          Number(a.diasNR) || 0,
+        diasAcum:        Number(a.diasLact || a.diasAcum) || 0,
+        lecheAcum:       Number(a.lecheAcum) || 0,
+        nroLactancia:    Number(a.nroPartos || a.nroLactancia) || 0,
+        enSanitario:     false,
+        rodeoManual:     a.rodeoManual || null,
+        fechaEgreso:     null,
+      };
+
+      rodeo.push(animal);
+
+      if(animal.cat === 'Ternera' || animal.cat === 'Ternero') {
+        var d = animal.fechaNac ? -diasHasta(animal.fechaNac) : null;
+        if(d !== null && d <= 75) {
+          guachera.push({rp:animal.rp,nombre:animal.nombre,sexo:animal.sexo,padre:animal.ultimaInsemToro,fechaNac:animal.fechaNac,vacunado:false,salio:false,eventos:[]});
+        } else {
+          recria.push({rp:animal.rp,nombre:animal.nombre,sexo:animal.sexo,cat:animal.cat,estadoRepro:animal.estadoRepro,rodeoManual:animal.rodeoManual,fechaNac:animal.fechaNac,padre:animal.ultimaInsemToro,madre:'',eventos:[],activo:true});
+        }
+      } else if(animal.cat === 'Vaquillona') {
+        recria.push({rp:animal.rp,nombre:animal.nombre,sexo:'H',cat:animal.cat,estadoRepro:animal.estadoRepro,rodeoManual:animal.rodeoManual,fechaNac:animal.fechaNac,padre:animal.ultimaInsemToro,madre:'',eventos:[],activo:true});
+      }
+      importados++;
+    });
+
+    guardarCacheLocal();
+    localStorage.setItem(CACHE_KEY_TS, String(Date.now()));
+
+    actualizarCats(); _selectsSucios = true; renderDashboard();
+    setSyncStatus('● '+(usuarioActual&&usuarioActual.nombre?usuarioActual.nombre:rodeo.length+' animales'));
+    console.log('Padron cargado desde Firebase: '+importados+' animales');
+    if(callback) callback(true);
+
+  } catch(e) {
+    console.warn('Error cargando padron desde Firebase:', e);
+    _fetchPadronBackground(callback);
+  }
+}
 
 function _fetchPadronBackground(callback) {
   // Cancelar fetch anterior si existe
@@ -5724,7 +5805,7 @@ async function fichaGuardar(sheetId, rp) {
       a.estadoProd='En Ordeñe';
       a.diasLactancia=0; a.lecheAcum=0;
     }
-    guardarCacheLocal();
+    guardarCacheLocal(); fb_syncAnimal(rp);
     await enviarASheets('Reg_Abortos',[generarID('Abo',rp),fecha,rp,a.nombre,mesesAborto+'m',obs]);
     showToast('Aborto registrado ✓'); renderDashboard(); renderRodeo(); goBack(); return;
   } else if(sheetId==='ficha-sheet-parto') {
@@ -5738,13 +5819,13 @@ async function fichaGuardar(sheetId, rp) {
     var obs=document.getElementById('fsp2-obs').value||'';
     a.nPartos=(a.nPartos||0)+1; a.ultimoParto=fecha; a.estadoRepro='Vacía'; a.estadoProd='En Ordeñe';
     if(toroNombre) a.ultimaInsemToro=toroNombre;
-    guardarCacheLocal();
+    guardarCacheLocal(); fb_syncAnimal(rp);
     await enviarASheets('Reg_Partos',[generarID('Par',rp),fecha,rp,a.nombre,tipo,sexo,rpCria,toroNombre,obs]);
     showToast('Parto registrado ✓'); renderDashboard(); renderRodeo(); goBack(); return;
   } else if(sheetId==='ficha-sheet-celo') {
     var celoEnPreniada = a.estadoRepro && a.estadoRepro.normalize('NFC')==='Preñada';
     a.estadoRepro='Celo'; a.ultimoCelo=document.getElementById('fsc-fecha').value||hoy;
-    guardarCacheLocal();
+    guardarCacheLocal(); fb_syncAnimal(rp);
     await enviarASheets('Reg_Celos',[generarID('Cel',rp),a.ultimoCelo,rp,a.nombre,document.getElementById('fsc-obs').value||'']);
     if(celoEnPreniada) showToast('⚠️ Posible aborto — RP '+rp);
     else showToast('Celo registrado ✓');
@@ -5752,7 +5833,7 @@ async function fichaGuardar(sheetId, rp) {
   } else if(sheetId==='ficha-sheet-inseminar') {
     var fecha=document.getElementById('fsi-fecha').value||hoy;
     a.estadoRepro='Inseminada'; a.ultimaInsem=fecha; a.nroServicios=(a.nroServicios||0)+1;
-    guardarCacheLocal();
+    guardarCacheLocal(); fb_syncAnimal(rp);
     var fsiToroEl=document.getElementById('fsi-toro');
     var fsiToroNombre=fsiToroEl.options[fsiToroEl.selectedIndex]?fsiToroEl.options[fsiToroEl.selectedIndex].text:fsiToroEl.value;
     a.ultimaInsemToro=fsiToroNombre;
@@ -5765,18 +5846,18 @@ async function fichaGuardar(sheetId, rp) {
     else if(res==='Vacía'||res==='Repetición'){a.estadoRepro='Vacía';}
     else if(res==='Hormonal'){a.estadoRepro='IATF';}
     else{a.estadoRepro=res;}
-    guardarCacheLocal();
+    guardarCacheLocal(); fb_syncAnimal(rp);
     await enviarASheets('Reg_Tactos',[generarID('Tac',rp),fecha,rp,a.nombre,res,''],{resultado:res});
     showToast('Tacto registrado ✓'); renderDashboard(); renderRodeo();
   } else if(sheetId==='ficha-sheet-secar') {
-    a.estadoProd='Seca'; guardarCacheLocal();
+    a.estadoProd='Seca'; guardarCacheLocal(); fb_syncAnimal(rp);
     await enviarASheets('Reg_Secados',[generarID('Sec',rp),document.getElementById('fss-fecha').value||hoy,rp,a.nombre,'']);
     showToast('Secado registrado ✓'); renderDashboard(); renderRodeo();
   } else if(sheetId==='ficha-sheet-produccion') {
     await enviarASheets('Reg_Produccion',[generarID('Prd',rp),document.getElementById('fsp-fecha').value||hoy,rp,a.nombre,parseFloat(document.getElementById('fsp-litros').value)||0,'']);
     showToast('Producción registrada ✓');
   } else if(sheetId==='ficha-sheet-baja') {
-    a.cat='Baja'; a.estadoProd=''; a.estadoRepro='Baja'; guardarCacheLocal();
+    a.cat='Baja'; a.estadoProd=''; a.estadoRepro='Baja'; guardarCacheLocal(); fb_syncAnimal(rp);
     await enviarASheets('Reg_Bajas',[generarID('Baj',rp),document.getElementById('fsb-fecha').value||hoy,rp,a.nombre,document.getElementById('fsb-motivo').value,document.getElementById('fsb-obs').value||'']);
     showToast('Baja registrada'); renderDashboard(); renderRodeo(); goBack(); return;
   } else if(sheetId==='ficha-sheet-tratamiento') {
