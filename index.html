@@ -5854,7 +5854,11 @@ async function fichaGuardar(sheetId, rp) {
     await enviarASheets('Reg_Secados',[generarID('Sec',rp),document.getElementById('fss-fecha').value||hoy,rp,a.nombre,'']);
     showToast('Secado registrado ✓'); renderDashboard(); renderRodeo();
   } else if(sheetId==='ficha-sheet-produccion') {
-    await enviarASheets('Reg_Produccion',[generarID('Prd',rp),document.getElementById('fsp-fecha').value||hoy,rp,a.nombre,parseFloat(document.getElementById('fsp-litros').value)||0,'']);
+    var litros = parseFloat(document.getElementById('fsp-litros').value)||0;
+    a.produccionUltima = litros; // actualizar en memoria
+    guardarCacheLocal(); fb_syncAnimal(rp); // sincronizar Firebase
+    await enviarASheets('Reg_Produccion',[generarID('Prd',rp),document.getElementById('fsp-fecha').value||hoy,rp,a.nombre,litros,'']);
+    abrirFicha(rp); // refrescar ficha
     showToast('Producción registrada ✓');
   } else if(sheetId==='ficha-sheet-baja') {
     a.cat='Baja'; a.estadoProd=''; a.estadoRepro='Baja'; guardarCacheLocal(); fb_syncAnimal(rp);
