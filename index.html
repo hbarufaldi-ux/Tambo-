@@ -3874,7 +3874,7 @@ async function _fetchPadronFirebase(callback) {
         ultimaInsemToro: a.ultimaInsemToro || '',
         partoEstimado:   a.partoEstimado || null,
         nroServicios:    Number(a.nroInsem || a.nroServicios) || 0,
-        produccionUltima:Number(a.prodUltima || a.produccionUltima) || null,
+        produccionUltima:Number(a.produccionUltima !== undefined ? a.produccionUltima : (a.prodUltima || null)),
         diasNR:          Number(a.diasNR) || 0,
         diasAcum:        Number(a.diasLact || a.diasAcum) || 0,
         lecheAcum:       Number(a.lecheAcum) || 0,
