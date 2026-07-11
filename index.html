@@ -3393,21 +3393,13 @@ function confirmarImportDIRSA() {
         rodeo.push(a);
       });
 
-      // Limpiar localStorage Y IndexedDB antes de guardar los nuevos datos
-      // Esto evita que al recargar aparezcan los datos viejos del caché
+      // Limpiar caché viejo antes de guardar los datos nuevos
       ['tambo_rodeo','tambo_rodeo_ts','tambo_guachera','tambo_recria','tambo_pending','tambo_cfg'].forEach(function(k){
         localStorage.removeItem(k);
       });
-      try {
-        indexedDB.databases().then(function(dbs) {
-          dbs.forEach(function(db) {
-            if(db.name && db.name.indexOf('firestore') !== -1) {
-              indexedDB.deleteDatabase(db.name);
-            }
-          });
-        });
-      } catch(e) {}
       guardarCacheLocal();
+      // Invalidar TTL para forzar fetch desde Firestore en la próxima recarga
+      localStorage.setItem('tambo_rodeo_ts', '0');
       actualizarCats();
       _selectsSucios = true;
       renderDashboard();
