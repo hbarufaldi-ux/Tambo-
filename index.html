@@ -3393,13 +3393,11 @@ function confirmarImportDIRSA() {
         rodeo.push(a);
       });
 
-      guardarCacheLocal();
-      actualizarCats();
-      _selectsSucios = true;
-      renderDashboard();
-      progress.style.width = '100%';
-      // Limpiar caché IndexedDB de Firestore para que la próxima recarga
-      // tome los datos nuevos del servidor y no los viejos del caché
+      // Limpiar localStorage Y IndexedDB antes de guardar los nuevos datos
+      // Esto evita que al recargar aparezcan los datos viejos del caché
+      ['tambo_rodeo','tambo_rodeo_ts','tambo_guachera','tambo_recria','tambo_pending','tambo_cfg'].forEach(function(k){
+        localStorage.removeItem(k);
+      });
       try {
         indexedDB.databases().then(function(dbs) {
           dbs.forEach(function(db) {
@@ -3409,6 +3407,11 @@ function confirmarImportDIRSA() {
           });
         });
       } catch(e) {}
+      guardarCacheLocal();
+      actualizarCats();
+      _selectsSucios = true;
+      renderDashboard();
+      progress.style.width = '100%';
 
       // Ocultar cards
       document.getElementById('card-dirsa-confirmar').style.display  = 'none';
