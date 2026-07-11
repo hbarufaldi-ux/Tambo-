@@ -2744,6 +2744,7 @@ async function guardarProd() {
   var a=getAnimal(animal); var pm=parseFloat(document.getElementById('pr-pm').value)||0;
   var total=(parseFloat(am)+pm).toFixed(1);
   a.produccionUltima=parseFloat(total);
+  fb_syncAnimal(animal);
   var fila=[generarID('Pr',animal),document.getElementById('pr-fecha').value,animal,a.nombre,parseFloat(am),pm,parseFloat(total),document.getElementById('pr-grasa').value||'',document.getElementById('pr-prot').value||'',document.getElementById('pr-cs').value||'',document.getElementById('pr-obs').value||''];
   var ok=await enviarASheets('Reg_Produccion',fila);
   if(ok){agregarReciente('prod', parseInt(animal), total+' lts');renderDashboard();document.getElementById('prod-form').style.display='none';document.getElementById('prod-ok').style.display='block';}
@@ -2764,6 +2765,7 @@ async function guardarParto() {
 
   a.estadoProd='En Ordeñe'; a.estadoRepro='Vacía'; a.ultimoParto=fecha; a.partoEstimado=null;
   if(a.cat==='Vaquillona') a.cat='Vaca';
+  fb_syncAnimal(madre);
 
   if(!historialPartos[parseInt(madre)]) historialPartos[parseInt(madre)]=[];
   historialPartos[parseInt(madre)].push({fecha:fecha,padre:nombreToro,sexoCria:sexoCria,rpCria:parseInt(rpCria),nombreCria:nombreCria,tipo:document.getElementById('p-tipo').value});
@@ -2772,6 +2774,7 @@ async function guardarParto() {
     rodeo.push({rp:parseInt(rpCria),nombre:nombreCria,sexo:sexoCria==='Hembra'?'H':'M',raza:a.raza,cat:catCria,estadoRepro:catCria,estadoProd:'',fechaNac:fecha,madre:parseInt(madre),padre:nombreToro,ultimoParto:null,ultimaInsem:null,ultimaInsemToro:null,partoEstimado:null,nroServicios:0,produccionUltima:null});
     guachera.push({rp:parseInt(rpCria),nombre:nombreCria,sexo:sexoCria==='Hembra'?'H':'M',padre:nombreToro,madre:a.nombre+' (RP '+madre+')',fechaNac:fecha,vacunado:false,salio:false,eventos:[]});
   agregarReciente('guachera', parseInt(rpCria), fecha);
+    fb_syncAnimal(rpCria);
     enviarASheets('Guachera_Eventos',[generarID('Ing',rpCria),fecha,rpCria,nombreCria,'Ingreso',0,'',a.nombre,nombreToro,sexoCria]);
     // Agregar cría al Padrón en Sheets
     enviarASheets('Padron',[parseInt(rpCria),nombreCria,'Holando','Activa',fecha,nombreToro,catCria,0,'','',0,'','',0,0,0,'',catCria,'',0,0,'']);
@@ -2789,6 +2792,7 @@ async function guardarInsem() {
   var nombreToro=toros.find(function(t){return t.rp==toroRp;})?toros.find(function(t){return t.rp==toroRp;}).nombre:toroRp;
   var fecha=document.getElementById('i-fecha').value;
   a.estadoRepro='Inseminada'; a.ultimaInsem=fecha; a.ultimaInsemToro=nombreToro; a.nroServicios=(a.nroServicios||0)+1; a.partoEstimado=null;
+  fb_syncAnimal(animal);
   var fila=[generarID('Ins',animal),fecha,animal,a.nombre,nombreToro,document.getElementById('i-tipo').value,document.getElementById('i-inseminador').value,getRadio('celo'),a.nroServicios,document.getElementById('i-obs').value||''];
   var ok=await enviarASheets('Reg_Inseminaciones',fila);
   if(ok){agregarReciente('insem', animal, nombreToro+' — '+document.getElementById('i-tipo').value);poblarSelects(); _selectsSucios=false; renderDashboard();document.getElementById('insem-form').style.display='none';document.getElementById('insem-ok').style.display='block';}
@@ -2798,6 +2802,8 @@ async function guardarCelo() {
   var animal=document.getElementById('c-animal').value;
   if(!animal){showToast('Seleccioná un animal',true);return;}
   var a=getAnimal(animal);
+  a.ultimoCelo=document.getElementById('c-fecha').value;
+  fb_syncAnimal(animal);
   var fila=[generarID('Cel',animal),document.getElementById('c-fecha').value,animal,a.nombre,a.estadoRepro,document.getElementById('c-obs').value||''];
   var ok=await enviarASheets('Reg_Celos',fila,{resultado:a.estadoRepro});
   if(ok){agregarReciente('celo', animal, a.estadoRepro+' — '+document.getElementById('c-obs').value);document.getElementById('celo-form').style.display='none';document.getElementById('celo-ok').style.display='block';}
@@ -2815,6 +2821,7 @@ async function guardarTacto() {
       enviarASheets('Reg_Abortos',[generarID('Ab',animal),fecha,animal,a.nombre,'Aborto confirmado por tacto',document.getElementById('t-obs').value||'']);
     }
   }
+  fb_syncAnimal(animal);
   var metodo=resultado==='Vacía'?document.getElementById('t-metodo-v').value:document.getElementById('t-metodo').value;
   var fila=[generarID('Tac',animal),fecha,animal,a.nombre,resultado,document.getElementById('t-dias').value||'',document.getElementById('t-vet').value,metodo,document.getElementById('t-obs').value||'',a.partoEstimado||''];
   var ok=await enviarASheets('Reg_Tactos',fila,{resultado:resultado});
@@ -2827,6 +2834,7 @@ async function guardarSecado() {
   if(!animal){showToast('Seleccioná un animal',true);return;}
   var a=getAnimal(animal); var estadoAnt=a.estadoProd||'';
   a.estadoProd='Seca'; if(a.cat==='Vaquillona') a.cat='Vaca';
+  fb_syncAnimal(animal);
   var fila=[generarID('Sec',animal),document.getElementById('s-fecha').value,animal,a.nombre,estadoAnt,document.getElementById('s-obs').value||''];
   var ok=await enviarASheets('Reg_Secados',fila);
   if(ok){poblarSelects(); _selectsSucios=false; renderDashboard();renderRodeo();document.getElementById('secado-form').style.display='none';document.getElementById('secado-ok').style.display='block';}
@@ -2836,6 +2844,7 @@ async function guardarBaja() {
   var animal=document.getElementById('b-animal').value;
   if(!animal){showToast('Seleccioná un animal',true);return;}
   var a=getAnimal(animal); a.cat='Baja';
+  fb_syncAnimal(animal);
   var fila=[generarID('Baj',animal),document.getElementById('b-fecha').value,animal,a.nombre,document.getElementById('b-motivo').value,document.getElementById('b-destino').value||'',document.getElementById('b-peso').value||'',document.getElementById('b-precio').value||'',document.getElementById('b-obs').value||''];
   var ok=await enviarASheets('Reg_Bajas',fila);
   if(ok){poblarSelects(); _selectsSucios=false; renderDashboard();renderRodeo();document.getElementById('baja-form').style.display='none';document.getElementById('baja-ok').style.display='block';}
@@ -2986,6 +2995,7 @@ async function guardarAborto() {
   a.estadoRepro = 'Vacía';
   a.partoEstimado = null;
   a.nroServicios = 0;
+  fb_syncAnimal(animal);
   var fila = [generarID('Ab',animal), fecha, animal, a.rp, estadoAnt, causa, obs];
   var ok = await enviarASheets('Reg_Abortos', fila);
   if(ok){
@@ -3703,47 +3713,35 @@ function _entrarApp() {
   _lovSetTexto('Cargando padrón...', 'Conectando con el servidor');
   setSyncStatus('⟳ Cargando padrón...');
 
-  // ── CASO A: hay caché válida → mostrar overlay, render después del paint ──
-  var desdeCache = cargarCacheLocal();
-  if(desdeCache) {
-    // El overlay ya está visible. Dar 1 frame al browser para pintarlo
-    // ANTES del render pesado, así el usuario ve la animación y no el freeze.
-    setTimeout(function() {
-      actualizarCats(); _selectsSucios = true; renderDashboard();
-      _lovProgreso(100); _lovCheck();
-      var tA2 = setTimeout(function(){
+  // ── FIRESTORE-FIRST: la nube es la fuente de verdad. Se va primero a
+  // Firestore, se muestran datos reales y recién ahí se cachea. El caché
+  // local queda solo como fallback si no hay conexión. ──
+  _lovSetTexto('Cargando padrón...', 'Consultando la nube');
+  _lovProgreso(30);
+  _fetchPadronFirebase(function(ok) {
+    if(ok) {
+      // Firestore respondió: _fetchPadronFirebase ya renderizó y cacheó
+      _lovTimers.forEach(clearTimeout); _lovTimers = [];
+      _lovSetFase(2);
+      _lovSetTexto('Listo', '');
+      _lovProgreso(100);
+      _lovCheck();
+      var t = setTimeout(function(){
         _lovOcultar(function(){
           setSyncStatus('● '+(usuarioActual&&usuarioActual.nombre?usuarioActual.nombre:rodeo.length+' animales'));
         });
-        if(cacheTTLVencido()) {
-          setSyncStatus('● '+rodeo.length+' · actualizando...');
-          _fetchPadronBackground(function(ok){
-            if(ok) setSyncStatus('● '+(usuarioActual&&usuarioActual.nombre?usuarioActual.nombre:rodeo.length+' animales'));
-          });
-        }
       }, 400);
-      _lovTimers.push(tA2);
-    }, 50);
-    return;
-  }
-
-  // ── CASO B: sin caché → overlay, cierra al completar fetch ──
-  _fetchPadronBackground(function(ok) {
-    if(!ok) {
-      _lovOcultar(function(){ setSyncStatus('● Sin conexión — datos locales'); });
+      _lovTimers.push(t);
       return;
     }
-    _lovTimers.forEach(clearTimeout); _lovTimers = [];
-    _lovSetFase(2);
-    _lovSetTexto('Listo', '');
-    _lovProgreso(100);
-    _lovCheck();
-    var t = setTimeout(function(){
-      _lovOcultar(function(){
-        setSyncStatus('● '+(usuarioActual&&usuarioActual.nombre?usuarioActual.nombre:rodeo.length+' animales'));
-      });
-    }, 600);
-    _lovTimers.push(t);
+    // Sin nube: fallback a caché local para no quedar sin datos offline
+    var desdeCache = cargarCacheLocal();
+    if(desdeCache) { actualizarCats(); _selectsSucios = true; renderDashboard(); }
+    _lovOcultar(function(){
+      setSyncStatus(desdeCache
+        ? '● '+rodeo.length+' · sin conexión (local)'
+        : '● Sin conexión — sin datos');
+    });
   });
 }
 
@@ -3852,22 +3850,25 @@ function cerrarSesion() {
 
 // ---- CARGAR PADRON DESDE SHEETS (con caché) ----
 function cargarPadronDesdeSheets(callback) {
-  // 1. Intentar caché local primero (respuesta inmediata)
-  var desdeCache = cargarCacheLocal();
-  if(desdeCache) {
-    actualizarCats(); _selectsSucios = true; renderDashboard();
-    setSyncStatus('● '+(usuarioActual&&usuarioActual.nombre?usuarioActual.nombre:rodeo.length+' animales'));
-    if(callback) callback(true);
-    // 2. Refrescar desde Firebase en background si TTL venció
-    if(cacheTTLVencido()) {
-      setSyncStatus('● '+rodeo.length+' · actualizando...');
-      _fetchPadronFirebase(null);
-    }
-    return;
-  }
-  // 3. Sin caché: cargar desde Firebase (primera vez o caché vencida)
+  // FIRESTORE-FIRST: la nube es la fuente de verdad. El caché local es solo
+  // fallback offline. Así el arranque nunca muestra datos viejos si hay red.
   setSyncStatus('⟳ Cargando padrón...');
-  _fetchPadronFirebase(callback);
+  _fetchPadronFirebase(function(ok) {
+    if(ok) {
+      // Firestore ya renderizó y cacheó los datos frescos
+      if(callback) callback(true);
+      return;
+    }
+    // Sin nube: usar caché local si existe
+    var desdeCache = cargarCacheLocal();
+    if(desdeCache) {
+      actualizarCats(); _selectsSucios = true; renderDashboard();
+      setSyncStatus('● '+rodeo.length+' · sin conexión (local)');
+    } else {
+      setSyncStatus('● Sin conexión — sin datos');
+    }
+    if(callback) callback(desdeCache);
+  });
 }
 var _fetchPadronController = null; // AbortController activo
 
@@ -3940,7 +3941,9 @@ async function _fetchPadronFirebase(callback) {
 
   } catch(e) {
     console.warn('Error cargando padron desde Firebase:', e);
-    _fetchPadronBackground(callback);
+    // No caer al Sheet (respaldo viejo). Reportar fallo para que el que
+    // llama use la caché local. El Sheet queda solo como log.
+    if(callback) callback(false);
   }
 }
 
@@ -4529,6 +4532,7 @@ async function guardarTactoMasivo() {
   await enviarASheets('Reg_Tactos', fila, {resultado: resultado});
 
   guardarCacheLocal();
+  if(a) fb_syncAnimal(rp);
   cerrarModalTM();
 
   // Limpiar el dataset.sel
@@ -5855,7 +5859,7 @@ async function fichaGuardar(sheetId, rp) {
     showToast('Parto registrado ✓'); renderDashboard(); renderRodeo(); goBack(); return;
   } else if(sheetId==='ficha-sheet-celo') {
     var celoEnPreniada = a.estadoRepro && a.estadoRepro.normalize('NFC')==='Preñada';
-    a.estadoRepro='Celo'; a.ultimoCelo=document.getElementById('fsc-fecha').value||hoy;
+    a.ultimoCelo=document.getElementById('fsc-fecha').value||hoy;
     guardarCacheLocal(); fb_syncAnimal(rp);
     await enviarASheets('Reg_Celos',[generarID('Cel',rp),a.ultimoCelo,rp,a.nombre,document.getElementById('fsc-obs').value||'']);
     if(celoEnPreniada) showToast('⚠️ Posible aborto — RP '+rp);
