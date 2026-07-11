@@ -3061,28 +3061,48 @@ function importarPadronDIRSA(input) {
         if(s==='6'||s==='6.0'||s==='R6') return 'R6';
         return null;
       }
-      function mapEstadoProd(leUC, secado, cat) {
-        // Logica definitiva DIRSA:
-        // 1. Le.UC con valor  → En Ordene (paso el control)
-        // 2. Secado con fecha → Seca
-        // 3. Ternera/Vaquillona → Recria
-        // 4. Vaca adulta sin Le.UC y sin Secado → Omitir (datos sucios DIRSA)
-        var tieneLeche = leUC && String(leUC).trim() && String(leUC).trim() !== '0';
-        var tieneSecado = secado && secado instanceof Date;
+      // Parsear fecha string DD/M/YYYY o D/M/YYYY → 'YYYY-MM-DD' o null
+      function parseFechaDIRSA(s) {
+        if(!s) return null;
+        s = String(s).trim().replace(/\s+/g,'');
+        if(!s || s === '//' || s === '/  /  /' || s.replace(/\//g,'').trim() === '') return null;
+        var p = s.split('/');
+        if(p.length !== 3) return null;
+        var d = parseInt(p[0]), m = parseInt(p[1]), y = parseInt(p[2]);
+        if(!d || !m || !y || y < 1900) return null;
+        return y + '-' + String(m).padStart(2,'0') + '-' + String(d).padStart(2,'0');
+      }
+      // Calcular días desde hoy hasta una fecha 'YYYY-MM-DD'
+      function diasHastaFecha(fechaStr) {
+        if(!fechaStr) return null;
+        var hoy = new Date(); hoy.setHours(0,0,0,0);
+        var f = new Date(fechaStr + 'T00:00:00');
+        return Math.round((f - hoy) / 86400000);
+      }
+      // Mapear raza numérica DIRSA → string
+      function mapRaza(r) {
+        var razas = {'1':'Holando','2':'Jersey','3':'Holando x Jersey','4':'Shorthorn','5':'Angus'};
+        return razas[String(r).trim()] || 'Holando';
+      }
+      function mapEstadoProd(leUCRaw, estActual, secadoStr, cat) {
+        // Est.Actual: O=En Ordeñe, S=Seca
+        var estAct = String(estActual||'').trim();
+        if(estAct === 'S') return 'Seca';
+        if(estAct === 'O') return 'En Ordeñe';
+        // Fallback por datos
+        var tieneLeche = leUCRaw && String(leUCRaw).replace(/[\s,\.]/g,'').trim() !== '' && parseFloat(String(leUCRaw).replace(',','.')) > 0;
+        var tieneSecado = !!parseFechaDIRSA(secadoStr);
         if(tieneLeche) return 'En Ordeñe';
         if(tieneSecado) return 'Seca';
         if(cat === 'Ternera' || cat === 'Vaquillona') return 'Recria';
-        return 'Omitir';
+        return 'En Ordeñe'; // asumir en ordeñe si no hay datos (no omitir)
       }
-      function mapCat(estadoDIRSA, nroLact, fechaNac) {
-        // DIRSA Estado col6: A=Activo en sistema, R=Retiro/Baja
+      function mapCat(estadoDIRSA, fechaNac) {
         if(estadoDIRSA === 'R') return 'Baja';
-        // Clasificar SIEMPRE por edad — NroLact=0 en DIRSA no significa recría,
-        // puede ser vaca adulta con historial no cargado
-        if(!fechaNac) return 'Vaca'; // sin fecha → asumir vaca adulta
-        var meses = Math.round((new Date()-new Date(fechaNac))/2628000000);
-        if(meses < 8) return 'Ternera';
-        if(meses < 30) return 'Vaquillona'; // < 30 meses = recría real
+        if(!fechaNac) return 'Vaca';
+        var meses = Math.round((new Date() - new Date(fechaNac)) / 2628000000);
+        if(meses < 8)  return 'Ternera';
+        if(meses < 30) return 'Vaquillona';
         return 'Vaca';
       }
 
@@ -3090,63 +3110,75 @@ function importarPadronDIRSA(input) {
       var errores = 0;
       var enOrdeñe = 0, secas = 0, enRecria = 0;
       rows.forEach(function(row) {
-        var rp = parseInt(getVal(row,['RP','rp','Rp']));
+        var rp = parseInt(String(row['RP']||'').trim());
         if(!rp || isNaN(rp)) { errores++; return; }
-        var fechaNac   = fmtDate(getVal(row,['F_Nac','Fecha Nacimiento','Fecha nacimiento','FechaNac','fecha_nac']));
-        var estadoDIRSA = String(row['Estado']||'').trim(); // A=Activo, R=Retiro/Baja
-        var colR       = String(row['R']||'').trim().toLowerCase(); // 'r' = Rechazo (libreta)
-        var fechaEgreso = fmtDate(getVal(row,['Fecha Egreso','FechaEgreso','F.Egreso']));
-        var loteAct    = row['Lote Act'];
-        var loteAnt    = row['Lote Ant'];
-        var secadoRaw  = row['Secado']; // fecha Date o espacios vacios
-        var leUCRaw    = row['Le.UC'];  // produccion ultimo control
-        var rodeoVal   = mapLoteArodeo(loteAct) || mapLoteArodeo(loteAnt) || '';
-        // Estado reproductivo inferido desde Dias al Parto + Dias NR + Ult.Servicio
-        var diasParto2  = parseFloat(String(row['Dias al Parto']||'0').trim())||0;
-        var diasNR2     = parseFloat(String(row['Dias NR']||'0').trim())||0;
+
+        var estadoDIRSA = String(row['Estado']||'').trim();       // A=Activo, R=Retiro/Baja
+        var estActual   = String(row['Est.Actual']||'').trim();   // O=Ordeñe, S=Seca
+        var fechaNac    = parseFechaDIRSA(row['F_Nac']);
+        var cat         = mapCat(estadoDIRSA, fechaNac);
+        if(cat === 'Baja') { errores++; return; }                 // omitir dados de baja en DIRSA
+
+        var leUCRaw     = row['Le.UC'];
+        var secadoStr   = String(row['Secado']||'').trim();
+        var estadoProd  = mapEstadoProd(leUCRaw, estActual, secadoStr, cat);
+
+        var ultimoParto = parseFechaDIRSA(row['Ini.Lact']);
+        var ultimaInsem = parseFechaDIRSA(row['F.Servicio']);
+        var proxPartoStr= parseFechaDIRSA(row['Prox.Parto']);
         var tactoVal    = String(row['Tacto']||'').trim();
+        var diasNR2     = parseInt(String(row['Dias NR']||'0').replace(',','.').trim())||0;
+
+        // Estado reproductivo — Tacto de DIRSA es la fuente más confiable
         var estadoRepro;
-        if(colR==='r') estadoRepro = 'Rechazo'; // marcado como rechazo en libreta/padrón DIRSA
-        else if(tactoVal==='P') estadoRepro = 'Preñada';
-        else if(tactoVal==='V'||tactoVal==='Vacia'||tactoVal==='Vacía') estadoRepro = 'Vacía';
-        else if(estadoDIRSA==='S' || String(row['Est.Actual']||'').trim()==='S') estadoRepro = 'Seca';
-        else if(diasParto2 > 0 && diasParto2 <= 290) estadoRepro = 'Preñada';
-        else if(ultimaInsem && diasNR2 > 0 && diasNR2 <= 30) estadoRepro = 'Inseminada';
-        else estadoRepro = 'Vacía';
-        var ultimoParto= fmtDate(getVal(row,['Ini.Lact','Inicio Lactancia','Ultimo Parto','UltimoParto','inicio_lactancia']));
-        var ultimaInsem= fmtDate(getVal(row,['Ult.Servicio','Fecha Servicio','FechaServicio','Ultima Insem','ultima_insem']));
+        if(tactoVal === 'P')                          estadoRepro = 'Preñada';
+        else if(tactoVal==='V' || tactoVal==='Vacia') estadoRepro = 'Vacía';
+        else if(estActual === 'S')                    estadoRepro = 'Seca';
+        else if(proxPartoStr && diasHastaFecha(proxPartoStr) > 0 && diasHastaFecha(proxPartoStr) <= 310) estadoRepro = 'Preñada';
+        else if(ultimaInsem && diasNR2 > 0 && diasNR2 <= 35)  estadoRepro = 'Inseminada';
+        else                                          estadoRepro = 'Vacía';
+
+        // Días al parto: calcular desde Prox.Parto real (no el campo Dias al Parto de DIRSA que es basura)
+        var diasParto = proxPartoStr ? Math.max(0, diasHastaFecha(proxPartoStr)) : 0;
+
+        var padre    = String(row['Padre']||row['Apodo Toro']||'').trim();
+        var rpMadre  = parseInt(String(row['RP Madre']||'').trim())||null;
+        var nroLact  = parseInt(String(row['Nro.Lact']||'0').trim())||0;
+        var loteAct  = row['Lote Act'];
+        var loteAnt  = row['Lote Ant'];
+        var rodeoVal = mapLoteArodeo(loteAct) || mapLoteArodeo(loteAnt) || '';
+
         var produccion = parseLeche(leUCRaw);
-        var nroLact    = parseInt(getVal(row,['Nro.Lact','Numero Lactancia','NroLactancia','lactancia'])||0)||0;
-        var padre      = String(getVal(row,['Toro/Embrion','Toro/Embrión','ToroemBrion','ApodoPadre','Padre','Nombre Padre','padre'])||'').trim();
-        var rpMadre    = getVal(row,['RP Madre','RPMadre','rp_madre']);
-        var diasParto  = parseInt(getVal(row,['Dias al Parto','DiasAlParto'])||0)||0;
-        var proxParto  = getVal(row,['Prox.Parto','Prox Parto']);
-        var cat        = mapCat(estadoDIRSA, nroLact, fechaNac);
-        if(cat === 'Baja') { errores++; return; } // omitir animales dados de baja
-        var estadoProd = mapEstadoProd(leUCRaw, secadoRaw, cat);
-        if(estadoProd === 'Omitir') { errores++; return; } // vaca adulta sin datos en DIRSA
-        var partoEstimado = null;
-        if(proxParto && proxParto instanceof Date) partoEstimado = proxParto.toISOString().split('T')[0];
-        else if(diasParto && diasParto > 0 && diasParto <= 290) partoEstimado = sumarDias(TODAY, diasParto);
-        else if(ultimaInsem && estadoRepro==='Preñada') partoEstimado = sumarDias(ultimaInsem, 280);
+
         var animal = {
-          rp:rp, nombre:String(getVal(row,['Nombre','nombre'])||'').trim(),
-          sexo:'H', raza:String(getVal(row,['Raza','raza'])||'Holando').trim(),
-          cat:cat, estadoRepro:estadoRepro,
-          estadoProd:estadoProd, fechaNac:fechaNac, ultimoParto:ultimoParto,
-          ultimaInsem:ultimaInsem, ultimaInsemToro:padre, partoEstimado:partoEstimado,
-          nroServicios:parseInt(String(getVal(row,['Nro.Servicio','Nro.Servicio','NroServicio','nro_servicio'])||0).trim())||0,
-          produccionUltima:produccion, madre:rpMadre?parseInt(rpMadre):null, padre:padre,
-          nroLactancia:nroLact, enSanitario:false,
-          rodeoManual:rodeoVal||null,
-          fechaEgreso:fechaEgreso||null,  // Fecha de baja/retiro de DIRSA
-          // Campos para alertas
-          diasNR: diasNR2 || 0,
-          diasAcum: parseInt(String(getVal(row,['Dias ACU','DiasACU'])||0).trim())||0,
-          lecheAcum: parseLeche(getVal(row,['Le.ACU','LeACU'])) || 0,
+          rp:            rp,
+          nombre:        String(row['Nombre']||'').trim(),
+          sexo:          'H',
+          raza:          mapRaza(row['Raza']),
+          cat:           cat,
+          estadoRepro:   estadoRepro,
+          estadoProd:    estadoProd,
+          fechaNac:      fechaNac,
+          ultimoParto:   ultimoParto,
+          ultimaInsem:   ultimaInsem,
+          ultimaInsemToro: padre,
+          partoEstimado: proxPartoStr || null,
+          nroServicios:  parseInt(String(row['Nro.Servicio']||'0').trim())||0,
+          produccionUltima: produccion,
+          madre:         rpMadre,
+          padre:         padre,
+          nroLactancia:  nroLact,
+          enSanitario:   false,
+          rodeoManual:   rodeoVal || null,
+          diasNR:        diasNR2,
+          diasAcum:      parseInt(String(row['Dias ACU']||'0').replace(',','.').trim())||0,
+          lecheAcum:     parseLeche(row['Le.ACU']) || 0,
+          diasParto:     diasParto,
         };
         _dirsaAnimalesParsed.push(animal);
-        if(estadoProd==='Seca') secas++; else if(estadoProd==='En Ordeñe') enOrdeñe++; else if(estadoProd==='Recria') enRecria++;
+        if(estadoProd==='Seca') secas++;
+        else if(estadoProd==='En Ordeñe') enOrdeñe++;
+        else if(estadoProd==='Recria') enRecria++;
       });
 
       // Actualizar zona de carga
