@@ -1,4 +1,4 @@
-var CACHE_NAME = 'tambo-v143';
+var CACHE_NAME = 'tambo-v144';
 var urlsToCache = [
   '/Tambo-/',
   '/Tambo-/index.html',
@@ -32,9 +32,35 @@ self.addEventListener('activate', function(event) {
 });
 
 self.addEventListener('fetch', function(event) {
-  // No cachear llamadas al Apps Script
   if(event.request.url.indexOf('script.google.com') !== -1) return;
+  if(event.request.url.indexOf('firebase') !== -1) return;
+  if(event.request.url.indexOf('googleapis.com') !== -1) return;
 
+  // Network-first para index.html — siempre baja la versión más reciente
+  var isHTML = event.request.url.endsWith('/Tambo-/') || 
+               event.request.url.endsWith('/Tambo-/index.html') ||
+               event.request.url.indexOf('/Tambo-/index.html') !== -1;
+
+  if(isHTML) {
+    event.respondWith(
+      fetch(event.request)
+        .then(function(response) {
+          if(response && response.status === 200) {
+            var clone = response.clone();
+            caches.open(CACHE_NAME).then(function(cache) {
+              cache.put(event.request, clone);
+            });
+          }
+          return response;
+        })
+        .catch(function() {
+          return caches.match(event.request);
+        })
+    );
+    return;
+  }
+
+  // Cache-first para el resto (íconos, manifest, etc.)
   event.respondWith(
     caches.match(event.request).then(function(response) {
       if(response) return response;
