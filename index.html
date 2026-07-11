@@ -3098,7 +3098,7 @@ function importarPadronDIRSA(input) {
         return 'En Ordeñe'; // asumir en ordeñe si no hay datos (no omitir)
       }
       function mapCat(estadoDIRSA, fechaNac) {
-        if(estadoDIRSA === 'R') return 'Baja';
+        // R = Rechazo en DIRSA, NO es Baja definitiva — sigue en el tambo
         if(!fechaNac) return 'Vaca';
         var meses = Math.round((new Date() - new Date(fechaNac)) / 2628000000);
         if(meses < 8)  return 'Ternera';
@@ -3116,8 +3116,8 @@ function importarPadronDIRSA(input) {
         var estadoDIRSA = String(row['Estado']||'').trim();       // A=Activo, R=Retiro/Baja
         var estActual   = String(row['Est.Actual']||'').trim();   // O=Ordeñe, S=Seca
         var fechaNac    = parseFechaDIRSA(row['F_Nac']);
+        var esRechazo    = estadoDIRSA === 'R';                    // R = Rechazo en DIRSA
         var cat         = mapCat(estadoDIRSA, fechaNac);
-        if(cat === 'Baja') { errores++; return; }                 // omitir dados de baja en DIRSA
 
         var leUCRaw     = row['Le.UC'];
         var secadoStr   = String(row['Secado']||'').trim();
@@ -3174,6 +3174,8 @@ function importarPadronDIRSA(input) {
           diasAcum:      parseInt(String(row['Dias ACU']||'0').replace(',','.').trim())||0,
           lecheAcum:     parseLeche(row['Le.ACU']) || 0,
           diasParto:     diasParto,
+          rechazo:       esRechazo,    // marcada para descarte en DIRSA
+          activo:        true,          // sigue en el tambo hasta baja real
         };
         _dirsaAnimalesParsed.push(animal);
         if(estadoProd==='Seca') secas++;
