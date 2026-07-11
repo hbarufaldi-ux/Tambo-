@@ -3398,6 +3398,17 @@ function confirmarImportDIRSA() {
       _selectsSucios = true;
       renderDashboard();
       progress.style.width = '100%';
+      // Limpiar caché IndexedDB de Firestore para que la próxima recarga
+      // tome los datos nuevos del servidor y no los viejos del caché
+      try {
+        indexedDB.databases().then(function(dbs) {
+          dbs.forEach(function(db) {
+            if(db.name && db.name.indexOf('firestore') !== -1) {
+              indexedDB.deleteDatabase(db.name);
+            }
+          });
+        });
+      } catch(e) {}
 
       // Ocultar cards
       document.getElementById('card-dirsa-confirmar').style.display  = 'none';
