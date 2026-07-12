@@ -595,12 +595,12 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 
 <!-- GUACHERA -->
 <div id="screen-guachera" class="screen">
-  <div class="metric-grid">
-    <div class="metric"><div class="metric-label">En guachera</div><div class="metric-val" id="g-total">—</div></div>
-    <div class="metric"><div class="metric-label">Vacunar hoy</div><div class="metric-val" id="g-vacunar">—</div></div>
-    <div class="metric"><div class="metric-label">Salen a corral</div><div class="metric-val" id="g-corral">—</div></div>
-    <div class="metric"><div class="metric-label">% mortandad</div><div class="metric-val" id="g-mort">—</div></div>
-  </div>
+  <div class="d-panel"><div class="d-g4">
+    <div class="d-cell"><div class="d-lbl">En guachera</div><div class="d-val"><div class="d-num" style="color:#1C1C1E;" id="g-total">—</div></div></div>
+    <div class="d-cell"><div class="d-lbl">Vacunar hoy</div><div class="d-val"><div class="d-num" style="color:#C08000;" id="g-vacunar">—</div></div></div>
+    <div class="d-cell"><div class="d-lbl">Salen a corral</div><div class="d-val"><div class="d-num" style="color:#1C1C1E;" id="g-corral">—</div></div></div>
+    <div class="d-cell"><div class="d-lbl">% mortandad</div><div class="d-val"><div class="d-num" style="color:#A0200A;" id="g-mort">—</div></div></div>
+  </div></div>
   <div style="margin-bottom:10px;">
     <input type="text" id="guachera-buscar" placeholder="Buscar por RP..." inputmode="numeric" oninput="renderGuachera()" style="width:100%;padding:11px 14px;border:1px solid #B0BCC8;border-radius:12px;font-size:17px;background:#fff;color:#1C1C1E;box-sizing:border-box;"/>
   </div>
@@ -618,12 +618,12 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 
 <!-- RECRIA -->
 <div id="screen-recria" class="screen">
-  <div class="metric-grid">
-    <div class="metric"><div class="metric-label">En recría</div><div class="metric-val" id="r-total">—</div></div>
-    <div class="metric"><div class="metric-label">Hembras</div><div class="metric-val" id="r-hembras">—</div></div>
-    <div class="metric"><div class="metric-label">Machos</div><div class="metric-val" id="r-machos">—</div></div>
-    <div class="metric"><div class="metric-label">Listos</div><div class="metric-val" id="r-listos">—</div></div>
-  </div>
+  <div class="d-panel"><div class="d-g4">
+    <div class="d-cell"><div class="d-lbl">En recría</div><div class="d-val"><div class="d-num" style="color:#1C1C1E;" id="r-total">—</div></div></div>
+    <div class="d-cell"><div class="d-lbl">Hembras</div><div class="d-val"><div class="d-num" style="color:#1060C0;" id="r-hembras">—</div></div></div>
+    <div class="d-cell"><div class="d-lbl">Machos</div><div class="d-val"><div class="d-num" style="color:#48566A;" id="r-machos">—</div></div></div>
+    <div class="d-cell"><div class="d-lbl">Listos</div><div class="d-val"><div class="d-num" style="color:#1A7A40;" id="r-listos">—</div></div></div>
+  </div></div>
   <div style="margin-bottom:10px;">
     <input type="search" id="recria-buscar" placeholder="Buscar por RP o nombre..." oninput="renderRecria()" style="width:100%;padding:11px 14px;border:1px solid #B0BCC8;border-radius:12px;font-size:17px;background:#fff;color:#1C1C1E;">
   </div>
