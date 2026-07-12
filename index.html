@@ -121,6 +121,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 /* Dashboard tiras (Inicio) */
 .d-panel{background:#fff;border:1px solid #E6EBF0;border-radius:18px;overflow:hidden;margin-bottom:12px;}
 .d-g3{display:grid;grid-template-columns:repeat(3,1fr);}
+.d-g2{display:grid;grid-template-columns:repeat(2,1fr);}
 .d-g4{display:grid;grid-template-columns:repeat(2,1fr);}
 .d-split{display:grid;grid-template-columns:1fr;}
 .d-cell{padding:15px 20px;border-right:1px solid #EDF1F5;border-bottom:1px solid #EDF1F5;}
@@ -641,66 +642,35 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 <!-- LECHE -->
 <div id="screen-leche" class="screen">
 
-  <!-- HEADER CARD azul - todo en uno -->
-  <div style="background:linear-gradient(135deg,#1060C0,#063A8A);border-radius:18px;padding:16px;margin-bottom:10px;">
-
-    <!-- Fila 1: Título + fecha -->
-    <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
-      <span style="font-size:14px;color:#fff;font-weight:900;letter-spacing:0.05em;">LECHE</span>
-      <span style="font-size:13px;color:rgba(255,255,255,0.6);" id="l-fecha-ultimo">—</span>
+    <!-- HEADER LECHE (panel limpio) -->
+  <div class="d-panel">
+    <div style="padding:16px 20px 2px;display:flex;align-items:center;gap:8px;">
+      <span style="font-size:13px;font-weight:900;letter-spacing:.05em;color:#1060C0;">LECHE</span>
+      <span style="font-size:13px;color:#8493a5;" id="l-fecha-ultimo">—</span>
     </div>
-
-    <!-- Fila 2: Número grande + prom/vaca -->
-    <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:12px;">
+    <div style="padding:2px 20px 14px;display:flex;justify-content:space-between;align-items:flex-end;">
       <div>
-        <div style="font-size:56px;font-weight:900;color:#fff;line-height:1;letter-spacing:-2px;" id="l-total-hoy">—</div>
-        <div style="font-size:14px;color:rgba(255,255,255,0.7);margin-top:2px;">litros del día</div>
+        <div style="font-size:46px;font-weight:900;color:#1060C0;line-height:1;letter-spacing:-2px;" id="l-total-hoy">—</div>
+        <div style="font-size:13px;color:#8493a5;margin-top:2px;">litros del día</div>
       </div>
-      <div style="text-align:right;padding-bottom:4px;">
-        <div style="font-size:11px;color:rgba(255,255,255,0.6);font-weight:700;text-transform:uppercase;">Prom/vaca</div>
-        <div style="font-size:32px;font-weight:900;color:#fff;line-height:1;" id="l-prom-vaca">—</div>
-        <div style="font-size:12px;color:rgba(255,255,255,0.5);">lts/vaca</div>
-      </div>
-    </div>
-
-    <!-- Fila 3: Acumulado mes + Días registrados -->
-    <div style="background:rgba(255,255,255,0.12);border-radius:12px;padding:10px;margin-bottom:8px;">
-      <div style="display:flex;gap:6px;">
-        <div style="flex:1;">
-          <div style="font-size:10px;color:rgba(255,255,255,0.6);font-weight:700;text-transform:uppercase;letter-spacing:0.06em;">Acumulado mes</div>
-          <div style="font-size:22px;font-weight:800;color:#fff;" id="l-acum-mes">—</div>
-          <div style="font-size:10px;color:rgba(255,255,255,0.4);">litros</div>
-        </div>
-        <div style="width:1px;background:rgba(255,255,255,0.2);margin:0 6px;"></div>
-        <div style="flex:1;">
-          <div style="font-size:10px;color:rgba(255,255,255,0.6);font-weight:700;text-transform:uppercase;letter-spacing:0.06em;">Días registrados</div>
-          <div style="font-size:22px;font-weight:800;color:#fff;" id="l-dias-mes">—</div>
-          <div style="font-size:10px;color:rgba(255,255,255,0.4);">este mes</div>
-        </div>
+      <div style="text-align:right;">
+        <div style="font-size:11px;color:#8493a5;font-weight:700;text-transform:uppercase;">Prom/vaca</div>
+        <div style="font-size:28px;font-weight:800;color:#1C1C1E;line-height:1.15;" id="l-prom-vaca">—</div>
+        <div style="font-size:12px;color:#94a0ad;">lts/vaca</div>
       </div>
     </div>
-
-    <!-- Fila 4: Por empresa + VS ant -->
-    <div style="background:rgba(255,255,255,0.12);border-radius:12px;padding:10px;">
-      <div style="display:flex;gap:6px;">
-        <div style="flex:1;">
-          <div style="font-size:10px;color:rgba(255,255,255,0.6);font-weight:700;text-transform:uppercase;letter-spacing:0.06em;">Ucalac SA</div>
-          <div style="font-size:22px;font-weight:800;color:#fff;" id="l-ucalac-hoy">—</div>
-        </div>
-        <div style="width:1px;background:rgba(255,255,255,0.2);margin:0 6px;"></div>
-        <div style="flex:1;">
-          <div style="font-size:10px;color:rgba(255,255,255,0.6);font-weight:700;text-transform:uppercase;letter-spacing:0.06em;">Saputo</div>
-          <div style="font-size:22px;font-weight:800;color:#fff;" id="l-saputo-hoy">—</div>
-        </div>
-        <div style="width:1px;background:rgba(255,255,255,0.2);margin:0 6px;"></div>
-        <div style="flex:1;">
-          <div style="font-size:10px;color:rgba(255,255,255,0.6);font-weight:700;text-transform:uppercase;letter-spacing:0.06em;">VS ant.</div>
-          <div style="font-size:22px;font-weight:800;color:#fff;" id="l-vs-ayer">—</div>
-        </div>
-      </div>
+    <div style="border-top:1px solid #EDF1F5;"></div>
+    <div class="d-g3">
+      <div class="d-cell"><div class="d-lbl">Acumulado mes</div><div class="d-val"><div class="d-num" style="font-size:24px;color:#1C1C1E;" id="l-acum-mes">—</div></div></div>
+      <div class="d-cell"><div class="d-lbl">Días registrados</div><div class="d-val"><div class="d-num" style="font-size:24px;color:#1C1C1E;" id="l-dias-mes">—</div></div></div>
+      <div class="d-cell"><div class="d-lbl">VS ant.</div><div class="d-val"><div class="d-num" style="font-size:24px;color:#1A7A40;" id="l-vs-ayer">—</div></div></div>
     </div>
-
+    <div class="d-g2">
+      <div class="d-cell"><div class="d-lbl">Ucalac SA</div><div class="d-val"><div class="d-num" style="font-size:24px;color:#1C1C1E;" id="l-ucalac-hoy">—</div></div></div>
+      <div class="d-cell"><div class="d-lbl">Saputo</div><div class="d-val"><div class="d-num" style="font-size:24px;color:#1C1C1E;" id="l-saputo-hoy">—</div></div></div>
+    </div>
   </div>
+
   <!-- HISTORIAL ÚLTIMOS 7 DÍAS -->
 <div class="card" style="margin-top:8px;">
 <div class="section-title" id="l-historial-titulo">Registros</div>
