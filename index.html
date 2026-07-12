@@ -117,6 +117,39 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 .ficha-row:last-child{border-bottom:none;}
 .ficha-key{font-size:17px;color:#8E8E93;}
 .ficha-val{font-size:17px;font-weight:500;}
+
+/* ===== LAYOUT ESCRITORIO (PC ≥1024px) — no afecta el mobile ===== */
+@media (min-width:1024px){
+  /* Sólo topbar arriba + barra lateral a la izquierda.
+     !important porque un JS ajusta body.paddingTop según la nav horizontal. */
+  body{ padding-top:80px !important; padding-left:220px !important; }
+
+  /* Nav de chips → barra lateral vertical (mismo fondo, sin línea) */
+  #main-nav{
+    top:80px; bottom:0; right:auto; width:220px;
+    flex-direction:column; align-items:stretch; justify-content:flex-start;
+    gap:4px; padding:18px 14px;
+    overflow-x:hidden; overflow-y:auto;
+    border-top:none; border-bottom:none; border-right:none;
+    background:transparent;
+  }
+  #main-nav .nav-btn{
+    width:100%; text-align:left; box-shadow:none;
+    border-radius:12px; padding:12px 16px; font-size:15px;
+    background:transparent; border:1px solid transparent; color:#48566A;
+  }
+  #main-nav .nav-btn:hover{ background:rgba(255,255,255,0.55); }
+  #main-nav .nav-btn.active{ background:#1C1C1E; color:#fff; border-color:#1C1C1E; }
+
+  /* Contenido centrado en columna cómoda (no estirado) */
+  .screen{ max-width:1120px; margin:0 auto; padding:26px 40px 60px; }
+
+  /* Barra de búsqueda del padrón, alineada al área de contenido */
+  #rodeo-search-bar{ top:80px !important; left:220px !important; }
+
+  /* Menú "Más": desplegar junto a la barra lateral, no arriba a la derecha */
+  #mas-menu > div:last-child{ top:auto !important; bottom:60px !important; left:14px !important; right:auto !important; }
+}
 </style>
 </head>
 <body>
