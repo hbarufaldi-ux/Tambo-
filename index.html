@@ -118,6 +118,20 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 .ficha-key{font-size:17px;color:#8E8E93;}
 .ficha-val{font-size:17px;font-weight:500;}
 
+/* Dashboard tiras (Inicio) */
+.d-panel{background:#fff;border:1px solid #E6EBF0;border-radius:18px;overflow:hidden;margin-bottom:12px;}
+.d-g3{display:grid;grid-template-columns:repeat(3,1fr);}
+.d-g4{display:grid;grid-template-columns:repeat(2,1fr);}
+.d-split{display:grid;grid-template-columns:1fr;}
+.d-cell{padding:15px 20px;border-right:1px solid #EDF1F5;border-bottom:1px solid #EDF1F5;}
+.d-lbl{font-size:12px;color:#8493a5;font-weight:700;text-transform:uppercase;letter-spacing:.4px;margin-bottom:7px;}
+.d-val{display:flex;align-items:baseline;gap:6px;}
+.d-num{font-size:30px;font-weight:800;letter-spacing:-1px;line-height:1;}
+.d-pct{font-size:13px;font-weight:700;color:#94a0ad;}
+.d-replbl{font-size:13px;font-weight:800;color:#1C1C1E;padding:12px 20px 0;}
+.d-sec{padding:16px 20px 18px;}
+.nav-ic{display:none;}
+
 /* ===== LAYOUT ESCRITORIO (PC ≥1024px) — no afecta el mobile ===== */
 @media (min-width:1024px){
   /* Sólo topbar arriba + barra lateral a la izquierda.
@@ -149,6 +163,10 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 
   /* Menú "Más": desplegar junto a la barra lateral, no arriba a la derecha */
   #mas-menu > div:last-child{ top:auto !important; bottom:60px !important; left:14px !important; right:auto !important; }
+  #main-nav .nav-btn{ display:flex; align-items:center; gap:11px; }
+  #main-nav .nav-ic{ display:inline-flex; align-items:center; justify-content:center; width:21px; height:21px; color:#8493a5; flex-shrink:0; }
+  #main-nav .nav-ic svg{ width:21px; height:21px; stroke-width:1.7; }
+  #main-nav .nav-btn.active .nav-ic{ color:#fff; }
 }
 </style>
 </head>
@@ -168,12 +186,12 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 </div>
 
 <div class="nav" id="main-nav">
-  <button class="nav-btn active" id="nav-inicio"   onclick="goTo('dashboard',this)">Inicio</button>
-  <button class="nav-btn"        id="nav-leche"    onclick="goTo('leche',this)">Leche</button>
-  <button class="nav-btn"        id="nav-padron"   onclick="goTo('rodeo',this)">Padrón</button>
-  <button class="nav-btn"        id="nav-guachera" onclick="goTo('guachera',this)">Guachera</button>
-  <button class="nav-btn"        id="nav-recria"   onclick="goTo('recria',this)">Recría</button>
-  <button class="nav-btn"        id="nav-mas"      onclick="toggleMasMenu()">Más</button>
+  <button class="nav-btn active" id="nav-inicio"   onclick="goTo('dashboard',this)"><span class="nav-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 4l9 6.5"/><path d="M5.5 9.5V20h13V9.5"/><path d="M9.5 20v-5h5v5"/></svg></span>Inicio</button>
+  <button class="nav-btn"        id="nav-leche"    onclick="goTo('leche',this)"><span class="nav-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.6s6 6.1 6 10.1a6 6 0 0 1-12 0c0-4 6-10.1 6-10.1Z"/></svg></span>Leche</button>
+  <button class="nav-btn"        id="nav-padron"   onclick="goTo('rodeo',this)"><span class="nav-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 6H20M8.5 12H20M8.5 18H20"/><circle cx="4.5" cy="6" r="1.1" fill="currentColor" stroke="none"/><circle cx="4.5" cy="12" r="1.1" fill="currentColor" stroke="none"/><circle cx="4.5" cy="18" r="1.1" fill="currentColor" stroke="none"/></svg></span>Padrón</button>
+  <button class="nav-btn"        id="nav-guachera" onclick="goTo('guachera',this)"><span class="nav-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M9 8.5h6V18a2 2 0 0 1-2 2h-2a2 2 0 0 1-2-2V8.5Z"/><path d="M10 8.5V7h4v1.5"/><path d="M10.6 5.2h2.8l-.5-1.4h-1.8l-.5 1.4Z"/><path d="M9.2 12.4h5.6"/></svg></span>Guachera</button>
+  <button class="nav-btn"        id="nav-recria"   onclick="goTo('recria',this)"><span class="nav-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20v-8"/><path d="M12 13.5c0-3-2.4-4.6-5.2-4.6-.1 3 2.3 4.6 5.2 4.6Z"/><path d="M12 12c0-2.6 2.1-4 4.8-4 .1 2.6-2 4-4.8 4Z"/></svg></span>Recría</button>
+  <button class="nav-btn"        id="nav-mas"      onclick="toggleMasMenu()"><span class="nav-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="7" height="7" rx="1.8"/><rect x="13" y="4" width="7" height="7" rx="1.8"/><rect x="4" y="13" width="7" height="7" rx="1.8"/><rect x="13" y="13" width="7" height="7" rx="1.8"/></svg></span>Más</button>
 </div>
 <!-- Menú Más -->
 <div id="mas-menu" style="display:none;position:fixed;inset:0;z-index:500;">
@@ -226,81 +244,64 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 <!-- DASHBOARD -->
 <div id="screen-dashboard" class="screen active">
 
-  <!-- RODEO (productivo) -->
-  <div style="background:#fff;border:1px solid #E6EBF0;border-radius:18px;margin-bottom:12px;overflow:hidden;">
-    <div style="display:grid;grid-template-columns:repeat(3,1fr);">
-      <div style="padding:18px 22px;border-right:1px solid #EDF1F5;">
-        <div style="font-size:12px;color:#8493a5;font-weight:700;text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px;">Total</div>
-        <div style="font-size:32px;font-weight:800;letter-spacing:-1px;line-height:1;color:#1C1C1E;" id="m-vacas">—</div>
+  <!-- MÉTRICAS (panel unificado compacto) -->
+  <div class="d-panel">
+    <div class="d-g3">
+      <div class="d-cell">
+        <div class="d-lbl">Total</div>
+        <div class="d-val"><div class="d-num" style="color:#1C1C1E;" id="m-vacas">—</div></div>
       </div>
-      <div style="padding:18px 22px;border-right:1px solid #EDF1F5;cursor:pointer;" onclick="irAlPadronFiltrado('prod','En Ordeñe','fc-ordene')">
-        <div style="font-size:12px;color:#8493a5;font-weight:700;text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px;">En ordeñe</div>
-        <div style="display:flex;align-items:baseline;gap:8px;">
-          <div style="font-size:32px;font-weight:800;letter-spacing:-1px;line-height:1;color:#1A7A40;" id="m-ordene-num">—</div>
-          <span style="font-size:13px;font-weight:700;color:#94a0ad;" id="m-ordene-pct"></span>
-        </div>
+      <div class="d-cell" style="cursor:pointer;" onclick="irAlPadronFiltrado('prod','En Ordeñe','fc-ordene')">
+        <div class="d-lbl">En ordeñe</div>
+        <div class="d-val"><div class="d-num" style="color:#1A7A40;" id="m-ordene-num">—</div><span class="d-pct" id="m-ordene-pct"></span></div>
       </div>
-      <div style="padding:18px 22px;cursor:pointer;" onclick="irAlPadronFiltrado('prod','Seca','fc-seca')">
-        <div style="font-size:12px;color:#8493a5;font-weight:700;text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px;">Secas</div>
-        <div style="display:flex;align-items:baseline;gap:8px;">
-          <div style="font-size:32px;font-weight:800;letter-spacing:-1px;line-height:1;color:#48566A;" id="m-secas-num">—</div>
-          <span style="font-size:13px;font-weight:700;color:#94a0ad;" id="m-secas-pct"></span>
-        </div>
+      <div class="d-cell" style="cursor:pointer;" onclick="irAlPadronFiltrado('prod','Seca','fc-seca')">
+        <div class="d-lbl">Secas</div>
+        <div class="d-val"><div class="d-num" style="color:#48566A;" id="m-secas-num">—</div><span class="d-pct" id="m-secas-pct"></span></div>
+      </div>
+    </div>
+    <div class="d-replbl">Estado Reproductivo</div>
+    <div class="d-g4">
+      <div class="d-cell" style="cursor:pointer;" onclick="irAlPadronFiltrado('repro','Preñada','fc-prenada')">
+        <div class="d-lbl">Preñadas</div>
+        <div class="d-val"><div class="d-num" style="color:#1060C0;" id="m-prenadas">—</div><span class="d-pct" id="pct-prenadas"></span></div>
+      </div>
+      <div class="d-cell" style="cursor:pointer;" onclick="irAlPadronFiltrado('repro','Vacía','fc-vacia')">
+        <div class="d-lbl">Vacías</div>
+        <div class="d-val"><div class="d-num" style="color:#C08000;" id="m-vacias">—</div><span class="d-pct" id="pct-vacias"></span></div>
+      </div>
+      <div class="d-cell" style="cursor:pointer;" onclick="irAlPadronFiltrado('repro','Inseminada','fc-inseminada')">
+        <div class="d-lbl">Inseminadas</div>
+        <div class="d-val"><div class="d-num" style="color:#6B35D4;" id="m-inseminadas">—</div><span class="d-pct" id="pct-inseminadas"></span></div>
+      </div>
+      <div class="d-cell" style="cursor:pointer;" onclick="irAlPadronFiltrado('repro','Rechazo','fc-rechazo')">
+        <div class="d-lbl">Rechazo</div>
+        <div class="d-val"><div class="d-num" style="color:#A0200A;" id="m-rechazo">—</div><span class="d-pct" id="pct-rechazo"></span></div>
       </div>
     </div>
   </div>
 
-  <!-- ESTADO REPRODUCTIVO -->
-  <div style="background:#fff;border:1px solid #E6EBF0;border-radius:18px;margin-bottom:12px;overflow:hidden;">
-    <div style="font-size:15px;font-weight:800;color:#1C1C1E;padding:16px 22px 0;">Estado Reproductivo</div>
-    <div style="display:grid;grid-template-columns:repeat(4,1fr);">
-      <div style="padding:16px 20px;border-right:1px solid #EDF1F5;cursor:pointer;" onclick="irAlPadronFiltrado('repro','Preñada','fc-prenada')">
-        <div style="font-size:12px;color:#8493a5;font-weight:700;text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px;">Preñadas</div>
-        <div style="display:flex;align-items:baseline;gap:6px;">
-          <div style="font-size:30px;font-weight:800;letter-spacing:-1px;line-height:1;color:#1060C0;" id="m-prenadas">—</div>
-          <span style="font-size:13px;font-weight:700;color:#94a0ad;" id="pct-prenadas"></span>
+  <!-- PRÓXIMAS A PARIR + ACTIVIDAD -->
+  <div class="d-panel">
+    <div class="d-split">
+      <div class="d-sec" style="border-right:1px solid #EDF1F5;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+          <div style="font-size:15px;font-weight:800;">Próximas a parir</div>
+          <div style="font-size:13px;font-weight:700;color:#0A4FA6;cursor:pointer;" onclick="irAlPadronFiltrado('repro','Preñada','fc-prenada')">Ver padrón →</div>
         </div>
+        <div id="proximas-parir-lista"></div>
       </div>
-      <div style="padding:16px 20px;border-right:1px solid #EDF1F5;cursor:pointer;" onclick="irAlPadronFiltrado('repro','Vacía','fc-vacia')">
-        <div style="font-size:12px;color:#8493a5;font-weight:700;text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px;">Vacías</div>
-        <div style="display:flex;align-items:baseline;gap:6px;">
-          <div style="font-size:30px;font-weight:800;letter-spacing:-1px;line-height:1;color:#C08000;" id="m-vacias">—</div>
-          <span style="font-size:13px;font-weight:700;color:#94a0ad;" id="pct-vacias"></span>
+      <div class="d-sec">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+          <div style="font-size:15px;font-weight:800;">Actividad de hoy</div>
+          <div id="actividad-badge" style="display:none;background:#1C1C1E;color:#fff;font-size:12px;font-weight:700;padding:3px 9px;border-radius:20px;"></div>
         </div>
-      </div>
-      <div style="padding:16px 20px;border-right:1px solid #EDF1F5;cursor:pointer;" onclick="irAlPadronFiltrado('repro','Inseminada','fc-inseminada')">
-        <div style="font-size:12px;color:#8493a5;font-weight:700;text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px;">Inseminadas</div>
-        <div style="display:flex;align-items:baseline;gap:6px;">
-          <div style="font-size:30px;font-weight:800;letter-spacing:-1px;line-height:1;color:#6B35D4;" id="m-inseminadas">—</div>
-          <span style="font-size:13px;font-weight:700;color:#94a0ad;" id="pct-inseminadas"></span>
-        </div>
-      </div>
-      <div style="padding:16px 20px;cursor:pointer;" onclick="irAlPadronFiltrado('repro','Rechazo','fc-rechazo')">
-        <div style="font-size:12px;color:#8493a5;font-weight:700;text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px;">Rechazo</div>
-        <div style="display:flex;align-items:baseline;gap:6px;">
-          <div style="font-size:30px;font-weight:800;letter-spacing:-1px;line-height:1;color:#A0200A;" id="m-rechazo">—</div>
-          <span style="font-size:13px;font-weight:700;color:#94a0ad;" id="pct-rechazo"></span>
-        </div>
+        <div id="actividad-hoy-lista"><div style="color:#8E8E93;font-size:14px;text-align:center;padding:12px 0;">Sin registros hoy</div></div>
       </div>
     </div>
   </div>
 
-  <!-- ACTIVIDAD DE HOY -->
-  <div style="background:#fff;border:1px solid #E6EBF0;border-radius:18px;padding:16px 22px;margin-bottom:12px;">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
-      <div style="font-size:15px;font-weight:800;color:#1C1C1E;">Actividad de hoy</div>
-      <div id="actividad-badge" style="display:none;background:#1C1C1E;color:#fff;font-size:12px;font-weight:700;padding:3px 9px;border-radius:20px;"></div>
-    </div>
-    <div id="actividad-hoy-lista">
-      <div style="color:#8E8E93;font-size:14px;text-align:center;padding:12px 0;">Sin registros hoy</div>
-    </div>
-  </div>
-
-  <!-- ALERTAS -->
-  <div style="background:#fff;border:1px solid #E6EBF0;border-radius:18px;padding:16px 22px;margin-bottom:10px;">
-    <div style="font-size:15px;font-weight:800;color:#1C1C1E;margin-bottom:10px;">Alertas y tareas</div>
-    <div id="alertas-lista"></div>
-  </div>
+  <div id="alertas-lista" style="display:none;"></div>
 
 </div>
 
@@ -1569,9 +1570,34 @@ function renderDashboard() {
     }
   }
   renderActividadHoy();
+  renderProximasParir();
 }
 
 // ---- RENDER RODEO ----
+function renderProximasParir(){
+  var cont=document.getElementById('proximas-parir-lista');
+  if(!cont) return;
+  var lista=rodeo.filter(function(a){ return a.cat!=='Baja' && a.estadoRepro==='Preñada' && a.partoEstimado; })
+    .map(function(a){ return {a:a, dias:diasHasta(a.partoEstimado)}; })
+    .filter(function(x){ return x.dias!==null; })
+    .sort(function(p,q){ return p.dias - q.dias; })
+    .slice(0,6);
+  cont.innerHTML='';
+  if(lista.length===0){ cont.innerHTML='<div style="color:#8E8E93;font-size:14px;text-align:center;padding:14px 0;">Sin vacas próximas a parir</div>'; return; }
+  lista.forEach(function(x){
+    var a=x.a, dias=x.dias;
+    var partes=[a.cat]; if(a.raza) partes.push(a.raza); if(a.nroLactancia) partes.push(a.nroLactancia+'° parto');
+    var cls = dias<=21 ? 'badge-blue' : 'badge-gray';
+    var txt = dias<0 ? 'Atrasada' : dias+' días';
+    var row=document.createElement('div');
+    row.style.cssText='display:flex;align-items:center;gap:13px;padding:11px 0;border-bottom:1px solid #F0F3F6;cursor:pointer;';
+    row.onclick=(function(rp){return function(){abrirFicha(rp);};})(a.rp);
+    row.innerHTML='<div style="min-width:48px;height:36px;border-radius:10px;background:#EEF2F6;color:#48566a;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px;flex-shrink:0;">'+a.rp+'</div>'+
+      '<div style="flex:1;min-width:0;"><div style="font-weight:700;font-size:15px;">'+(a.nombre||'')+'</div><div style="font-size:12.5px;color:#8493a5;margin-top:1px;">'+partes.join(' · ')+'</div></div>'+
+      '<span class="badge '+cls+'" style="white-space:nowrap;">'+txt+'</span>';
+    cont.appendChild(row);
+  });
+}
 function limpiarFiltros() {
   filtroRodeo = {prod: null, repro: null};
   document.querySelectorAll('.fchip').forEach(function(c){c.classList.remove('active');});
