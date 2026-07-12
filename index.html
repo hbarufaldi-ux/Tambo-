@@ -134,6 +134,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 .d-2col{display:grid;grid-template-columns:1fr;gap:8px;margin-bottom:8px;}
 .d-2col .d-panel{margin-bottom:0;}
 .nav-ic{display:none;}
+.ficha-sticky{ position:sticky; top:136px; z-index:30; background:#D8E0E8; padding:8px 0 12px; box-shadow:0 6px 8px -4px rgba(0,0,0,0.12); }
 
 /* ===== LAYOUT ESCRITORIO (PC ≥1024px) — no afecta el mobile ===== */
 @media (min-width:1024px){
@@ -174,6 +175,14 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
   #main-nav .nav-ic{ display:inline-flex; align-items:center; justify-content:center; width:21px; height:21px; color:#8493a5; flex-shrink:0; }
   #main-nav .nav-ic svg{ width:21px; height:21px; stroke-width:1.7; }
   #main-nav .nav-btn.active .nav-ic{ color:#fff; }
+  .ficha-sticky{ top:80px; }
+  #screen-config .card{ display:grid; grid-template-columns:1fr 1fr; gap:2px 22px; align-content:start; }
+  #screen-config .card > .section-title{ grid-column:1 / -1; }
+  #screen-config .card > .field-row{ grid-column:1 / -1; }
+  #screen-config #cfg-usuarios-lista{ grid-column:1 / -1; }
+  #screen-config .cfg-add-btn{ width:auto !important; justify-self:start; }
+  #cfg-botones{ justify-content:flex-end !important; }
+  #cfg-botones button{ flex:0 0 auto !important; min-width:150px; }
 }
 </style>
 </head>
@@ -204,8 +213,8 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 <div id="mas-menu" style="display:none;position:fixed;inset:0;z-index:500;">
   <div onclick="cerrarMasMenu()" style="position:absolute;inset:0;background:rgba(0,0,0,0.5);"></div>
   <div style="position:absolute;top:96px;right:12px;background:#fff;border-radius:16px;padding:8px;min-width:180px;box-shadow:0 8px 24px rgba(0,0,0,0.18);">
-    <button id="mas-reportes" onclick="cerrarMasMenu();goTo('reportes')" style="display:block;width:100%;padding:14px 16px;border:none;background:none;font-size:16px;font-weight:600;color:#1C1C1E;text-align:left;cursor:pointer;border-radius:10px;">📊 Reportes</button>
-    <button id="mas-config"   onclick="cerrarMasMenu();goTo('config')"   style="display:block;width:100%;padding:14px 16px;border:none;background:none;font-size:16px;font-weight:600;color:#1C1C1E;text-align:left;cursor:pointer;border-radius:10px;">⚙️ Configuración</button>
+    <button id="mas-reportes" onclick="cerrarMasMenu();goTo('reportes')" style="display:block;width:100%;padding:14px 16px;border:none;background:none;font-size:16px;font-weight:600;color:#1C1C1E;text-align:left;cursor:pointer;border-radius:10px;">Reportes</button>
+    <button id="mas-config"   onclick="cerrarMasMenu();goTo('config')"   style="display:block;width:100%;padding:14px 16px;border:none;background:none;font-size:16px;font-weight:600;color:#1C1C1E;text-align:left;cursor:pointer;border-radius:10px;">Configuración</button>
   </div>
 </div>
 
@@ -801,7 +810,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
       <button class="btn-secondary" onclick="exportar('guachera')">Guachera</button>
       <button class="btn-secondary" onclick="exportar('recria')">Recría</button>
       <button class="btn-secondary" onclick="exportar('alertas')" style="background:#FFF3CC;color:#7A5500;border-color:#F0C040;">Alertas para veterinario</button>
-      <button class="btn-secondary" onclick="exportarReporteMensual()" style="background:#EEE0FF;color:#6B35D4;border-color:#D4B0FF;">📊 Reporte mensual leche</button>
+      <button class="btn-secondary" onclick="exportarReporteMensual()" style="background:#EEE0FF;color:#6B35D4;border-color:#D4B0FF;">Reporte mensual leche</button>
       <button class="btn-secondary" onclick="limpiarCache()" style="color:#A32D2D;font-weight:700;">🗑 Limpiar caché local y recargar</button>
     </div>
   </div>
@@ -844,7 +853,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
   <!-- Botones -->
   <div style="display:flex;flex-direction:column;gap:8px;margin-top:10px;">
     <button class="btn-primary" onclick="guardarControlLechero()">💾 Guardar y subir a fichas</button>
-    <button class="btn-secondary" onclick="exportarControlLechero()">📊 Exportar Excel para DIRSA</button>
+    <button class="btn-secondary" onclick="exportarControlLechero()">Exportar Excel para DIRSA</button>
     <button class="btn-secondary" onclick="pausarControlLechero()" style="background:#FFF8E1;color:#7A5500;border-color:#F0C040;">⏸ Pausar — continuar después</button>
     <button class="btn-secondary" onclick="descartarControlLechero()" style="color:#A0200A;">✕ Descartar control</button>
   </div>
@@ -1928,7 +1937,7 @@ function abrirFicha(rp) {
   Object.entries(historialPartos).forEach(function(e){var p=e[1].find(function(p){return p.rpCria===rp;});if(p){var ma=getAnimal(parseInt(e[0]));madre=ma?ma.nombre+' (RP '+e[0]+')':'RP '+e[0];}});
 
   // Header
-  var hdr=document.createElement('div'); hdr.style.cssText='display:flex;align-items:center;gap:14px;margin-bottom:16px;';
+  var hdr=document.createElement('div'); hdr.style.cssText='display:flex;align-items:center;gap:14px;margin-bottom:0;';
   var info=document.createElement('div'); info.style.flex='1';
   var rRodeo = a.rodeoManual || calcRodeo(a);
   var rbHtml = rRodeo ? ' <span class="badge '+(RODEO_BADGE[rRodeo]||'badge-gray')+'" style="font-size:14px;vertical-align:middle;padding:6px 14px;">'+( RODEO_LABEL[rRodeo]||rRodeo )+'</span>' : '';
@@ -1941,8 +1950,9 @@ function abrirFicha(rp) {
   volverBtn.style.cssText = 'background:none;border:none;color:#1C1C1E;font-size:14px;font-weight:600;cursor:pointer;padding:0 0 12px;display:block;';
   volverBtn.textContent = '← Volver al Padrón';
   volverBtn.onclick = function(){ goBack(); };
-  cont.appendChild(volverBtn);
-  cont.appendChild(hdr);
+  var _stickyHead=document.createElement('div'); _stickyHead.className='ficha-sticky';
+  _stickyHead.appendChild(volverBtn); _stickyHead.appendChild(hdr);
+  cont.appendChild(_stickyHead);
 
   // Alertas
   alertas.forEach(function(al){
@@ -1969,10 +1979,8 @@ function abrirFicha(rp) {
   var f1=[['Fecha nac.',fmtFecha(a.fechaNac)],['Edad',eStr],['Raza',a.raza],['Categoría',a.cat]];
   if(madre) f1.push(['Madre',madre]);
   if(padre) f1.push(['Padre',padre]);
-  cont.appendChild(mkCard('Datos generales',f1));
-
   if(a.sexo==='H') {
-    var f2=[['Estado productivo',a.estadoProd||'—'],['Estado reproductivo',a.estadoRepro||'—'],['Último parto',fmtFecha(a.ultimoParto)],['Última insem.',fmtFecha(a.ultimaInsem)],['Parto estimado',a.partoEstimado?fmtFecha(a.partoEstimado)+(diasHasta(a.partoEstimado)!==null?' ('+diasHasta(a.partoEstimado)+' días)':''):'—'],['N° servicios ciclo',a.nroServicios||0]];
+    var f2=[['Último parto',fmtFecha(a.ultimoParto)],['Última insem.',fmtFecha(a.ultimaInsem)],['Parto estimado',a.partoEstimado?fmtFecha(a.partoEstimado)+(diasHasta(a.partoEstimado)!==null?' ('+diasHasta(a.partoEstimado)+' días)':''):'—'],['N° servicios ciclo',a.nroServicios||0]];
     if(diasEnLeche!==null) f2.push(['Días en leche',diasEnLeche]);
     if(diasGest!==null) f2.push(['Días gestación',diasGest]);
     var c2=mkCard('Reproducción',f2);
@@ -2013,6 +2021,8 @@ function abrirFicha(rp) {
       cont.appendChild(c4);
     }
   }
+
+  cont.appendChild(mkCard('Datos generales',f1));
 
   // FAB contextual ficha
   if(a.sexo==='H' && a.cat!=='Baja') {
@@ -6355,7 +6365,7 @@ function cerrarJovenFab() {
     <div style="font-size:19px;font-weight:800;color:#1C1C1E;letter-spacing:-0.3px;">Configuración</div>
   </div>
   <div class="card">
-    <div class="section-title">🏠 General</div>
+    <div class="section-title">General</div>
     <div class="form-row">
       <label class="form-label">Nombre del tambo</label>
       <input type="text" id="cfg-nombreTambo" class="form-input" placeholder="Cañada Negra">
@@ -6372,7 +6382,7 @@ function cerrarJovenFab() {
 
   <!-- PRODUCCIÓN -->
   <div class="card">
-    <div class="section-title">🥛 Producción</div>
+    <div class="section-title">Producción</div>
     <div class="form-row">
       <label class="form-label">Unidad de medida</label>
       <select id="cfg-unidad" class="form-input">
@@ -6405,7 +6415,7 @@ function cerrarJovenFab() {
 
   <!-- REPRODUCCIÓN -->
   <div class="card">
-    <div class="section-title">🐄 Reproducción</div>
+    <div class="section-title">Reproducción</div>
     <div class="form-row">
       <label class="form-label">Días espera posparto (1ra insem.)</label>
       <div style="display:flex;align-items:center;gap:8px;">
@@ -6424,7 +6434,7 @@ function cerrarJovenFab() {
 
   <!-- SECADO -->
   <div class="card">
-    <div class="section-title">💤 Secado</div>
+    <div class="section-title">Secado</div>
     <div class="form-row">
       <label class="form-label">Días antes del parto para secar</label>
       <div style="display:flex;align-items:center;gap:8px;">
@@ -6444,7 +6454,7 @@ function cerrarJovenFab() {
 
   <!-- CALIDAD DE LECHE -->
   <div class="card">
-    <div class="section-title">🧪 Calidad de leche</div>
+    <div class="section-title">Calidad de leche</div>
     <div class="form-row">
       <label class="form-label">UFC alerta (miles)</label>
       <input type="number" id="cfg-calUfcAlerta" class="form-input" inputmode="decimal">
@@ -6475,13 +6485,13 @@ function cerrarJovenFab() {
 
   <!-- USUARIOS (solo admin) -->
   <div class="card" id="cfg-card-usuarios">
-    <div class="section-title">👤 Usuarios</div>
+    <div class="section-title">Usuarios</div>
     <div id="cfg-usuarios-lista"></div>
     <button class="cfg-add-btn" onclick="abrirModalUsuario(null)">+ Agregar usuario</button>
   </div>
 
   <!-- BOTONES -->
-  <div style="display:flex;gap:10px;padding:0 0 16px;">
+  <div id="cfg-botones" style="display:flex;gap:10px;padding:0 0 16px;">
     <button onclick="resetConfig()" style="flex:1;padding:14px;border:1px solid #E0E0E5;border-radius:12px;background:#fff;font-size:15px;font-weight:600;cursor:pointer;color:#8E8E93;">Restaurar</button>
     <button onclick="guardarConfigUI()" style="flex:2;padding:14px;border:none;border-radius:12px;background:#1C1C1E;color:#fff;font-size:15px;font-weight:700;cursor:pointer;">Guardar cambios</button>
   </div>
