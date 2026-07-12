@@ -134,7 +134,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 .d-2col{display:grid;grid-template-columns:1fr;gap:8px;margin-bottom:8px;}
 .d-2col .d-panel{margin-bottom:0;}
 .nav-ic{display:none;}
-.ficha-sticky{ position:sticky; top:136px; z-index:30; background:#D8E0E8; padding:8px 0 12px; box-shadow:0 6px 8px -4px rgba(0,0,0,0.12); }
+.ficha-sticky{ position:sticky; top:136px; z-index:45; background:#D8E0E8; margin:0 -16px; padding:8px 16px 12px; box-shadow:0 8px 8px -6px rgba(0,0,0,0.18); }
 
 /* ===== LAYOUT ESCRITORIO (PC ≥1024px) — no afecta el mobile ===== */
 @media (min-width:1024px){
@@ -175,7 +175,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
   #main-nav .nav-ic{ display:inline-flex; align-items:center; justify-content:center; width:21px; height:21px; color:#8493a5; flex-shrink:0; }
   #main-nav .nav-ic svg{ width:21px; height:21px; stroke-width:1.7; }
   #main-nav .nav-btn.active .nav-ic{ color:#fff; }
-  .ficha-sticky{ top:80px; }
+  .ficha-sticky{ top:80px; margin:0 -40px; padding:10px 40px 12px; }
   #screen-config .card{ display:grid; grid-template-columns:1fr 1fr; gap:2px 22px; align-content:start; }
   #screen-config .card > .section-title{ grid-column:1 / -1; }
   #screen-config .card > .field-row{ grid-column:1 / -1; }
@@ -268,7 +268,6 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
   </div></div>
 
   <div class="d-panel">
-    <div class="d-replbl">Estado Reproductivo</div>
     <div class="d-g4">
       <div class="d-cell" style="cursor:pointer;" onclick="irAlPadronFiltrado('repro','Preñada','fc-prenada')"><div class="d-lbl">Preñadas</div><div class="d-val"><div class="d-num" style="color:#1060C0;" id="m-prenadas">—</div><span class="d-pct" id="pct-prenadas"></span></div></div>
       <div class="d-cell" style="cursor:pointer;" onclick="irAlPadronFiltrado('repro','Vacía','fc-vacia')"><div class="d-lbl">Vacías</div><div class="d-val"><div class="d-num" style="color:#C08000;" id="m-vacias">—</div><span class="d-pct" id="pct-vacias"></span></div></div>
