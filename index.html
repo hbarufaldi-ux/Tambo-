@@ -882,6 +882,7 @@ function drawDonut(id,pct,color){
 <!-- Firebase SDK -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script>
 // ── Firebase init ──
 var _fbConfig = {
@@ -898,6 +899,11 @@ var _db = firebase.firestore();
 _db.enablePersistence({synchronizeTabs: true}).catch(function(e){
   console.warn('Persistencia offline no disponible:', e.code);
 });
+
+// ── Login anónimo en Firebase (necesario para cerrar las reglas) ──
+var _authReady = firebase.auth().signInAnonymously()
+  .then(function(){ console.log('Firebase auth anónima OK'); })
+  .catch(function(e){ console.warn('Firebase auth anónima falló:', e); });
 
 // ── Capa de abstracción Firestore ──
 
@@ -6604,11 +6610,13 @@ function cerrarJovenFab() {
   </div>
 </div>
 <script>
-// Cargar usuarios desde Firebase antes de mostrar el login
-_inicializarUsuarios().then(function(){
+// Esperar login anónimo, luego cargar usuarios antes de mostrar el login
+_authReady.then(function(){
+  return _inicializarUsuarios();
+}).then(function(){
   initLogin();
 }).catch(function(e){
-  console.error('Error inicializando usuarios:', e);
+  console.error('Error en arranque:', e);
   initLogin(); // igual arrancar
 });
 </script>
