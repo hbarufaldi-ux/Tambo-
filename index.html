@@ -968,6 +968,61 @@ async function fb_actualizarEvento(coleccion, id, datos) {
 }
 
 // PRODUCCIÓN Y CALIDAD
+// ===== EVENTOS POR ANIMAL — carga en segundo plano (Ficha inteligente, etapa 1) =====
+var eventosPorRP = {};        // { rp: [ {tipo, fecha, rp, fila, ts}, ... ] }
+var _eventosCargados = false;
+
+var _EVENTOS_COLS = {
+  'eventos_inseminaciones': 'Inseminacion',
+  'eventos_tactos':         'Tacto',
+  'eventos_celos':          'Celo',
+  'eventos_partos':         'Parto',
+  'eventos_abortos':        'Aborto',
+  'eventos_secados':        'Secado',
+  'eventos_bajas':          'Baja'
+};
+
+async function cargarEventos() {
+  if(!_db) return;
+  try {
+    var nombres = Object.keys(_EVENTOS_COLS);
+    var idx = {};
+    for(var i=0;i<nombres.length;i++){
+      var col = nombres[i];
+      try {
+        var snap = await _db.collection(col).get();
+        snap.forEach(function(doc){
+          var d = doc.data(); var fila = d.fila || [];
+          var rp = Number(fila[2]); if(!rp) return;
+          if(!idx[rp]) idx[rp] = [];
+          idx[rp].push({ tipo:_EVENTOS_COLS[col], fecha:fila[1]||'', rp:rp, fila:fila, ts:d.ts||0 });
+        });
+      } catch(e){ console.warn('cargarEventos '+col+':', e); }
+    }
+    Object.keys(idx).forEach(function(rp){
+      idx[rp].sort(function(a,b){ return String(a.fecha).localeCompare(String(b.fecha)) || (a.ts-b.ts); });
+    });
+    eventosPorRP = idx; _eventosCargados = true;
+    console.log('Eventos cargados: '+Object.keys(idx).length+' animales con historial');
+  } catch(e){ console.warn('cargarEventos:', e); }
+}
+
+// Todos los eventos de un animal, en orden cronologico
+function eventosDeRP(rp){ return eventosPorRP[Number(rp)] || []; }
+
+// Agrupa los eventos por lactancia (una lactancia = de un parto al siguiente). La ultima es la vigente.
+function lactanciasDeRP(rp){
+  var evs = eventosDeRP(rp), lacts = [], actual = { partoInicio:null, eventos:[] };
+  evs.forEach(function(ev){
+    if(ev.tipo==='Parto'){
+      if(actual.eventos.length || actual.partoInicio) lacts.push(actual);
+      actual = { partoInicio:ev.fecha, eventos:[ev] };
+    } else { actual.eventos.push(ev); }
+  });
+  if(actual.eventos.length || actual.partoInicio) lacts.push(actual);
+  return lacts;
+}
+
 async function fb_guardarProduccion(registro) {
   try {
     var id = registro.id || registro.fecha;
@@ -6624,6 +6679,7 @@ _authReady.then(function(){
   return _inicializarUsuarios();
 }).then(function(){
   initLogin();
+  cargarEventos();
 }).catch(function(e){
   console.error('Error en arranque:', e);
   initLogin(); // igual arrancar
