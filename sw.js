@@ -1,4 +1,4 @@
-var CACHE_NAME = 'tambo-v157';
+var CACHE_NAME = 'tambo-v158';
 var urlsToCache = [
   '/Tambo-/',
   '/Tambo-/index.html',
@@ -36,14 +36,15 @@ self.addEventListener('fetch', function(event) {
   if(event.request.url.indexOf('firebase') !== -1) return;
   if(event.request.url.indexOf('googleapis.com') !== -1) return;
 
-  // Network-first para index.html — siempre baja la versión más reciente
-  var isHTML = event.request.url.endsWith('/Tambo-/') || 
-               event.request.url.endsWith('/Tambo-/index.html') ||
-               event.request.url.indexOf('/Tambo-/index.html') !== -1;
+  // Network-first para index.html — siempre baja la versión más reciente,
+  // ignorando la caché HTTP del navegador (cache: 'no-store')
+  var isHTML = event.request.url.endsWith('/Tambo-/') ||
+               event.request.url.indexOf('/Tambo-/index.html') !== -1 ||
+               event.request.mode === 'navigate';
 
   if(isHTML) {
     event.respondWith(
-      fetch(event.request)
+      fetch(event.request, { cache: 'no-store' })
         .then(function(response) {
           if(response && response.status === 200) {
             var clone = response.clone();
