@@ -1224,7 +1224,9 @@ var _EVENTOS_COLS = {
   'eventos_partos':         'Parto',
   'eventos_abortos':        'Aborto',
   'eventos_secados':        'Secado',
-  'eventos_bajas':          'Baja'
+  'eventos_bajas':          'Baja',
+  'eventos_tratamientos':  'Tratamiento',
+  'eventos_sanidad':       'Sanidad'
 };
 
 async function cargarEventos() {
@@ -2988,6 +2990,8 @@ async function enviarASheets(hoja, fila, datosExtra) {
       'Reg_Abortos':'eventos_abortos',
       'Reg_Secados':'eventos_secados',
       'Reg_Bajas':'eventos_bajas',
+      'Reg_Tratamientos':'eventos_tratamientos',
+      'Reg_Sanidad':'eventos_sanidad',
       'Guachera_Eventos':'eventos_guachera',
       'Reg_Produccion_Tambo':'produccion',
       'Calidad_Leche':'calidad',
