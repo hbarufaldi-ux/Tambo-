@@ -215,6 +215,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
   <div onclick="cerrarMasMenu()" style="position:absolute;inset:0;background:rgba(0,0,0,0.5);"></div>
   <div style="position:absolute;top:96px;right:12px;background:#fff;border-radius:16px;padding:8px;min-width:180px;box-shadow:0 8px 24px rgba(0,0,0,0.18);">
     <button id="mas-reportes" onclick="cerrarMasMenu();goTo('reportes')" style="display:block;width:100%;padding:14px 16px;border:none;background:none;font-size:16px;font-weight:600;color:#1C1C1E;text-align:left;cursor:pointer;border-radius:10px;">Reportes</button>
+    <button id="mas-botiquin" onclick="cerrarMasMenu();goTo('botiquin')" style="display:block;width:100%;padding:14px 16px;border:none;background:none;font-size:16px;font-weight:600;color:#1C1C1E;text-align:left;cursor:pointer;border-radius:10px;">Botiquín</button>
     <button id="mas-config"   onclick="cerrarMasMenu();goTo('config')"   style="display:block;width:100%;padding:14px 16px;border:none;background:none;font-size:16px;font-weight:600;color:#1C1C1E;text-align:left;cursor:pointer;border-radius:10px;">Configuración</button>
   </div>
 </div>
@@ -1034,6 +1035,150 @@ function eliminarInseminadorModal() {
   _guardarInseminadores(INSEMINADORES); fb_eliminarInseminador(it.id);
   renderCfgInseminadores(); poblarSelectsInseminador(); cerrarModalInseminador();
   showToast('Inseminador eliminado');
+}
+
+// ── BOTIQUÍN (catálogo de insumos — pieza 2) ──────────────────
+var BOTIQUIN = [];
+async function fb_cargarBotiquin() {
+  if(!_db) return null;
+  try {
+    var snap = await _db.collection('botiquin').orderBy('orden').get();
+    if(snap.empty) return null;
+    var arr = []; snap.forEach(function(d){ arr.push(d.data()); });
+    return arr;
+  } catch(e) { console.warn('fb_cargarBotiquin:', e); return null; }
+}
+async function fb_guardarTodoBotiquin(lista) {
+  if(!_db) return;
+  for(var i=0;i<lista.length;i++){ await _db.collection('botiquin').doc(String(lista[i].id)).set(lista[i]); }
+}
+async function fb_eliminarBotiquinItem(id) {
+  if(!_db) return;
+  try { await _db.collection('botiquin').doc(String(id)).delete(); } catch(e){ console.warn('fb_eliminarBotiquinItem:',e); }
+}
+function _guardarBotiquin(lista) {
+  BOTIQUIN = lista;
+  fb_guardarTodoBotiquin(lista).catch(function(e){ console.warn('Error guardando botiquín:', e); });
+  try { localStorage.setItem('tambo_botiquin', JSON.stringify(lista)); } catch(e) {}
+}
+async function _inicializarBotiquin() {
+  var fb = await fb_cargarBotiquin();
+  if(fb && fb.length) { BOTIQUIN = fb; }
+  else {
+    var ls = null; try { ls = JSON.parse(localStorage.getItem('tambo_botiquin')||'null'); } catch(e) {}
+    if(ls && ls.length) { BOTIQUIN = ls; }
+    else { BOTIQUIN = [{ id:'pg', nombre:'PG', categoria:'Medicamento', activo:'Prostaglandina', dosis:'', via:'', retiroLeche:0, retiroCarne:0, notas:'Celo / reinicio', orden:0 }]; _guardarBotiquin(BOTIQUIN); }
+  }
+  poblarSelectsBotiquin();
+}
+function optsBotiquin() { return BOTIQUIN.map(function(x){ return '<option value="'+x.nombre+'">'+x.nombre+' ('+x.categoria+')</option>'; }).join(''); }
+function botiquinPorNombre(n) { for(var i=0;i<BOTIQUIN.length;i++){ if(BOTIQUIN[i].nombre===n) return BOTIQUIN[i]; } return null; }
+function tratamientoInfoRetiro() {
+  var sel = document.getElementById('fstt-tipo'), info = document.getElementById('fstt-retiro-info');
+  if(!sel || !info) return;
+  var it = botiquinPorNombre(sel.value);
+  if(it && Number(it.retiroLeche) > 0) { info.style.display='block'; info.textContent='🥛 Retiro de leche: '+it.retiroLeche+' días'; }
+  else { info.style.display='none'; }
+}
+function poblarSelectsBotiquin() {
+  var sel = document.getElementById('fstt-tipo');
+  if(sel && sel.tagName==='SELECT' && sel.getAttribute('data-botiquin')==='1') {
+    var prev = sel.value;
+    sel.innerHTML = '<option value="">Seleccionar...</option>' + optsBotiquin();
+    if(prev) sel.value = prev;
+  }
+}
+var _botiquinFiltro = 'Todos';
+function renderBotiquin(filtro) {
+  if(filtro) _botiquinFiltro = filtro;
+  var cont = document.getElementById('botiquin-lista'); if(!cont) return;
+  document.querySelectorAll('#botiquin-filtros .fchip-bq').forEach(function(c){ c.classList.toggle('active', c.getAttribute('data-cat')===_botiquinFiltro); });
+  var items = BOTIQUIN.filter(function(x){ return _botiquinFiltro==='Todos' || x.categoria===_botiquinFiltro; });
+  var icon = {Medicamento:'💊', Vacuna:'🛡️', Insumo:'🏷️', Protocolo:'📋'};
+  var ctcls = {Medicamento:'ct-med', Vacuna:'ct-vac', Insumo:'ct-ins', Protocolo:'ct-pro'};
+  var iccls = {Medicamento:'bq-ic-med', Vacuna:'bq-ic-vac', Insumo:'bq-ic-ins', Protocolo:'bq-ic-pro'};
+  cont.innerHTML = '';
+  if(!items.length){ cont.innerHTML = '<div style="text-align:center;color:#A0A6B0;font-size:14px;padding:26px;">Sin ítems'+(_botiquinFiltro!=='Todos'?' en esta categoría':'')+'</div>'; return; }
+  items.forEach(function(it){
+    var idx = BOTIQUIN.indexOf(it);
+    var retiro = Number(it.retiroLeche)>0 ? '<span class="bq-retiro">🥛 Retiro '+it.retiroLeche+' d</span>' : '';
+    var sub = (it.activo||it.notas||'') + (it.dosis?(' · '+it.dosis):'');
+    var row = document.createElement('div');
+    row.className = 'bq-item';
+    row.onclick = function(){ abrirModalBotiquin(idx); };
+    row.innerHTML = '<div class="bq-ic '+(iccls[it.categoria]||'bq-ic-ins')+'">'+(icon[it.categoria]||'📦')+'</div>'+
+      '<div style="flex:1;min-width:0;"><div class="bq-t">'+it.nombre+' <span class="bq-cat '+(ctcls[it.categoria]||'ct-ins')+'">'+it.categoria+'</span></div><div class="bq-s">'+sub+' '+retiro+'</div></div>';
+    cont.appendChild(row);
+  });
+}
+var _editBotiquinIdx = null;
+function abrirModalBotiquin(idx) {
+  _editBotiquinIdx = idx;
+  var modal = document.getElementById('modal-botiquin'); if(!modal) return;
+  modal.style.display = 'flex';
+  var det = document.getElementById('bq-detalle'); if(det) det.classList.remove('bq-open');
+  var di = document.getElementById('bq-det-ic'); if(di) di.textContent='＋';
+  document.querySelectorAll('#modal-botiquin .bq-co').forEach(function(c){ c.classList.remove('sel'); });
+  if(idx===null) {
+    document.getElementById('modal-bq-titulo').textContent = 'Nuevo ítem';
+    ['bq-nombre','bq-activo','bq-dosis','bq-retiroLeche','bq-retiroCarne','bq-notas'].forEach(function(id){ var e=document.getElementById(id); if(e) e.value=''; });
+    document.getElementById('bq-via').value=''; document.getElementById('bq-cat').value='';
+    document.getElementById('bq-eliminar').style.display='none';
+  } else {
+    var it = BOTIQUIN[idx];
+    document.getElementById('modal-bq-titulo').textContent = 'Editar ítem';
+    document.getElementById('bq-nombre').value = it.nombre||'';
+    document.getElementById('bq-cat').value = it.categoria||'';
+    document.querySelectorAll('#modal-botiquin .bq-co').forEach(function(c){ if(c.getAttribute('data-cat')===it.categoria) c.classList.add('sel'); });
+    document.getElementById('bq-activo').value = it.activo||'';
+    document.getElementById('bq-dosis').value = it.dosis||'';
+    document.getElementById('bq-via').value = it.via||'';
+    document.getElementById('bq-retiroLeche').value = it.retiroLeche||'';
+    document.getElementById('bq-retiroCarne').value = it.retiroCarne||'';
+    document.getElementById('bq-notas').value = it.notas||'';
+    document.getElementById('bq-eliminar').style.display='block';
+  }
+  actualizarRetiroBox();
+}
+function selCatBotiquin(el) {
+  document.querySelectorAll('#modal-botiquin .bq-co').forEach(function(c){ c.classList.remove('sel'); });
+  el.classList.add('sel');
+  document.getElementById('bq-cat').value = el.getAttribute('data-cat');
+  actualizarRetiroBox();
+}
+function actualizarRetiroBox() {
+  var cat = document.getElementById('bq-cat').value;
+  var box = document.getElementById('bq-retiro-box');
+  if(box) box.style.display = (cat==='Medicamento'||cat==='Vacuna') ? 'block' : 'none';
+}
+function toggleDetalleBotiquin() {
+  var d = document.getElementById('bq-detalle'); d.classList.toggle('bq-open');
+  document.getElementById('bq-det-ic').textContent = d.classList.contains('bq-open')?'−':'＋';
+}
+function cerrarModalBotiquin() { var m=document.getElementById('modal-botiquin'); if(m) m.style.display='none'; }
+function guardarBotiquinModal() {
+  var nombre = document.getElementById('bq-nombre').value.trim();
+  var cat = document.getElementById('bq-cat').value;
+  if(!nombre) { showToast('Ingresá un nombre'); return; }
+  if(!cat) { showToast('Elegí una categoría'); return; }
+  var obj = { nombre:nombre, categoria:cat,
+    activo:document.getElementById('bq-activo').value.trim(), dosis:document.getElementById('bq-dosis').value.trim(),
+    via:document.getElementById('bq-via').value, retiroLeche:Number(document.getElementById('bq-retiroLeche').value)||0,
+    retiroCarne:Number(document.getElementById('bq-retiroCarne').value)||0, notas:document.getElementById('bq-notas').value.trim() };
+  if(_editBotiquinIdx===null) {
+    obj.id = nombre.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,'_')+'_'+Date.now().toString().slice(-4);
+    obj.orden = BOTIQUIN.length; BOTIQUIN.push(obj);
+  } else { var orig = BOTIQUIN[_editBotiquinIdx]; obj.id = orig.id; obj.orden = _editBotiquinIdx; BOTIQUIN[_editBotiquinIdx] = obj; }
+  _guardarBotiquin(BOTIQUIN); renderBotiquin(); poblarSelectsBotiquin(); cerrarModalBotiquin();
+  showToast('Guardado en el botiquín ✓');
+}
+function eliminarBotiquinModal() {
+  if(_editBotiquinIdx===null) return;
+  var it = BOTIQUIN[_editBotiquinIdx];
+  BOTIQUIN.splice(_editBotiquinIdx,1); BOTIQUIN.forEach(function(x,i){ x.orden=i; });
+  _guardarBotiquin(BOTIQUIN); fb_eliminarBotiquinItem(it.id);
+  renderBotiquin(); poblarSelectsBotiquin(); cerrarModalBotiquin();
+  showToast('Ítem eliminado');
 }
 
 // PADRÓN
@@ -2289,7 +2434,7 @@ function abrirFicha(rp) {
     mkS('ficha-sheet-secar','Secar','<div style="margin-bottom:12px;"><label style="'+lb+'">Fecha<\/label><input id="fss-fecha" type="date" value="'+td+'" style="'+sa+'"><\/div><div style="background:#D8E0E8;border-radius:12px;padding:12px 14px;margin-bottom:10px;display:flex;align-items:center;gap:10px;"><span style="font-size:18px;">🐄<\/span><div><span style="font-size:11px;color:#8E8E93;font-weight:600;text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:2px;">Estado actual<\/span><strong style="font-size:15px;color:#1C1C1E;">'+(a.estadoProd||'\u2014')+' · '+(a.estadoRepro||'\u2014')+'<\/strong><\/div><\/div>');
     mkS('ficha-sheet-produccion','Producci\xf3n','<div style="'+g2+'"><div><label style="'+lb+'">Fecha<\/label><input id="fsp-fecha" type="date" value="'+td+'" oninput="fichaCheck(\'ficha-sheet-produccion\')" style="'+sa+'"><\/div><div><label style="'+lb+'">Litros *<\/label><input id="fsp-litros" type="number" inputmode="decimal" placeholder="0" oninput="fichaCheck(\'ficha-sheet-produccion\')" style="'+si+'"><\/div><\/div>');
     mkS('ficha-sheet-baja','Baja','<div style="'+g2+'"><div><label style="'+lb+'">Fecha<\/label><input id="fsb-fecha" type="date" value="'+td+'" oninput="fichaCheck(\'ficha-sheet-baja\')" style="'+sa+'"><\/div><div><label style="'+lb+'">Motivo *<\/label><select id="fsb-motivo" onchange="fichaCheck(\'ficha-sheet-baja\')" style="'+si+'"><option value="">Seleccionar...<\/option><option>Muerte<\/option><option>Venta<\/option><option>Descarte<\/option><option>Otro<\/option><\/select><\/div><\/div><div style="background:#FFD6D6;border-radius:10px;padding:10px;font-size:13px;color:#A0200A;margin-bottom:8px;">Esta acci\xf3n marca el animal como Baja.<\/div>');
-    mkS('ficha-sheet-tratamiento','Tratamiento','<div style="'+g2+'"><div><label style="'+lb+'">Fecha<\/label><input id="fstt-fecha" type="date" value="'+td+'" oninput="fichaCheck(\'ficha-sheet-tratamiento\')" style="'+sa+'"><\/div><div><label style="'+lb+'">Tipo *<\/label><select id="fstt-tipo" onchange="fichaCheck(\'ficha-sheet-tratamiento\')" style="'+si+'"><option value="">Seleccionar...<\/option><option>Patas<\/option><option>Mastitis<\/option><option>Otro<\/option><\/select><\/div><\/div><div style="margin-bottom:8px;"><label style="'+lb+'">Descripci\xf3n<\/label><input id="fstt-desc" type="text" placeholder="Ej: desvasado..." style="'+si+'"><\/div>');
+    mkS('ficha-sheet-tratamiento','Tratamiento','<div style="'+g2+'"><div><label style="'+lb+'">Fecha<\/label><input id="fstt-fecha" type="date" value="'+td+'" oninput="fichaCheck(\'ficha-sheet-tratamiento\')" style="'+sa+'"><\/div><div><label style="'+lb+'">Producto *<\/label><select id="fstt-tipo" data-botiquin="1" onchange="fichaCheck(\'ficha-sheet-tratamiento\');tratamientoInfoRetiro();" style="'+si+'"><option value="">Seleccionar...<\/option>'+optsBotiquin()+'<\/select><\/div><\/div><div id="fstt-retiro-info" style="display:none;background:#FFF3CC;color:#7A5500;font-size:12px;font-weight:700;border-radius:8px;padding:7px 10px;margin-bottom:8px;"><\/div><div style="margin-bottom:8px;"><label style="'+lb+'">Descripci\xf3n<\/label><input id="fstt-desc" type="text" placeholder="Ej: desvasado..." style="'+si+'"><\/div>');
     mkS('ficha-sheet-sanidad','Sanidad','<div style="'+g2+'"><div><label style="'+lb+'">Fecha<\/label><input id="fssn-fecha" type="date" value="'+td+'" oninput="fichaCheck(\'ficha-sheet-sanidad\')" style="'+sa+'"><\/div><div><label style="'+lb+'">Tipo *<\/label><select id="fssn-tipo" onchange="fichaSelSanidad(this);fichaCheck(\'ficha-sheet-sanidad\')" style="'+si+'"><option value="">Seleccionar...<\/option><option>Brucelosis<\/option><option>Aftosa<\/option><option>Tuberculosis<\/option><\/select><\/div><\/div><div id="fssn-tbc" style="display:none;margin-bottom:8px;"><label style="'+lb+'">Resultado TBC<\/label><div style="display:flex;gap:8px;margin-top:4px;"><button onclick="fichaSelTbc(this,\'Negativa\')" style="flex:1;padding:10px;border:1px solid #B0BCC8;border-radius:10px;font-size:14px;background:#EBF0F5;cursor:pointer;">Negativa<\/button><button onclick="fichaSelTbc(this,\'Positiva\')" style="flex:1;padding:10px;border:1px solid #B0BCC8;border-radius:10px;font-size:14px;background:#EBF0F5;color:#A32D2D;cursor:pointer;">Positiva<\/button><\/div><\/div>');
     setTimeout(function(){fichaCheck('ficha-sheet-celo');fichaCheck('ficha-sheet-secar');},50);
     window._fichaFabRp=a.rp;
@@ -3039,7 +3184,7 @@ function goToNav(screen) {
 var _navAnterior = null; // {screen, navId}
 
 function goTo(screen, btn) {
-  var SCREENS_SIN_NAV = ['config', 'reportes'];
+  var SCREENS_SIN_NAV = ['config', 'reportes', 'botiquin'];
   var esSinNav = SCREENS_SIN_NAV.indexOf(screen) >= 0;
 
   if(screen==='reportes'){
@@ -3115,6 +3260,7 @@ function goTo(screen, btn) {
   if(['tacto','secado','baja','aborto'].indexOf(screen)>=0) poblarSelectsSiSucios();
   if(screen==='dashboard') renderDashboard();
   if(screen==='config') renderConfig();
+  if(screen==='botiquin') renderBotiquin();
   if(screen==='leche') { setTimeout(function(){ renderLeche(); }, 100); }
   window.scrollTo(0,0);
 }
@@ -3903,19 +4049,19 @@ function aplicarRol(rol) {
   var permisos = {
     admin: {
       nav: ['nav-inicio','nav-leche','nav-padron','nav-guachera','nav-recria','nav-mas'],
-      mas: ['mas-reportes','mas-config'],
+      mas: ['mas-reportes','mas-config','mas-botiquin'],
       fabFicha: ['Parto','Aborto','Celo','Inseminar','Tacto','Secar','Producción','Baja','Tratamiento','Sanidad'],
       fabLeche: ['prod','cal','control'],
     },
     tambero: {
       nav: ['nav-inicio','nav-leche','nav-padron','nav-guachera','nav-recria','nav-mas'],
-      mas: ['mas-reportes'],
+      mas: ['mas-reportes','mas-botiquin'],
       fabFicha: ['Parto','Aborto','Celo','Inseminar','Tacto','Secar','Producción','Baja','Tratamiento','Sanidad'],
       fabLeche: ['prod','cal','control'],
     },
     veterinario: {
       nav: ['nav-inicio','nav-leche','nav-padron','nav-guachera','nav-recria','nav-mas'],
-      mas: ['mas-reportes'],
+      mas: ['mas-reportes','mas-botiquin'],
       fabFicha: ['Parto','Aborto','Celo','Inseminar','Tacto','Secar','Producción','Baja','Tratamiento','Sanidad'],
       fabLeche: ['prod','cal','control'],
     },
@@ -3945,7 +4091,7 @@ function aplicarRol(rol) {
   });
 
   // Mostrar/ocultar opciones de Más
-  ['mas-reportes','mas-config'].forEach(function(id){
+  ['mas-reportes','mas-config','mas-botiquin'].forEach(function(id){
     var btn = document.getElementById(id);
     if(btn) btn.style.display = p.mas.indexOf(id) >= 0 ? 'block' : 'none';
   });
@@ -6536,6 +6682,38 @@ function cerrarJovenFab() {
 <!-- ============================================================ -->
 <!-- CONFIGURACIÓN                                                 -->
 <!-- ============================================================ -->
+<style id="botiquin-styles">
+.bq-filtros{display:flex;gap:7px;padding:12px 0 8px;overflow-x:auto;}
+.fchip-bq{padding:7px 13px;border-radius:20px;background:#EBF0F5;border:none;font-size:12.5px;font-weight:700;color:#6C727C;cursor:pointer;white-space:nowrap;}
+.fchip-bq.active{background:#1C1C1E;color:#fff;}
+.bq-item{background:#fff;border-radius:15px;box-shadow:0 1px 6px rgba(0,0,0,.05);padding:13px 15px;display:flex;align-items:center;gap:12px;cursor:pointer;margin-bottom:9px;}
+.bq-ic{width:42px;height:42px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:19px;flex-shrink:0;}
+.bq-ic-med{background:#FFE0E0;}.bq-ic-vac{background:#D6EAFF;}.bq-ic-ins{background:#EAF5E0;}.bq-ic-pro{background:#EEE0FF;}
+.bq-t{font-size:15.5px;font-weight:700;color:#1C1C1E;}
+.bq-s{font-size:12px;color:#8E8E93;margin-top:2px;}
+.bq-cat{display:inline-block;font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;}
+.ct-med{background:#FFD6D6;color:#A0200A;}.ct-vac{background:#D6EAFF;color:#0A4FA6;}.ct-ins{background:#D1F2E0;color:#1A7A40;}.ct-pro{background:#EEE0FF;color:#5A2DA0;}
+.bq-retiro{display:inline-flex;align-items:center;gap:3px;font-size:10.5px;font-weight:700;color:#7A5500;background:#FFF3CC;padding:2px 7px;border-radius:20px;margin-left:5px;}
+.bq-co{padding:11px 4px;border-radius:11px;border:2px solid #E5E5EA;background:#fff;text-align:center;font-size:13px;font-weight:700;color:#1C1C1E;cursor:pointer;}
+.bq-co.sel{border-color:#1C1C1E;background:#F2F2F7;}
+#bq-detalle.bq-open{max-height:600px;}
+</style>
+<div id="screen-botiquin" class="screen">
+  <div style="display:flex;align-items:center;gap:10px;padding:4px 0 8px;">
+    <button onclick="volverDeSecundaria()" style="background:none;border:none;font-size:22px;color:#1C1C1E;cursor:pointer;padding:4px 8px 4px 0;font-weight:600;line-height:1;">‹</button>
+    <div><div style="font-size:19px;font-weight:800;color:#1C1C1E;letter-spacing:-0.3px;">Botiquín</div><div style="font-size:12px;color:#8E8E93;font-weight:600;">Medicamentos · vacunas · insumos · protocolos</div></div>
+  </div>
+  <div id="botiquin-filtros" class="bq-filtros">
+    <button class="fchip-bq active" data-cat="Todos" onclick="renderBotiquin('Todos')">Todos</button>
+    <button class="fchip-bq" data-cat="Medicamento" onclick="renderBotiquin('Medicamento')">Medicamentos</button>
+    <button class="fchip-bq" data-cat="Vacuna" onclick="renderBotiquin('Vacuna')">Vacunas</button>
+    <button class="fchip-bq" data-cat="Insumo" onclick="renderBotiquin('Insumo')">Insumos</button>
+    <button class="fchip-bq" data-cat="Protocolo" onclick="renderBotiquin('Protocolo')">Protocolos</button>
+  </div>
+  <div id="botiquin-lista"></div>
+  <button class="cfg-add-btn" onclick="abrirModalBotiquin(null)" style="margin-top:12px;">+ Agregar ítem</button>
+</div>
+
 <div id="screen-config" class="screen">
   <div style="display:flex;align-items:center;gap:10px;padding:4px 0 12px;">
     <button onclick="volverDeSecundaria()" style="background:none;border:none;font-size:22px;color:#1C1C1E;cursor:pointer;padding:4px 8px 4px 0;font-weight:600;line-height:1;">‹</button>
@@ -6730,6 +6908,44 @@ function cerrarJovenFab() {
   </div>
 </div>
 
+<!-- MODAL BOTIQUÍN -->
+<div id="modal-botiquin" style="display:none;position:fixed;inset:0;z-index:800;background:rgba(0,0,0,0.45);align-items:flex-end;justify-content:center;">
+  <div style="background:#fff;border-radius:24px 24px 0 0;padding:22px 20px 34px;width:100%;max-width:480px;max-height:88vh;overflow-y:auto;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+      <div style="font-size:19px;font-weight:800;color:#1C1C1E;" id="modal-bq-titulo">Nuevo ítem</div>
+      <button onclick="cerrarModalBotiquin()" style="background:none;border:none;font-size:22px;color:#8E8E93;cursor:pointer;">✕</button>
+    </div>
+    <input type="hidden" id="bq-cat">
+    <div class="field"><label>Nombre</label><input type="text" id="bq-nombre" class="form-input" placeholder="Ej. Tilmicosina, PG..."></div>
+    <label class="form-label">Categoría</label>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:13px;">
+      <div class="bq-co" data-cat="Medicamento" onclick="selCatBotiquin(this)">💊 Medicamento</div>
+      <div class="bq-co" data-cat="Vacuna" onclick="selCatBotiquin(this)">🛡️ Vacuna</div>
+      <div class="bq-co" data-cat="Insumo" onclick="selCatBotiquin(this)">🏷️ Insumo</div>
+      <div class="bq-co" data-cat="Protocolo" onclick="selCatBotiquin(this)">📋 Protocolo</div>
+    </div>
+    <button onclick="toggleDetalleBotiquin()" style="width:100%;padding:12px;background:#EBF0F5;border:none;border-radius:12px;font-size:14px;font-weight:700;color:#1C1C1E;cursor:pointer;margin-bottom:6px;"><span id="bq-det-ic">＋</span> Agregar detalle (opcional)</button>
+    <div id="bq-detalle" style="max-height:0;overflow:hidden;transition:max-height .35s ease;">
+      <div style="padding-top:12px;">
+        <div class="field"><label>Principio activo</label><input type="text" id="bq-activo" class="form-input" placeholder="Ej. Cloprostenol..."></div>
+        <div class="field-row"><div class="field"><label>Dosis</label><input type="text" id="bq-dosis" class="form-input" placeholder="Ej. 2 ml"></div>
+        <div class="field"><label>Vía</label><select id="bq-via" class="form-input"><option value="">—</option><option>Intramuscular</option><option>Subcutánea</option><option>Intramamaria</option><option>Intravaginal</option><option>Endovenosa</option><option>Oral</option></select></div></div>
+        <div id="bq-retiro-box" style="background:#FFF8E0;border:1px solid #FFE9A8;border-radius:12px;padding:12px;margin-bottom:13px;">
+          <div style="font-size:12px;font-weight:800;color:#7A5500;margin-bottom:9px;">🥛 Restricciones de leche</div>
+          <div class="field-row"><div class="field"><label>Retiro leche (días)</label><input type="number" id="bq-retiroLeche" class="form-input" placeholder="0"></div>
+          <div class="field"><label>Retiro carne (días)</label><input type="number" id="bq-retiroCarne" class="form-input" placeholder="0"></div></div>
+        </div>
+        <div class="field"><label>Notas / para qué se usa</label><input type="text" id="bq-notas" class="form-input" placeholder="Ej. induce celo..."></div>
+      </div>
+    </div>
+    <div style="display:flex;gap:10px;margin-top:6px;">
+      <button onclick="cerrarModalBotiquin()" style="flex:1;padding:14px;border:1px solid #E5E5EA;border-radius:13px;background:#fff;font-size:15px;font-weight:600;cursor:pointer;">Cancelar</button>
+      <button onclick="guardarBotiquinModal()" style="flex:2;padding:14px;border:none;border-radius:13px;background:#1C1C1E;color:#fff;font-size:15px;font-weight:700;cursor:pointer;">Guardar</button>
+    </div>
+    <button id="bq-eliminar" onclick="eliminarBotiquinModal()" style="display:none;width:100%;padding:13px;border:1px solid #FFD6D6;border-radius:13px;background:#FFF0F0;color:#A0200A;font-size:15px;font-weight:600;cursor:pointer;margin-top:10px;">Eliminar ítem</button>
+  </div>
+</div>
+
 <!-- MODAL EVALUAR RECHAZO -->
 <div id="modal-rechazo" style="display:none;position:fixed;inset:0;z-index:700;background:rgba(0,0,0,0.5);align-items:flex-end;justify-content:center;">
   <div style="background:#fff;border-radius:24px 24px 0 0;padding:24px 20px 36px;width:100%;max-width:480px;">
@@ -6805,6 +7021,7 @@ _authReady.then(function(){
   initLogin();
   cargarEventos();
   _inicializarInseminadores();
+  _inicializarBotiquin();
 }).catch(function(e){
   console.error('Error en arranque:', e);
   initLogin(); // igual arrancar
