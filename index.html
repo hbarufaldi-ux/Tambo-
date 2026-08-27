@@ -404,7 +404,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
         <div><label>Tipo servicio</label><select id="i-tipo"><option>IA</option><option>TE</option><option>Monta natural</option></select></div>
       </div>
       <div class="field-row">
-        <div><label>Inseminador</label><input type="text" id="i-inseminador" value="Héctor Acosta"></div>
+        <div><label>Inseminador</label><select id="i-inseminador"><option value="">Seleccionar...</option></select></div>
         <div><label>Celo detectado</label><div class="radio-group" style="margin-top:4px;"><span class="radio-opt" onclick="sel(this,'celo')">Sí</span><span class="radio-opt" onclick="sel(this,'celo')">No</span></div></div>
       </div>
       <div id="i-nro-servicios" class="info-box" style="display:none;"></div>
@@ -934,6 +934,106 @@ async function fb_guardarTodosUsuarios(lista) {
 async function fb_eliminarUsuario(id) {
   try { await _db.collection('usuarios').doc(id).delete(); return true; }
   catch(e) { console.warn('fb_eliminarUsuario:', e); return false; }
+}
+
+// ── INSEMINADORES (lista editable — pieza 1) ──────────────────
+var INSEMINADORES = [];
+
+async function fb_cargarInseminadores() {
+  if(!_db) return null;
+  try {
+    var snap = await _db.collection('inseminadores').orderBy('orden').get();
+    if(snap.empty) return null;
+    var arr = []; snap.forEach(function(d){ arr.push(d.data()); });
+    return arr;
+  } catch(e) { console.warn('fb_cargarInseminadores:', e); return null; }
+}
+async function fb_guardarTodosInseminadores(lista) {
+  if(!_db) return;
+  for(var i=0;i<lista.length;i++){ await _db.collection('inseminadores').doc(String(lista[i].id)).set(lista[i]); }
+}
+async function fb_eliminarInseminador(id) {
+  if(!_db) return;
+  try { await _db.collection('inseminadores').doc(String(id)).delete(); } catch(e){ console.warn('fb_eliminarInseminador:',e); }
+}
+function _guardarInseminadores(lista) {
+  INSEMINADORES = lista;
+  fb_guardarTodosInseminadores(lista).catch(function(e){ console.warn('Error guardando inseminadores:', e); });
+  try { localStorage.setItem('tambo_inseminadores', JSON.stringify(lista)); } catch(e) {}
+}
+async function _inicializarInseminadores() {
+  var fb = await fb_cargarInseminadores();
+  if(fb && fb.length) { INSEMINADORES = fb; }
+  else {
+    var ls = null; try { ls = JSON.parse(localStorage.getItem('tambo_inseminadores')||'null'); } catch(e) {}
+    if(ls && ls.length) { INSEMINADORES = ls; }
+    else { INSEMINADORES = [{ id:'hector_acosta', nombre:'Héctor Acosta', orden:0 }]; _guardarInseminadores(INSEMINADORES); }
+  }
+  poblarSelectsInseminador();
+}
+function optsInseminadores() {
+  return INSEMINADORES.map(function(x){ return '<option value="'+x.nombre+'">'+x.nombre+'</option>'; }).join('');
+}
+function poblarSelectsInseminador() {
+  var sel = document.getElementById('i-inseminador');
+  if(sel && sel.tagName==='SELECT') {
+    var prev = sel.value;
+    sel.innerHTML = '<option value="">Seleccionar...</option>' + optsInseminadores();
+    if(prev) sel.value = prev;
+  }
+}
+function renderCfgInseminadores() {
+  var lista = document.getElementById('cfg-inseminadores-lista');
+  if(!lista) return;
+  lista.innerHTML = '';
+  INSEMINADORES.forEach(function(it, idx) {
+    var row = document.createElement('div');
+    row.className = 'cfg-user-row';
+    row.innerHTML =
+      '<div class="cfg-avatar">'+(it.nombre[0]||'?')+'</div>'+
+      '<div style="flex:1;"><div style="font-size:15px;font-weight:600;color:#1C1C1E;">'+it.nombre+'</div></div>'+
+      '<button class="cfg-edit-btn" onclick="abrirModalInseminador('+idx+')">Editar</button>';
+    lista.appendChild(row);
+  });
+}
+var _editInsemIdx = null;
+function abrirModalInseminador(idx) {
+  _editInsemIdx = idx;
+  var modal = document.getElementById('modal-inseminador'); if(!modal) return;
+  modal.style.display = 'flex';
+  if(idx === null) {
+    document.getElementById('modal-i-titulo').textContent = 'Nuevo inseminador';
+    document.getElementById('mi-nombre').value = '';
+    document.getElementById('mi-eliminar').style.display = 'none';
+  } else {
+    document.getElementById('modal-i-titulo').textContent = 'Editar inseminador';
+    document.getElementById('mi-nombre').value = INSEMINADORES[idx].nombre;
+    document.getElementById('mi-eliminar').style.display = 'block';
+  }
+}
+function cerrarModalInseminador() { var m=document.getElementById('modal-inseminador'); if(m) m.style.display='none'; }
+function guardarInseminadorModal() {
+  var nombre = document.getElementById('mi-nombre').value.trim();
+  if(!nombre) { showToast('Ingresá un nombre'); return; }
+  if(_editInsemIdx === null) {
+    var id = nombre.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,'_');
+    INSEMINADORES.push({ id:id, nombre:nombre, orden:INSEMINADORES.length });
+  } else {
+    var orig = INSEMINADORES[_editInsemIdx];
+    INSEMINADORES[_editInsemIdx] = { id:orig.id, nombre:nombre, orden:_editInsemIdx };
+  }
+  _guardarInseminadores(INSEMINADORES);
+  renderCfgInseminadores(); poblarSelectsInseminador(); cerrarModalInseminador();
+  showToast('Inseminador guardado ✓');
+}
+function eliminarInseminadorModal() {
+  if(_editInsemIdx===null) return;
+  var it = INSEMINADORES[_editInsemIdx];
+  INSEMINADORES.splice(_editInsemIdx, 1);
+  INSEMINADORES.forEach(function(x,i){ x.orden = i; });
+  _guardarInseminadores(INSEMINADORES); fb_eliminarInseminador(it.id);
+  renderCfgInseminadores(); poblarSelectsInseminador(); cerrarModalInseminador();
+  showToast('Inseminador eliminado');
 }
 
 // PADRÓN
@@ -1704,6 +1804,7 @@ function renderConfig() {
   var unidad = document.getElementById('cfg-unidad');
   if (unidad) unidad.onchange = actualizarUnidadesConfig;
   renderCfgUsuarios();
+  renderCfgInseminadores();
 }
 
 function actualizarUnidadesConfig() {
@@ -2183,7 +2284,7 @@ function abrirFicha(rp) {
     mkS('ficha-sheet-parto','Parto','<div style="'+g2+'"><div><label style="'+lb+'">Fecha<\/label><input id="fsp2-fecha" type="date" value="'+td+'" oninput="fichaCheck(\'ficha-sheet-parto\')" style="'+sa+'"><\/div><div><label style="'+lb+'">Tipo parto<\/label><select id="fsp2-tipo" style="'+si+'"><option>Normal<\/option><option>Distócico<\/option><option>Cesárea<\/option><\/select><\/div><\/div><div style="'+g2+'"><div><label style="'+lb+'">Sexo cría<\/label><select id="fsp2-sexo" onchange="fichaCheck(\'ficha-sheet-parto\')" style="'+si+'"><option value="">Seleccionar...<\/option><option>Macho<\/option><option>Hembra<\/option><\/select><\/div><div><label style="'+lb+'">RP cría (opcional)<\/label><input id="fsp2-rp" type="text" placeholder="RP..." style="'+si+'"><\/div><\/div><div style="'+g2+'"><div><label style="'+lb+'">Toro\/Embrión<\/label><input id="fsp2-toro" type="text" readonly style="'+si+';background:#D8E0E8;cursor:default;font-weight:600;"><\/div><\/div><div style="margin-bottom:8px;"><label style="'+lb+'">Observaciones<\/label><input id="fsp2-obs" type="text" placeholder="Opcional..." style="'+si+'"><\/div>');
     mkS('ficha-sheet-aborto','Aborto','<div style="margin-bottom:12px;"><label style="'+lb+'">Fecha<\/label><input id="fsa2-fecha" type="date" value="'+td+'" oninput="fichaCheck(\'ficha-sheet-aborto\')" style="'+sa+'"><\/div><div style="background:#FFD6D6;border-radius:12px;padding:12px 14px;margin-bottom:12px;font-size:13px;color:#A0200A;">Esta acción marca la vaca como Vacía y registra el aborto.<\/div><div style="margin-bottom:8px;"><label style="'+lb+'">Observaciones<\/label><input id="fsa2-obs" type="text" placeholder="Opcional..." style="'+si+'"><\/div>');
     mkS('ficha-sheet-celo','Celo','<div style="'+g2+'"><div><label style="'+lb+'">Fecha<\/label><input id="fsc-fecha" type="date" value="'+td+'" oninput="fichaCheck(\'ficha-sheet-celo\')" style="'+sa+'"><\/div><div><label style="'+lb+'">Obs<\/label><input id="fsc-obs" type="text" placeholder="Opcional..." style="'+si+'"><\/div><\/div>');
-    mkS('ficha-sheet-inseminar','Inseminar','<div style="'+g2+'"><div><label style="'+lb+'">Fecha<\/label><input id="fsi-fecha" type="date" value="'+td+'" oninput="fichaCheck(\'ficha-sheet-inseminar\')" style="'+sa+'"><\/div><div><label style="'+lb+'">Toro *<\/label><select id="fsi-toro" onchange="fichaCheck(\'ficha-sheet-inseminar\')" style="'+si+'"><option value="">Seleccionar...<\/option>'+to+'<\/select><\/div><\/div><div style="'+g2+'"><div><label style="'+lb+'">Tipo<\/label><select id="fsi-tipo" style="'+si+'"><option>IA<\/option><option>IATF<\/option><option>TE<\/option><option>Monta natural<\/option><\/select><\/div><div><label style="'+lb+'">Inseminador<\/label><input id="fsi-insem" type="text" placeholder="Opcional" style="'+si+'"><\/div><\/div>');
+    mkS('ficha-sheet-inseminar','Inseminar','<div style="'+g2+'"><div><label style="'+lb+'">Fecha<\/label><input id="fsi-fecha" type="date" value="'+td+'" oninput="fichaCheck(\'ficha-sheet-inseminar\')" style="'+sa+'"><\/div><div><label style="'+lb+'">Toro *<\/label><select id="fsi-toro" onchange="fichaCheck(\'ficha-sheet-inseminar\')" style="'+si+'"><option value="">Seleccionar...<\/option>'+to+'<\/select><\/div><\/div><div style="'+g2+'"><div><label style="'+lb+'">Tipo<\/label><select id="fsi-tipo" style="'+si+'"><option>IA<\/option><option>IATF<\/option><option>TE<\/option><option>Monta natural<\/option><\/select><\/div><div><label style="'+lb+'">Inseminador<\/label><select id="fsi-insem" style="'+si+'"><option value="">Opcional...<\/option>'+optsInseminadores()+'<\/select><\/div><\/div>');
     mkS('ficha-sheet-tacto','Tacto','<div style="margin-bottom:10px;"><label style="'+lb+'">Fecha<\/label><input id="fst-fecha" type="date" value="'+td+'" style="'+sa+'"><\/div><div style="margin-bottom:10px;"><label style="'+lb+'">Resultado *<\/label><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px;">'+rb+'<\/div><\/div>');
     mkS('ficha-sheet-secar','Secar','<div style="margin-bottom:12px;"><label style="'+lb+'">Fecha<\/label><input id="fss-fecha" type="date" value="'+td+'" style="'+sa+'"><\/div><div style="background:#D8E0E8;border-radius:12px;padding:12px 14px;margin-bottom:10px;display:flex;align-items:center;gap:10px;"><span style="font-size:18px;">🐄<\/span><div><span style="font-size:11px;color:#8E8E93;font-weight:600;text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:2px;">Estado actual<\/span><strong style="font-size:15px;color:#1C1C1E;">'+(a.estadoProd||'\u2014')+' · '+(a.estadoRepro||'\u2014')+'<\/strong><\/div><\/div>');
     mkS('ficha-sheet-produccion','Producci\xf3n','<div style="'+g2+'"><div><label style="'+lb+'">Fecha<\/label><input id="fsp-fecha" type="date" value="'+td+'" oninput="fichaCheck(\'ficha-sheet-produccion\')" style="'+sa+'"><\/div><div><label style="'+lb+'">Litros *<\/label><input id="fsp-litros" type="number" inputmode="decimal" placeholder="0" oninput="fichaCheck(\'ficha-sheet-produccion\')" style="'+si+'"><\/div><\/div>');
@@ -6567,6 +6668,13 @@ function cerrarJovenFab() {
   </div>
 
   <!-- BOTONES -->
+  <!-- INSEMINADORES -->
+  <div class="card" id="cfg-card-inseminadores">
+    <div class="section-title">Inseminadores</div>
+    <div id="cfg-inseminadores-lista"></div>
+    <button class="cfg-add-btn" onclick="abrirModalInseminador(null)">+ Agregar inseminador</button>
+  </div>
+
   <div id="cfg-botones" style="display:flex;gap:10px;padding:0 0 16px;">
     <button onclick="resetConfig()" style="flex:1;padding:14px;border:1px solid #E0E0E5;border-radius:12px;background:#fff;font-size:15px;font-weight:600;cursor:pointer;color:#8E8E93;">Restaurar</button>
     <button onclick="guardarConfigUI()" style="flex:2;padding:14px;border:none;border-radius:12px;background:#1C1C1E;color:#fff;font-size:15px;font-weight:700;cursor:pointer;">Guardar cambios</button>
@@ -6603,6 +6711,22 @@ function cerrarJovenFab() {
       <button onclick="guardarUsuarioModal()" style="flex:2;padding:14px;border:none;border-radius:13px;background:#1C1C1E;color:#fff;font-size:15px;font-weight:700;cursor:pointer;">Guardar</button>
     </div>
     <button id="mu-eliminar" onclick="eliminarUsuarioModal()" style="display:none;width:100%;padding:13px;border:1px solid #FFD6D6;border-radius:13px;background:#FFF0F0;color:#A0200A;font-size:15px;font-weight:600;cursor:pointer;margin-top:10px;">Eliminar usuario</button>
+  </div>
+</div>
+
+<!-- MODAL INSEMINADOR -->
+<div id="modal-inseminador" style="display:none;position:fixed;inset:0;z-index:800;background:rgba(0,0,0,0.45);align-items:flex-end;justify-content:center;">
+  <div style="background:#fff;border-radius:24px 24px 0 0;padding:24px 20px 40px;width:100%;max-width:480px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+      <div style="font-size:19px;font-weight:800;color:#1C1C1E;" id="modal-i-titulo">Nuevo inseminador</div>
+      <button onclick="cerrarModalInseminador()" style="background:none;border:none;font-size:22px;color:#8E8E93;cursor:pointer;">✕</button>
+    </div>
+    <div class="field"><label>Nombre</label><input type="text" id="mi-nombre" class="form-input" placeholder="ej: Héctor Acosta"></div>
+    <div style="display:flex;gap:10px;margin-top:4px;">
+      <button onclick="cerrarModalInseminador()" style="flex:1;padding:14px;border:1px solid #E5E5EA;border-radius:13px;background:#fff;font-size:15px;font-weight:600;cursor:pointer;">Cancelar</button>
+      <button onclick="guardarInseminadorModal()" style="flex:2;padding:14px;border:none;border-radius:13px;background:#1C1C1E;color:#fff;font-size:15px;font-weight:700;cursor:pointer;">Guardar</button>
+    </div>
+    <button id="mi-eliminar" onclick="eliminarInseminadorModal()" style="display:none;width:100%;padding:13px;border:1px solid #FFD6D6;border-radius:13px;background:#FFF0F0;color:#A0200A;font-size:15px;font-weight:600;cursor:pointer;margin-top:10px;">Eliminar inseminador</button>
   </div>
 </div>
 
@@ -6680,6 +6804,7 @@ _authReady.then(function(){
 }).then(function(){
   initLogin();
   cargarEventos();
+  _inicializarInseminadores();
 }).catch(function(e){
   console.error('Error en arranque:', e);
   initLogin(); // igual arrancar
