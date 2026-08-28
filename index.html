@@ -716,7 +716,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
   <div class="card">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
       <div class="section-title" style="margin:0;">Producción de leche</div>
-      <button onclick="exportarReporteMensual()" style="background:#EEE0FF;color:#6B35D4;border:1px solid #D4B0FF;border-radius:10px;padding:6px 12px;font-size:13px;font-weight:600;cursor:pointer;">⬇ Excel</button>
+      <button onclick="exportarReporteMensual()" style="background:#EEE0FF;color:#6B35D4;border:1px solid #D4B0FF;border-radius:10px;padding:6px 12px;font-size:13px;font-weight:600;cursor:pointer;">Excel</button>
     </div>
     <div id="reporte-leche-selector" style="display:flex;gap:8px;margin-bottom:12px;overflow-x:auto;padding-bottom:4px;"></div>
     <div id="reporte-leche-contenido"></div>
@@ -739,7 +739,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
       </div>
     </div>
     <div id="dirsa-drop-zone" style="border:2px dashed #C7CDD6;border-radius:14px;padding:22px 16px;text-align:center;background:#F7F9FB;margin-bottom:12px;">
-      <div style="font-size:28px;margin-bottom:6px;">📂</div>
+      <div style="font-size:28px;margin-bottom:6px;"></div>
       <div style="font-size:15px;font-weight:600;color:#1C1C1E;margin-bottom:3px;">Seleccionar archivo Excel</div>
       <div style="font-size:12px;color:#8E8E93;">.xlsx exportado de DIRSA</div>
     </div>
@@ -815,7 +815,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
       <button class="btn-secondary" onclick="exportar('recria')">Recría</button>
       <button class="btn-secondary" onclick="exportar('alertas')" style="background:#FFF3CC;color:#7A5500;border-color:#F0C040;">Alertas para veterinario</button>
       <button class="btn-secondary" onclick="exportarReporteMensual()" style="background:#EEE0FF;color:#6B35D4;border-color:#D4B0FF;">Reporte mensual leche</button>
-      <button class="btn-secondary" onclick="limpiarCache()" style="color:#A32D2D;font-weight:700;">🗑 Limpiar caché local y recargar</button>
+      <button class="btn-secondary" onclick="limpiarCache()" style="color:#A32D2D;font-weight:700;">Limpiar caché local y recargar</button>
     </div>
   </div>
 </div>
@@ -856,9 +856,9 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 
   <!-- Botones -->
   <div style="display:flex;flex-direction:column;gap:8px;margin-top:10px;">
-    <button class="btn-primary" onclick="guardarControlLechero()">💾 Guardar y subir a fichas</button>
+    <button class="btn-primary" onclick="guardarControlLechero()">Guardar y subir a fichas</button>
     <button class="btn-secondary" onclick="exportarControlLechero()">Exportar Excel para DIRSA</button>
-    <button class="btn-secondary" onclick="pausarControlLechero()" style="background:#FFF8E1;color:#7A5500;border-color:#F0C040;">⏸ Pausar — continuar después</button>
+    <button class="btn-secondary" onclick="pausarControlLechero()" style="background:#FFF8E1;color:#7A5500;border-color:#F0C040;">Pausar — continuar después</button>
     <button class="btn-secondary" onclick="descartarControlLechero()" style="color:#A0200A;">✕ Descartar control</button>
   </div>
 </div>
@@ -1080,7 +1080,7 @@ function tratamientoInfoRetiro() {
   var sel = document.getElementById('fstt-tipo'), info = document.getElementById('fstt-retiro-info');
   if(!sel || !info) return;
   var it = botiquinPorNombre(sel.value);
-  if(it && Number(it.retiroLeche) > 0) { info.style.display='block'; info.textContent='🥛 Retiro de leche: '+it.retiroLeche+' días'; }
+  if(it && Number(it.retiroLeche) > 0) { info.style.display='block'; info.textContent='Retiro de leche: '+it.retiroLeche+' días'; }
   else { info.style.display='none'; }
 }
 function poblarSelectsBotiquin() {
@@ -1097,19 +1097,19 @@ function renderBotiquin(filtro) {
   var cont = document.getElementById('botiquin-lista'); if(!cont) return;
   document.querySelectorAll('#botiquin-filtros .fchip-bq').forEach(function(c){ c.classList.toggle('active', c.getAttribute('data-cat')===_botiquinFiltro); });
   var items = BOTIQUIN.filter(function(x){ return _botiquinFiltro==='Todos' || x.categoria===_botiquinFiltro; });
-  var icon = {Medicamento:'💊', Vacuna:'🛡️', Insumo:'🏷️', Protocolo:'📋'};
+  var icon = {Medicamento:'', Vacuna:'', Insumo:'', Protocolo:''};
   var ctcls = {Medicamento:'ct-med', Vacuna:'ct-vac', Insumo:'ct-ins', Protocolo:'ct-pro'};
   var iccls = {Medicamento:'bq-ic-med', Vacuna:'bq-ic-vac', Insumo:'bq-ic-ins', Protocolo:'bq-ic-pro'};
   cont.innerHTML = '';
   if(!items.length){ cont.innerHTML = '<div style="text-align:center;color:#A0A6B0;font-size:14px;padding:26px;">Sin ítems'+(_botiquinFiltro!=='Todos'?' en esta categoría':'')+'</div>'; return; }
   items.forEach(function(it){
     var idx = BOTIQUIN.indexOf(it);
-    var retiro = Number(it.retiroLeche)>0 ? '<span class="bq-retiro">🥛 Retiro '+it.retiroLeche+' d</span>' : '';
+    var retiro = Number(it.retiroLeche)>0 ? '<span class="bq-retiro">Retiro '+it.retiroLeche+' d</span>' : '';
     var sub = (it.activo||it.notas||'') + (it.dosis?(' · '+it.dosis):'');
     var row = document.createElement('div');
     row.className = 'bq-item';
     row.onclick = function(){ abrirModalBotiquin(idx); };
-    row.innerHTML = '<div class="bq-ic '+(iccls[it.categoria]||'bq-ic-ins')+'">'+(icon[it.categoria]||'📦')+'</div>'+
+    row.innerHTML = '<div class="bq-ic '+(iccls[it.categoria]||'bq-ic-ins')+'">'+(icon[it.categoria]||'')+'</div>'+
       '<div style="flex:1;min-width:0;"><div class="bq-t">'+it.nombre+' <span class="bq-cat '+(ctcls[it.categoria]||'ct-ins')+'">'+it.categoria+'</span></div><div class="bq-s">'+sub+' '+retiro+'</div></div>';
     cont.appendChild(row);
   });
@@ -1438,7 +1438,7 @@ function setSyncStatus(msg) {
   el.textContent=msg;
   if(msg.startsWith('⟳') || msg.includes('actualizando') || msg.includes('Cargando') || msg.includes('Sincronizando') || msg.includes('Guardando')) {
     el.style.color='#F0A500'; // amarillo
-  } else if(msg.startsWith('⚠') || msg.startsWith('✕')) {
+  } else if(msg.startsWith('') || msg.startsWith('✕')) {
     el.style.color='#FF453A'; // rojo
   } else if(msg.includes('animales') || msg === '● Sincronizado') {
     el.style.color='#30D158'; // verde
@@ -1715,10 +1715,11 @@ function calcGuacheraAlertas() {
   guachera.filter(function(c){return !c.salio;}).forEach(function(c) {
     var d=diasDeVida(c.fechaNac);
     if(d===null) return;
-    if(!c.vacunado&&d>=43&&d<=47) alerts.push({tipo:'warn',msg:c.nombre+' — vacunar hoy (día '+d+')'});
-    else if(!c.vacunado&&d>47) alerts.push({tipo:'danger',msg:c.nombre+' — vacunación pendiente (día '+d+')'});
-    if(d>=68&&d<=72) alerts.push({tipo:'warn',msg:c.nombre+' — salida a corral (día '+d+')'});
-    else if(d>72) alerts.push({tipo:'danger',msg:c.nombre+' — salida a corral pendiente (día '+d+')'});
+    var id='RP '+c.rp+((c.nombre&&c.nombre.trim())?' ('+c.nombre.trim()+')':'');
+    if(!c.vacunado&&d>=43&&d<=47) alerts.push({tipo:'warn',rp:c.rp,msg:id+' — vacunar hoy (día '+d+')'});
+    else if(!c.vacunado&&d>47) alerts.push({tipo:'danger',rp:c.rp,msg:id+' — vacunación pendiente (día '+d+')'});
+    if(d>=68&&d<=72) alerts.push({tipo:'warn',rp:c.rp,msg:id+' — salida a corral (día '+d+')'});
+    else if(d>72) alerts.push({tipo:'danger',rp:c.rp,msg:id+' — salida a corral pendiente (día '+d+')'});
   });
   return alerts;
 }
@@ -1772,7 +1773,7 @@ function renderDashboard() {
   if(allAlerts.length===0 && guacheraAlerts.length===0) {
     var ok=document.createElement('div');
     ok.style.cssText='padding:12px 14px;border-radius:12px;background:#F4F7FA;color:#1C1C1E;display:flex;align-items:center;gap:8px;font-size:14px;font-weight:500;';
-    ok.innerHTML='<span style="font-size:16px;">✅</span><span>Todo en orden hoy</span>';
+    ok.innerHTML='<span style="font-size:16px;"></span><span>Todo en orden hoy</span>';
     lista.appendChild(ok);
   } else {
     // Grouped alerts by category
@@ -1786,7 +1787,7 @@ function renderDashboard() {
       // Header
       var hdr = document.createElement('div');
       hdr.style.cssText='display:flex;align-items:baseline;justify-content:space-between;margin-bottom:8px;cursor:pointer;';
-      hdr.innerHTML='<div style="display:flex;align-items:baseline;gap:8px;flex:1;"><span style="display:inline-flex;align-items:center;height:1em;flex-shrink:0;"><span style="width:8px;height:8px;border-radius:50%;background:'+cfg.dot+';display:inline-block;"></span></span><span style="font-size:16px;font-weight:700;color:#1C1C1E;">'+cfg.label+'</span></div><span style="font-size:15px;font-weight:600;color:#8493a5;white-space:nowrap;">'+grupos[cat].length+' animales'+(cat==='tacto'?' <button onclick="event.stopPropagation();abrirTactoMasivo()" style="background:#E07000;color:#fff;border:none;border-radius:10px;padding:4px 10px;font-size:12px;font-weight:700;cursor:pointer;">📋 Lista</button>':'')+' ›</span>';
+      hdr.innerHTML='<div style="display:flex;align-items:baseline;gap:8px;flex:1;"><span style="display:inline-flex;align-items:center;height:1em;flex-shrink:0;"><span style="width:8px;height:8px;border-radius:50%;background:'+cfg.dot+';display:inline-block;"></span></span><span style="font-size:16px;font-weight:700;color:#1C1C1E;">'+cfg.label+'</span></div><span style="font-size:15px;font-weight:600;color:#8493a5;white-space:nowrap;">'+grupos[cat].length+' animales'+(cat==='tacto'?' <button onclick="event.stopPropagation();abrirTactoMasivo()" style="background:#E07000;color:#fff;border:none;border-radius:10px;padding:4px 10px;font-size:12px;font-weight:700;cursor:pointer;">Lista</button>':'')+' ›</span>';
 
       var body = document.createElement('div');
       body.style.display='none';
@@ -2306,7 +2307,7 @@ function abrirFicha(rp) {
     if(diasEnLeche!==null) f2.push(['Días en leche',diasEnLeche]);
     if(diasGest!==null) f2.push(['Días gestación',diasGest]);
     var c2=mkCard('Reproducción',f2);
-    if((a.nroServicios||0)>=5){var w=document.createElement('div');w.className='warn-block';w.textContent='⚠️ '+a.nroServicios+' servicios en este ciclo — evaluar rechazo';c2.appendChild(w);}
+    if((a.nroServicios||0)>=5){var w=document.createElement('div');w.className='warn-block';w.textContent=''+a.nroServicios+' servicios en este ciclo — evaluar rechazo';c2.appendChild(w);}
     cont.appendChild(c2);
 
     var c3=document.createElement('div'); c3.className='card';
@@ -2315,7 +2316,7 @@ function abrirFicha(rp) {
       var pd=document.createElement('div'); pd.style.cssText='text-align:center;padding:8px 0;';
       pd.innerHTML='<div style="font-size:36px;font-weight:700;">'+a.produccionUltima+'</div><div style="font-size:13px;color:#8E8E93;">litros/día</div>';
       c3.appendChild(pd);
-      if(a.produccionUltima<12){var pw=document.createElement('div');pw.className='warn-block';pw.textContent='⚠️ Producción baja. Evaluar baja.';c3.appendChild(pw);}
+      if(a.produccionUltima<12){var pw=document.createElement('div');pw.className='warn-block';pw.textContent='Producción baja. Evaluar baja.';c3.appendChild(pw);}
     } else {
       var pn=document.createElement('div'); pn.style.cssText='padding:12px 0;text-align:center;color:#8E8E93;font-size:13px;'; pn.textContent='Sin registros de producción'; c3.appendChild(pn);
     }
@@ -2392,7 +2393,7 @@ function abrirFicha(rp) {
       var extra = '';
       if(o.label==='Secar'&&(repro==='Preñada')&&a.partoEstimado){
         var dp=Math.round((new Date(a.partoEstimado)-new Date())/864e5);
-        if(dp>(CONFIG.diasAntesPartoSecar||60)) extra=' ⚠️';
+        if(dp>(CONFIG.diasAntesPartoSecar||60)) extra=' ';
       }
       return {label:o.label+(bloq?' ✕':extra), s:o.s, c:bloq?'#909090':(o.c||null), disabled:bloq};
     })
@@ -2439,7 +2440,7 @@ function abrirFicha(rp) {
     mkS('ficha-sheet-celo','Celo','<div style="'+g2+'"><div><label style="'+lb+'">Fecha<\/label><input id="fsc-fecha" type="date" value="'+td+'" oninput="fichaCheck(\'ficha-sheet-celo\')" style="'+sa+'"><\/div><div><label style="'+lb+'">Obs<\/label><input id="fsc-obs" type="text" placeholder="Opcional..." style="'+si+'"><\/div><\/div>');
     mkS('ficha-sheet-inseminar','Inseminar','<div style="'+g2+'"><div><label style="'+lb+'">Fecha<\/label><input id="fsi-fecha" type="date" value="'+td+'" oninput="fichaCheck(\'ficha-sheet-inseminar\')" style="'+sa+'"><\/div><div><label style="'+lb+'">Toro *<\/label><select id="fsi-toro" onchange="fichaCheck(\'ficha-sheet-inseminar\')" style="'+si+'"><option value="">Seleccionar...<\/option>'+to+'<\/select><\/div><\/div><div style="'+g2+'"><div><label style="'+lb+'">Tipo<\/label><select id="fsi-tipo" style="'+si+'"><option>IA<\/option><option>IATF<\/option><option>TE<\/option><option>Monta natural<\/option><\/select><\/div><div><label style="'+lb+'">Inseminador<\/label><select id="fsi-insem" style="'+si+'"><option value="">Opcional...<\/option>'+optsInseminadores()+'<\/select><\/div><\/div>');
     mkS('ficha-sheet-tacto','Tacto','<div style="margin-bottom:10px;"><label style="'+lb+'">Fecha<\/label><input id="fst-fecha" type="date" value="'+td+'" style="'+sa+'"><\/div><div style="margin-bottom:10px;"><label style="'+lb+'">Resultado *<\/label><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px;">'+rb+'<\/div><\/div>');
-    mkS('ficha-sheet-secar','Secar','<div style="margin-bottom:12px;"><label style="'+lb+'">Fecha<\/label><input id="fss-fecha" type="date" value="'+td+'" style="'+sa+'"><\/div><div style="background:#D8E0E8;border-radius:12px;padding:12px 14px;margin-bottom:10px;display:flex;align-items:center;gap:10px;"><span style="font-size:18px;">🐄<\/span><div><span style="font-size:11px;color:#8E8E93;font-weight:600;text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:2px;">Estado actual<\/span><strong style="font-size:15px;color:#1C1C1E;">'+(a.estadoProd||'\u2014')+' · '+(a.estadoRepro||'\u2014')+'<\/strong><\/div><\/div>');
+    mkS('ficha-sheet-secar','Secar','<div style="margin-bottom:12px;"><label style="'+lb+'">Fecha<\/label><input id="fss-fecha" type="date" value="'+td+'" style="'+sa+'"><\/div><div style="background:#D8E0E8;border-radius:12px;padding:12px 14px;margin-bottom:10px;display:flex;align-items:center;gap:10px;"><span style="font-size:18px;"><\/span><div><span style="font-size:11px;color:#8E8E93;font-weight:600;text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:2px;">Estado actual<\/span><strong style="font-size:15px;color:#1C1C1E;">'+(a.estadoProd||'\u2014')+' · '+(a.estadoRepro||'\u2014')+'<\/strong><\/div><\/div>');
     mkS('ficha-sheet-produccion','Producci\xf3n','<div style="'+g2+'"><div><label style="'+lb+'">Fecha<\/label><input id="fsp-fecha" type="date" value="'+td+'" oninput="fichaCheck(\'ficha-sheet-produccion\')" style="'+sa+'"><\/div><div><label style="'+lb+'">Litros *<\/label><input id="fsp-litros" type="number" inputmode="decimal" placeholder="0" oninput="fichaCheck(\'ficha-sheet-produccion\')" style="'+si+'"><\/div><\/div>');
     mkS('ficha-sheet-baja','Baja','<div style="'+g2+'"><div><label style="'+lb+'">Fecha<\/label><input id="fsb-fecha" type="date" value="'+td+'" oninput="fichaCheck(\'ficha-sheet-baja\')" style="'+sa+'"><\/div><div><label style="'+lb+'">Motivo *<\/label><select id="fsb-motivo" onchange="fichaCheck(\'ficha-sheet-baja\')" style="'+si+'"><option value="">Seleccionar...<\/option><option>Muerte<\/option><option>Venta<\/option><option>Descarte<\/option><option>Otro<\/option><\/select><\/div><\/div><div style="background:#FFD6D6;border-radius:10px;padding:10px;font-size:13px;color:#A0200A;margin-bottom:8px;">Esta acci\xf3n marca el animal como Baja.<\/div>');
     mkS('ficha-sheet-tratamiento','Tratamiento','<div style="'+g2+'"><div><label style="'+lb+'">Fecha<\/label><input id="fstt-fecha" type="date" value="'+td+'" oninput="fichaCheck(\'ficha-sheet-tratamiento\')" style="'+sa+'"><\/div><div><label style="'+lb+'">Producto *<\/label><select id="fstt-tipo" data-botiquin="1" onchange="fichaCheck(\'ficha-sheet-tratamiento\');tratamientoInfoRetiro();" style="'+si+'"><option value="">Seleccionar...<\/option>'+optsBotiquin()+'<\/select><\/div><\/div><div id="fstt-retiro-info" style="display:none;background:#FFF3CC;color:#7A5500;font-size:12px;font-weight:700;border-radius:8px;padding:7px 10px;margin-bottom:8px;"><\/div><div style="margin-bottom:8px;"><label style="'+lb+'">Descripci\xf3n<\/label><input id="fstt-desc" type="text" placeholder="Ej: desvasado..." style="'+si+'"><\/div>');
@@ -2491,7 +2492,7 @@ function abrirFichaJoven(rp) {
   }
 
   var hdr=document.createElement('div'); hdr.style.cssText='display:flex;align-items:center;gap:14px;margin-bottom:16px;';
-  var icon=document.createElement('div'); icon.style.cssText='width:68px;height:68px;border-radius:50%;background:#D8E0E8;display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0;'; icon.textContent=a.sexo==='H'?'🐄':'🐂';
+  var icon=document.createElement('div'); icon.style.cssText='width:68px;height:68px;border-radius:50%;background:#D8E0E8;display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0;'; icon.textContent=a.sexo==='H'?'':'';
   var info=document.createElement('div'); info.style.flex='1';
   info.innerHTML='<div style="font-size:20px;font-weight:700;">RP '+a.rp+'</div><div style="font-size:15px;font-weight:500;color:#3C3C43;">'+a.nombre+'</div><div style="font-size:13px;color:#8E8E93;">'+(a.cat||'')+' · '+edadStr(a.fechaNac)+(enG&&!enG.salio?' · En guachera':'')+'</div>';
   hdr.appendChild(icon); hdr.appendChild(info); cont.appendChild(hdr);
@@ -2519,19 +2520,19 @@ function abrirFichaJoven(rp) {
   if(enG && !enG.salio) {
     // GUACHERA: vacunaciones, tratamiento, mover a recría
     var btnVacDia=document.createElement('button'); btnVacDia.className='btn-secondary';
-    btnVacDia.textContent='💉 Vacunación diarrea';
+    btnVacDia.textContent='Vacunación diarrea';
     btnVacDia.onclick=function(){registrarEventoTipo(rp,'Vacunación diarrea');}; btns.appendChild(btnVacDia);
 
     var btnVacRes=document.createElement('button'); btnVacRes.className='btn-secondary';
-    btnVacRes.textContent='💉 Vacunación respiratoria';
+    btnVacRes.textContent='Vacunación respiratoria';
     btnVacRes.onclick=function(){registrarEventoTipo(rp,'Vacunación respiratoria');}; btns.appendChild(btnVacRes);
 
     var btnVacMan=document.createElement('button'); btnVacMan.className='btn-secondary';
-    btnVacMan.textContent='💉 Vacunación mancha';
+    btnVacMan.textContent='Vacunación mancha';
     btnVacMan.onclick=function(){registrarEventoTipo(rp,'Vacunación mancha');}; btns.appendChild(btnVacMan);
 
     var btnTrat=document.createElement('button'); btnTrat.className='btn-secondary';
-    btnTrat.textContent='🩺 Tratamiento';
+    btnTrat.textContent='Tratamiento';
     btnTrat.onclick=function(){registrarEventoTipo(rp,'Tratamiento');}; btns.appendChild(btnTrat);
 
     var btnMover=document.createElement('button'); btnMover.className='btn-primary';
@@ -2541,27 +2542,27 @@ function abrirFichaJoven(rp) {
   } else {
     // RECRÍA: tratamiento, pesaje, inseminación, tacto, IATF, parto
     var btnTratR=document.createElement('button'); btnTratR.className='btn-secondary';
-    btnTratR.textContent='🩺 Tratamiento';
+    btnTratR.textContent='Tratamiento';
     btnTratR.onclick=function(){registrarEventoTipo(rp,'Tratamiento');}; btns.appendChild(btnTratR);
 
     var btnPes=document.createElement('button'); btnPes.className='btn-secondary';
-    btnPes.textContent='⚖️ Pesaje';
+    btnPes.textContent='Pesaje';
     btnPes.onclick=function(){registrarEventoTipo(rp,'Pesaje');}; btns.appendChild(btnPes);
 
     var btnInsem=document.createElement('button'); btnInsem.className='btn-secondary';
-    btnInsem.textContent='🔬 Inseminación';
+    btnInsem.textContent='Inseminación';
     btnInsem.onclick=function(){registrarEventoTipo(rp,'Inseminación');}; btns.appendChild(btnInsem);
 
     var btnTacto=document.createElement('button'); btnTacto.className='btn-secondary';
-    btnTacto.textContent='🔍 Tacto';
+    btnTacto.textContent='Tacto';
     btnTacto.onclick=function(){registrarEventoTipo(rp,'Tacto');}; btns.appendChild(btnTacto);
 
     var btnIATF=document.createElement('button'); btnIATF.className='btn-secondary';
-    btnIATF.textContent='🧬 IATF';
+    btnIATF.textContent='IATF';
     btnIATF.onclick=function(){registrarEventoTipo(rp,'IATF');}; btns.appendChild(btnIATF);
 
     var btnParto=document.createElement('button'); btnParto.className='btn-primary';
-    btnParto.textContent='🐄 Registrar parto → pasa a Padrón';
+    btnParto.textContent='Registrar parto → pasa a Padrón';
     btnParto.onclick=function(){confirmarPartoVaquillona(rp);}; btns.appendChild(btnParto);
   }
 
@@ -2838,7 +2839,7 @@ function onAnimalProd() {
   var a=getAnimal(document.getElementById('pr-animal').value);
   var div=document.getElementById('pr-alerta'); if(!div) return;
   if(!a){div.innerHTML='';return;}
-  if(a.estadoProd!=='En Ordeñe') div.innerHTML='<div class="warn-block">⚠️ '+a.nombre+' está como '+a.estadoProd+', no en ordeñe.</div>';
+  if(a.estadoProd!=='En Ordeñe') div.innerHTML='<div class="warn-block">'+a.nombre+' está como '+a.estadoProd+', no en ordeñe.</div>';
   else div.innerHTML='';
 }
 function calcTotal() {
@@ -2850,7 +2851,7 @@ function onMadreParto() {
   var a=getAnimal(document.getElementById('p-madre').value);
   var div=document.getElementById('p-madre-info'); if(!div) return;
   if(!a){div.innerHTML='';return;}
-  if(a.estadoRepro!=='Preñada'&&a.estadoProd!=='Seca'){div.innerHTML='<div class="danger-block">⛔ '+a.nombre+' no tiene preñez confirmada. Estado: '+a.estadoRepro+'</div>';return;}
+  if(a.estadoRepro!=='Preñada'&&a.estadoProd!=='Seca'){div.innerHTML='<div class="danger-block">'+a.nombre+' no tiene preñez confirmada. Estado: '+a.estadoRepro+'</div>';return;}
   // Preseleccionar toro — con retry si el select aún no está poblado
   function _setToro() {
     if(!a.ultimaInsemToro) return;
@@ -2877,18 +2878,18 @@ function onAnimalInsem() {
   var div=document.getElementById('i-alerta'); var nroDiv=document.getElementById('i-nro-servicios');
   if(!div) return;
   if(!a){div.innerHTML='';if(nroDiv)nroDiv.style.display='none';return;}
-  if(a.estadoRepro==='Rechazo') div.innerHTML='<div class="danger-block">⛔ '+a.nombre+' está en estado Rechazo. Evaluar si corresponde inseminar.</div>';
-  else if(a.estadoRepro==='Inseminada') div.innerHTML='<div class="warn-block">⚠️ '+a.nombre+' ya fue inseminada y espera tacto.</div>';
-  else if(a.estadoProd==='En Ordeñe'&&a.ultimoParto){var d=-diasHasta(a.ultimoParto);if(d<50)div.innerHTML='<div class="warn-block">⚠️ Día '+d+' post-parto. PVE: 50 días (faltan '+(50-d)+').</div>';else div.innerHTML='<div class="info-box">Día '+d+' post-parto. PVE cumplido.</div>';}
+  if(a.estadoRepro==='Rechazo') div.innerHTML='<div class="danger-block">'+a.nombre+' está en estado Rechazo. Evaluar si corresponde inseminar.</div>';
+  else if(a.estadoRepro==='Inseminada') div.innerHTML='<div class="warn-block">'+a.nombre+' ya fue inseminada y espera tacto.</div>';
+  else if(a.estadoProd==='En Ordeñe'&&a.ultimoParto){var d=-diasHasta(a.ultimoParto);if(d<50)div.innerHTML='<div class="warn-block">Día '+d+' post-parto. PVE: 50 días (faltan '+(50-d)+').</div>';else div.innerHTML='<div class="info-box">Día '+d+' post-parto. PVE cumplido.</div>';}
   else div.innerHTML='';
-  if(nroDiv){if((a.nroServicios||0)>=4){nroDiv.style.display='block';nroDiv.innerHTML='Servicio N° <strong>'+(a.nroServicios+1)+'</strong>'+((a.nroServicios||0)>=5?' — ⚠️ Evaluar rechazo':'');}else nroDiv.style.display='none';}
+  if(nroDiv){if((a.nroServicios||0)>=4){nroDiv.style.display='block';nroDiv.innerHTML='Servicio N° <strong>'+(a.nroServicios+1)+'</strong>'+((a.nroServicios||0)>=5?' — Evaluar rechazo':'');}else nroDiv.style.display='none';}
 }
 function onAnimalCelo() {
   var a=getAnimal(document.getElementById('c-animal').value);
   var div=document.getElementById('c-alerta'); if(!div) return;
   if(!a){div.innerHTML='';return;}
   if(a.estadoRepro==='Preñada'){
-    div.innerHTML='<div class="danger-block">⚠️ '+a.nombre+' está PREÑADA — celo puede indicar aborto. Registrá el celo y luego realizá un tacto para confirmar.</div>';
+    div.innerHTML='<div class="danger-block">'+a.nombre+' está PREÑADA — celo puede indicar aborto. Registrá el celo y luego realizá un tacto para confirmar.</div>';
     document.getElementById('celo-ok-msg').textContent='Celo registrado. Coordinar tacto urgente para confirmar posible aborto.';
   } else {
     div.innerHTML='<div class="info-box">Estado: '+a.estadoRepro+'</div>';
@@ -2918,7 +2919,7 @@ function onAnimalSecado() {
   var div=document.getElementById('s-info'); if(!div) return;
   if(!a){div.innerHTML='';return;}
   var html='<div class="info-box">'+a.estadoProd+' · '+a.estadoRepro+(a.partoEstimado?' · Parto est: '+fmtFecha(a.partoEstimado):(diasHasta(a.partoEstimado)!==null?' ('+(diasHasta(a.partoEstimado)>0?'faltan '+diasHasta(a.partoEstimado):'hace '+Math.abs(diasHasta(a.partoEstimado)))+' días)':''))+'</div>';
-  if(a.estadoProd!=='En Ordeñe'&&a.estadoRepro!=='Preñada') html+='<div class="warn-block">⚠️ '+a.nombre+' no está en ordeñe. ¿Confirmar secado?</div>';
+  if(a.estadoProd!=='En Ordeñe'&&a.estadoRepro!=='Preñada') html+='<div class="warn-block">'+a.nombre+' no está en ordeñe. ¿Confirmar secado?</div>';
   div.innerHTML=html;
 }
 
@@ -2980,7 +2981,7 @@ async function enviarASheetsEditar(hoja, buscarFecha, fila) {
     setSyncStatus('● '+rodeo.length+' animales'); showSaving(false); return true;
   } catch(e) {
     var nPend = leerPendientes().length;
-    setSyncStatus('⚠ Sin red ('+nPend+' pend.)');
+    setSyncStatus('Sin red ('+nPend+' pend.)');
     showSaving(false); showToast('Sin conexión — guardado localmente'); return true;
   }
 }
@@ -3019,7 +3020,7 @@ async function enviarASheets(hoja, fila, datosExtra) {
   } catch(e) {
     agregarPendiente(hoja, fila);
     var nPend = leerPendientes().length;
-    setSyncStatus('⚠ Sin red ('+nPend+' pend.)');
+    setSyncStatus('Sin red ('+nPend+' pend.)');
     showSaving(false); showToast('Sin conexión — guardado localmente'); return true;
   }
 }
@@ -3289,7 +3290,7 @@ function onAnimalAborto() {
   var a = getAnimal(document.getElementById('ab-animal').value);
   var div = document.getElementById('ab-info'); if(!div) return;
   if(!a){div.innerHTML='';return;}
-  if(a.estadoRepro!=='Preñada') div.innerHTML='<div class="warn-block">⚠️ '+a.rp+' no está confirmada Preñada. Estado: '+a.estadoRepro+'</div>';
+  if(a.estadoRepro!=='Preñada') div.innerHTML='<div class="warn-block">'+a.rp+' no está confirmada Preñada. Estado: '+a.estadoRepro+'</div>';
   else div.innerHTML='<div class="info-box">Preñada'+(a.partoEstimado?' · Parto est: '+fmtFecha(a.partoEstimado):'')+'</div>';
 }
 
@@ -3505,7 +3506,7 @@ function importarPadronDIRSA(input) {
       // Actualizar zona de carga
       document.getElementById('dirsa-drop-zone').style.background = '#D1F2E0';
       document.getElementById('dirsa-drop-zone').innerHTML =
-        '<div style="font-size:24px;margin-bottom:4px;">✅</div>' +
+        '<div style="font-size:24px;margin-bottom:4px;"></div>' +
         '<div style="font-size:14px;font-weight:600;color:#1C1C1E;">'+file.name+'</div>' +
         '<div style="font-size:12px;color:#8E8E93;">'+rows.length+' filas encontradas</div>';
 
@@ -3730,7 +3731,7 @@ function confirmarImportDIRSA() {
       document.getElementById('card-dirsa-conflictos').style.display = 'none';
 
       mostrarResultadoImport('ok',
-        '✅ Importación completada — ' +
+        'Importación completada — ' +
         (nuevos > 0 ? '<strong>' + nuevos + ' nuevos</strong> · ' : '') +
         '<strong>' + actualizados + ' actualizados</strong>' +
         (erroresFB > 0 ? ' · <span style="color:#A32D2D;">' + erroresFB + ' errores Firebase</span>' : '') + '<br>' +
@@ -3781,7 +3782,7 @@ function resetearImportDIRSA() {
   document.getElementById('import-resultado').innerHTML = '';
   document.getElementById('dirsa-drop-zone').style.background = '#F7F9FB';
   document.getElementById('dirsa-drop-zone').innerHTML =
-    '<div style="font-size:28px;margin-bottom:6px;">📂</div>' +
+    '<div style="font-size:28px;margin-bottom:6px;"></div>' +
     '<div style="font-size:15px;font-weight:600;color:#1C1C1E;margin-bottom:3px;">Seleccionar archivo Excel</div>' +
     '<div style="font-size:12px;color:#8E8E93;">.xlsx exportado de DIRSA</div>';
   document.getElementById('import-file').value = '';
@@ -4480,16 +4481,16 @@ function _cargarRecientes() {
 }
 
 var TIPO_LABELS = {
-  parto: {icon:'🐄', label:'Parto'},
-  insem: {icon:'🧬', label:'Inseminación'},
-  celo:  {icon:'♀️', label:'Celo'},
-  prod:  {icon:'💧', label:'Producción'},
-  guachera: {icon:'🍼', label:'Guachera'},
-  recria:   {icon:'🌱', label:'Recría'},
-  tacto:    {icon:'🔬', label:'Tacto'},
-  secado:   {icon:'🔒', label:'Secado'},
-  baja:     {icon:'⬇️', label:'Baja'},
-  aborto:   {icon:'⚠️', label:'Aborto'},
+  parto: {icon:'', label:'Parto'},
+  insem: {icon:'', label:'Inseminación'},
+  celo:  {icon:'', label:'Celo'},
+  prod:  {icon:'', label:'Producción'},
+  guachera: {icon:'', label:'Guachera'},
+  recria:   {icon:'', label:'Recría'},
+  tacto:    {icon:'', label:'Tacto'},
+  secado:   {icon:'', label:'Secado'},
+  baja:     {icon:'', label:'Baja'},
+  aborto:   {icon:'', label:'Aborto'},
 };
 
 function renderActividadHoy() {
@@ -4515,7 +4516,7 @@ function renderActividadHoy() {
 
   cont.innerHTML = '';
   todos.forEach(function(r) {
-    var cfg = TIPO_LABELS[r.tipo] || {icon:'📝', label: r.tipo};
+    var cfg = TIPO_LABELS[r.tipo] || {icon:'', label: r.tipo};
     var animal = getAnimal ? getAnimal(r.rp) : null;
     var nombreAnimal = animal ? (animal.nombre || 'RP '+r.rp) : 'RP '+r.rp;
     var row = document.createElement('div');
@@ -4732,10 +4733,10 @@ function renderTactoMasivo() {
     var info = document.createElement('div');
     info.innerHTML = '<div style="font-size:15px;font-weight:700;color:#1C1C1E;">RP ' + a.rp + (nombre?' — '+nombre:'') + '</div>'
       + '<div style="font-size:12px;color:#8E8E93;margin-top:2px;">' + a.detalle + '</div>'
-      + (hecho ? '<div style="font-size:12px;font-weight:600;color:#1A7A40;margin-top:3px;">✅ ' + res.resultado + '</div>' : '');
+      + (hecho ? '<div style="font-size:12px;font-weight:600;color:#1A7A40;margin-top:3px;">' + res.resultado + '</div>' : '');
 
     var btn = document.createElement('button');
-    btn.textContent = hecho ? '✏️' : '📋';
+    btn.textContent = hecho ? '' : '';
     btn.style.cssText = 'background:' + (hecho?'#E1F5EE':'#FFF3CC') + ';border:none;border-radius:10px;padding:8px 12px;font-size:18px;cursor:pointer;flex-shrink:0;';
     btn.onclick = function(){ abrirModalTM(a.rp, a.detalle); };
 
@@ -6175,7 +6176,7 @@ async function fichaGuardar(sheetId, rp) {
     guardarCacheLocal(); fb_syncAnimal(rp);
     await enviarASheets('Reg_Celos',[generarID('Cel',rp),a.ultimoCelo,rp,a.nombre,document.getElementById('fsc-obs').value||'']);
     agregarReciente('celo', rp, document.getElementById('fsc-obs').value||'Celo');
-    if(celoEnPreniada) showToast('⚠️ Posible aborto — RP '+rp);
+    if(celoEnPreniada) showToast('Posible aborto — RP '+rp);
     else showToast('Celo registrado ✓');
     renderDashboard(); renderRodeo();
   } else if(sheetId==='ficha-sheet-inseminar') {
@@ -6668,12 +6669,12 @@ function cerrarJovenFab() {
     <div style="font-size:13px;color:#8E8E93;margin-bottom:16px;" id="tm-modal-detalle"></div>
     <div style="font-size:13px;font-weight:600;color:#1C1C1E;margin-bottom:8px;">Resultado del tacto</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px;" id="tm-resultados">
-      <button onclick="selTactoMasivo(this,'Preñada')" style="padding:12px;border:2px solid #E0E0E5;border-radius:12px;background:#fff;font-size:14px;font-weight:600;cursor:pointer;color:#1060C0;">🐄 Preñada</button>
-      <button onclick="selTactoMasivo(this,'Vacía')" style="padding:12px;border:2px solid #E0E0E5;border-radius:12px;background:#fff;font-size:14px;font-weight:600;cursor:pointer;color:#7A5500;">⬜ Vacía</button>
-      <button onclick="selTactoMasivo(this,'Repetición')" style="padding:12px;border:2px solid #E0E0E5;border-radius:12px;background:#fff;font-size:14px;font-weight:600;cursor:pointer;color:#534AB7;">🔄 Repetición</button>
-      <button onclick="selTactoMasivo(this,'IATF')" style="padding:12px;border:2px solid #E0E0E5;border-radius:12px;background:#fff;font-size:14px;font-weight:600;cursor:pointer;color:#0F6E56;">💉 IATF</button>
-      <button onclick="selTactoMasivo(this,'PG')" style="padding:12px;border:2px solid #E0E0E5;border-radius:12px;background:#fff;font-size:14px;font-weight:600;cursor:pointer;color:#A05000;">💊 PG</button>
-      <button onclick="selTactoMasivo(this,'Anestro')" style="padding:12px;border:2px solid #E0E0E5;border-radius:12px;background:#fff;font-size:14px;font-weight:600;cursor:pointer;color:#A0200A;">⚠️ Anestro</button>
+      <button onclick="selTactoMasivo(this,'Preñada')" style="padding:12px;border:2px solid #E0E0E5;border-radius:12px;background:#fff;font-size:14px;font-weight:600;cursor:pointer;color:#1060C0;">Preñada</button>
+      <button onclick="selTactoMasivo(this,'Vacía')" style="padding:12px;border:2px solid #E0E0E5;border-radius:12px;background:#fff;font-size:14px;font-weight:600;cursor:pointer;color:#7A5500;">Vacía</button>
+      <button onclick="selTactoMasivo(this,'Repetición')" style="padding:12px;border:2px solid #E0E0E5;border-radius:12px;background:#fff;font-size:14px;font-weight:600;cursor:pointer;color:#534AB7;">Repetición</button>
+      <button onclick="selTactoMasivo(this,'IATF')" style="padding:12px;border:2px solid #E0E0E5;border-radius:12px;background:#fff;font-size:14px;font-weight:600;cursor:pointer;color:#0F6E56;">IATF</button>
+      <button onclick="selTactoMasivo(this,'PG')" style="padding:12px;border:2px solid #E0E0E5;border-radius:12px;background:#fff;font-size:14px;font-weight:600;cursor:pointer;color:#A05000;">PG</button>
+      <button onclick="selTactoMasivo(this,'Anestro')" style="padding:12px;border:2px solid #E0E0E5;border-radius:12px;background:#fff;font-size:14px;font-weight:600;cursor:pointer;color:#A0200A;">Anestro</button>
     </div>
     <div id="tm-dias-field" style="display:none;margin-bottom:12px;">
       <label style="font-size:13px;font-weight:600;color:#1C1C1E;">Días de gestación</label>
@@ -6930,10 +6931,10 @@ function cerrarJovenFab() {
     <div class="field"><label>Nombre</label><input type="text" id="bq-nombre" class="form-input" placeholder="Ej. Tilmicosina, PG..."></div>
     <label class="form-label">Categoría</label>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:13px;">
-      <div class="bq-co" data-cat="Medicamento" onclick="selCatBotiquin(this)">💊 Medicamento</div>
-      <div class="bq-co" data-cat="Vacuna" onclick="selCatBotiquin(this)">🛡️ Vacuna</div>
-      <div class="bq-co" data-cat="Insumo" onclick="selCatBotiquin(this)">🏷️ Insumo</div>
-      <div class="bq-co" data-cat="Protocolo" onclick="selCatBotiquin(this)">📋 Protocolo</div>
+      <div class="bq-co" data-cat="Medicamento" onclick="selCatBotiquin(this)">Medicamento</div>
+      <div class="bq-co" data-cat="Vacuna" onclick="selCatBotiquin(this)">Vacuna</div>
+      <div class="bq-co" data-cat="Insumo" onclick="selCatBotiquin(this)">Insumo</div>
+      <div class="bq-co" data-cat="Protocolo" onclick="selCatBotiquin(this)">Protocolo</div>
     </div>
     <button onclick="toggleDetalleBotiquin()" style="width:100%;padding:12px;background:#EBF0F5;border:none;border-radius:12px;font-size:14px;font-weight:700;color:#1C1C1E;cursor:pointer;margin-bottom:6px;"><span id="bq-det-ic">＋</span> Agregar detalle (opcional)</button>
     <div id="bq-detalle" style="max-height:0;overflow:hidden;transition:max-height .35s ease;">
@@ -6942,7 +6943,7 @@ function cerrarJovenFab() {
         <div class="field-row"><div class="field"><label>Dosis</label><input type="text" id="bq-dosis" class="form-input" placeholder="Ej. 2 ml"></div>
         <div class="field"><label>Vía</label><select id="bq-via" class="form-input"><option value="">—</option><option>Intramuscular</option><option>Subcutánea</option><option>Intramamaria</option><option>Intravaginal</option><option>Endovenosa</option><option>Oral</option></select></div></div>
         <div id="bq-retiro-box" style="background:#FFF8E0;border:1px solid #FFE9A8;border-radius:12px;padding:12px;margin-bottom:13px;">
-          <div style="font-size:12px;font-weight:800;color:#7A5500;margin-bottom:9px;">🥛 Restricciones de leche</div>
+          <div style="font-size:12px;font-weight:800;color:#7A5500;margin-bottom:9px;">Restricciones de leche</div>
           <div class="field-row"><div class="field"><label>Retiro leche (días)</label><input type="number" id="bq-retiroLeche" class="form-input" placeholder="0"></div>
           <div class="field"><label>Retiro carne (días)</label><input type="number" id="bq-retiroCarne" class="form-input" placeholder="0"></div></div>
         </div>
@@ -6967,13 +6968,13 @@ function cerrarJovenFab() {
     <div id="modal-rechazo-rp" style="font-size:15px;color:#3C3C43;margin-bottom:16px;"></div>
     <div style="display:flex;flex-direction:column;gap:10px;">
       <button onclick="accionRechazo('seguir')" style="padding:14px;border:1px solid #D0D5DC;border-radius:14px;background:#F2F2F7;font-size:15px;font-weight:600;cursor:pointer;text-align:left;width:100%;">
-        <span style="display:flex;gap:8px;"><span>🔄</span><span>Seguir inseminando<span style="font-size:13px;color:#5C5C66;font-weight:400;display:block;margin-top:3px;">Continuar con el protocolo actual</span></span></span>
+        <span style="display:flex;gap:8px;"><span></span><span>Seguir inseminando<span style="font-size:13px;color:#5C5C66;font-weight:400;display:block;margin-top:3px;">Continuar con el protocolo actual</span></span></span>
       </button>
       <button onclick="accionRechazo('aprobar1')" style="padding:14px;border:1px solid #F0C040;border-radius:14px;background:#FFF3CC;font-size:15px;font-weight:600;cursor:pointer;text-align:left;color:#7A5500;width:100%;">
-        <span style="display:flex;gap:8px;"><span>⚠️</span><span>Aprobar 1 servicio más<span style="font-size:13px;color:#5C4400;font-weight:400;display:block;margin-top:3px;">Último intento antes de decidir</span></span></span>
+        <span style="display:flex;gap:8px;"><span></span><span>Aprobar 1 servicio más<span style="font-size:13px;color:#5C4400;font-weight:400;display:block;margin-top:3px;">Último intento antes de decidir</span></span></span>
       </button>
       <button onclick="accionRechazo('rechazo')" style="padding:14px;border:1px solid #FFB3B3;border-radius:14px;background:#FFE8E8;font-size:15px;font-weight:600;cursor:pointer;text-align:left;color:#A0200A;width:100%;">
-        <span style="display:flex;gap:8px;"><span>❌</span><span>Marcar como rechazo<span style="font-size:13px;color:#7A1608;font-weight:400;display:block;margin-top:3px;">Se venderá cuando produzca ≤ <span id="modal-rechazo-litros"></span> lts</span></span></span>
+        <span style="display:flex;gap:8px;"><span></span><span>Marcar como rechazo<span style="font-size:13px;color:#7A1608;font-weight:400;display:block;margin-top:3px;">Se venderá cuando produzca ≤ <span id="modal-rechazo-litros"></span> lts</span></span></span>
       </button>
     </div>
   </div>
@@ -6990,13 +6991,13 @@ function cerrarJovenFab() {
     <div id="modal-baja-prod-val" style="font-size:34px;font-weight:900;color:#A0200A;margin-bottom:16px;"></div>
     <div style="display:flex;flex-direction:column;gap:10px;">
       <button onclick="abrirFicha(modalAlertaRp);cerrarModalBajaProd();" style="padding:14px;border:1px solid #D0D5DC;border-radius:14px;background:#F2F2F7;font-size:15px;font-weight:600;cursor:pointer;text-align:left;width:100%;">
-        <span style="display:flex;gap:8px;"><span>📋</span><span>Ver ficha del animal<span style="font-size:13px;color:#5C5C66;font-weight:400;display:block;margin-top:3px;">Revisar historial y registrar evento</span></span></span>
+        <span style="display:flex;gap:8px;"><span></span><span>Ver ficha del animal<span style="font-size:13px;color:#5C5C66;font-weight:400;display:block;margin-top:3px;">Revisar historial y registrar evento</span></span></span>
       </button>
       <button onclick="accionBajaProd('rechazo')" style="padding:14px;border:1px solid #FFB3B3;border-radius:14px;background:#FFE8E8;font-size:15px;font-weight:600;cursor:pointer;text-align:left;color:#A0200A;width:100%;">
-        <span style="display:flex;gap:8px;"><span>❌</span><span>Marcar como rechazo<span style="font-size:13px;color:#7A1608;font-weight:400;display:block;margin-top:3px;">Producción por debajo del umbral de venta</span></span></span>
+        <span style="display:flex;gap:8px;"><span></span><span>Marcar como rechazo<span style="font-size:13px;color:#7A1608;font-weight:400;display:block;margin-top:3px;">Producción por debajo del umbral de venta</span></span></span>
       </button>
       <button onclick="cerrarModalBajaProd()" style="padding:14px;border:1px solid #D0D5DC;border-radius:14px;background:#fff;font-size:15px;font-weight:600;cursor:pointer;text-align:left;color:#8E8E93;">
-        👌 OK, ignorar por ahora
+        OK, ignorar por ahora
       </button>
     </div>
   </div>
