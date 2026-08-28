@@ -1407,6 +1407,7 @@ function edadStr(f) {
   return m>=12 ? Math.floor(m/12)+'a '+(m%12)+'m' : m+'m';
 }
 function getAnimal(rp) { return rodeo.find(function(a){return String(a.rp)===String(rp);}); }
+function nombreVal(n){ n=(n||'').trim(); if(!n) return ''; if(/\d/.test(n)) return ''; return n; }
 function nextRP() {
   var criaRPs = rodeo.filter(function(a){return a.rp>=2000&&a.rp<3000;}).map(function(a){return a.rp;});
   return criaRPs.length>0 ? Math.max.apply(null,criaRPs)+1 : 2001;
@@ -2481,20 +2482,19 @@ function abrirFichaJoven(rp) {
   }
   var cont=document.getElementById('ficha-contenido'); cont.innerHTML='';
   var d = a.fechaNac ? Math.max(0, -diasHasta(a.fechaNac)) : null;
-  // Buscar madre desde rodeo si no está en el objeto
-  var madreStr = a.madre || '';
-  if(!madreStr) {
-    var animalRodeo = getAnimal(rp);
-    if(animalRodeo && animalRodeo.madre) {
-      var madreAnimal = getAnimal(animalRodeo.madre);
-      madreStr = madreAnimal ? madreAnimal.nombre + ' (RP ' + animalRodeo.madre + ')' : 'RP ' + animalRodeo.madre;
-    }
+  // Buscar madre (por RP); mostrar nombre solo si es un nombre real
+  var madreRP = a.madre || (getAnimal(rp) ? getAnimal(rp).madre : null);
+  var madreStr = '';
+  if(madreRP) {
+    var madreAnimal = getAnimal(madreRP);
+    var madreNom = madreAnimal ? nombreVal(madreAnimal.nombre) : '';
+    madreStr = madreNom ? madreNom + ' (RP ' + madreRP + ')' : 'RP ' + madreRP;
   }
 
   var hdr=document.createElement('div'); hdr.style.cssText='display:flex;align-items:center;gap:14px;margin-bottom:16px;';
   var icon=document.createElement('div'); icon.style.cssText='width:68px;height:68px;border-radius:50%;background:#D8E0E8;display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0;'; icon.textContent=a.sexo==='H'?'':'';
   var info=document.createElement('div'); info.style.flex='1';
-  info.innerHTML='<div style="font-size:20px;font-weight:700;">RP '+a.rp+'</div><div style="font-size:15px;font-weight:500;color:#3C3C43;">'+a.nombre+'</div><div style="font-size:13px;color:#8E8E93;">'+(a.cat||'')+' · '+edadStr(a.fechaNac)+(enG&&!enG.salio?' · En guachera':'')+'</div>';
+  info.innerHTML='<div style="font-size:20px;font-weight:700;">RP '+a.rp+'</div><div style="font-size:15px;font-weight:500;color:#3C3C43;">'+nombreVal(a.nombre)+'</div><div style="font-size:13px;color:#8E8E93;">'+(a.cat||'')+' · '+edadStr(a.fechaNac)+(enG&&!enG.salio?' · En guachera':'')+'</div>';
   hdr.appendChild(icon); hdr.appendChild(info); cont.appendChild(hdr);
 
   var c1=document.createElement('div'); c1.className='card';
