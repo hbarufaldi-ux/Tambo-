@@ -2581,23 +2581,10 @@ function abrirFichaJoven(rp) {
   var navMapJ = {rodeo:'nav-padron', guachera:'nav-guachera', recria:'nav-recria'};
   var navBtnJ = document.getElementById(navMapJ[navOrigenJ] || 'nav-guachera');
   if(navBtnJ) navBtnJ.classList.add('active');
-  // FAB contextual ficha joven
+  // FAB contextual eliminado: las acciones están en la tarjeta "Acciones" de la ficha.
   ['ficha-joven-fab-overlay','ficha-joven-fab-menu','ficha-joven-fab-btn'].forEach(function(id){
     var el=document.getElementById(id); if(el) el.remove();
   });
-  var fjOv=document.createElement('div'); fjOv.id='ficha-joven-fab-overlay';
-  fjOv.style.cssText='display:none;position:fixed;inset:0;background:rgba(0,0,0,0.80);z-index:200;';
-  fjOv.onclick=function(){cerrarJovenFab();}; document.body.appendChild(fjOv);
-  var fjMenu=document.createElement('div'); fjMenu.id='ficha-joven-fab-menu';
-  fjMenu.style.cssText='display:none;position:fixed;bottom:100px;right:24px;z-index:201;width:220px;text-align:right;';
-  document.body.appendChild(fjMenu);
-  var fjBtn=document.createElement('button'); fjBtn.id='ficha-joven-fab-btn';
-  fjBtn.style.cssText='position:fixed;bottom:24px;right:24px;width:68px;height:68px;border-radius:50%;background:#1C1C1E;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:202;transition:transform 0.2s;opacity:0.5;box-shadow:0 4px 16px rgba(0,0,0,0.3);';
-  fjBtn.innerHTML='<svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M12 4v16M4 12h16" stroke="#fff" stroke-width="2.4" stroke-linecap="round"/></svg>';
-  var _esGuachera = !!enG;
-  var _jovenRp = a.rp;
-  fjBtn.onclick=function(){toggleJovenFab(_jovenRp, _esGuachera);};
-  document.body.appendChild(fjBtn);
   window.scrollTo(0,0);
 }
 
@@ -4211,6 +4198,7 @@ async function _fetchPadronFirebase(callback) {
         estadoRepro:     a.estadoRepro || 'Vacia',
         estadoProd:      a.estadoProd || 'En Ordene',
         fechaNac:        a.fechaNac || null,
+        madre:           a.madre || null,
         ultimoParto:     a.fechaParto || a.ultimoParto || null,
         ultimaInsem:     a.fechaInsem || a.ultimaInsem || null,
         ultimaInsemToro: a.ultimaInsemToro || '',
