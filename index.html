@@ -3466,7 +3466,7 @@ function importarPadronDIRSA(input) {
         var animal = {
           rp:            rp,
           nombre:        String(row['Nombre']||'').trim(),
-          sexo:          'H',
+          sexo:          (String(row['Sexo']||'H').trim().toUpperCase()==='M' ? 'M' : 'H'),
           raza:          mapRaza(row['Raza']),
           cat:           cat,
           estadoRepro:   estadoRepro,
@@ -3599,7 +3599,7 @@ function mergearConAppActual(dirsaAnimal) {
   // Campos donde DIRSA manda siempre (datos oficiales)
   merged.rp          = dirsaAnimal.rp;
   merged.raza        = dirsaAnimal.raza || app.raza || 'Holando';
-  merged.sexo        = 'H';
+  merged.sexo        = dirsaAnimal.sexo || app.sexo || 'H';
   merged.cat         = dirsaAnimal.cat || app.cat || 'Vaca';
   merged.estadoProd  = dirsaAnimal.estadoProd || app.estadoProd; // rodeo/lote es de DIRSA
   merged.rodeoManual = dirsaAnimal.rodeoManual || app.rodeoManual;
