@@ -590,6 +590,8 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 <div id="screen-guachera" class="screen">
   <div class="d-panel"><div class="d-g4">
     <div class="d-cell"><div class="d-lbl">En guachera</div><div class="d-val"><div class="d-num" style="color:#1C1C1E;" id="g-total">—</div></div></div>
+    <div class="d-cell"><div class="d-lbl">Hembras</div><div class="d-val"><div class="d-num" style="color:#1060C0;" id="g-hembras">—</div></div></div>
+    <div class="d-cell"><div class="d-lbl">Machos</div><div class="d-val"><div class="d-num" style="color:#48566A;" id="g-machos">—</div></div></div>
     <div class="d-cell"><div class="d-lbl">Vacunar hoy</div><div class="d-val"><div class="d-num" style="color:#C08000;" id="g-vacunar">—</div></div></div>
     <div class="d-cell"><div class="d-lbl">Salen a corral</div><div class="d-val"><div class="d-num" style="color:#1C1C1E;" id="g-corral">—</div></div></div>
     <div class="d-cell"><div class="d-lbl">% mortandad</div><div class="d-val"><div class="d-num" style="color:#A0200A;" id="g-mort">—</div></div></div>
@@ -624,6 +626,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
     <button onclick="setFiltroRecria('')" id="rf-todos" class="rf-btn rf-active">Todos</button>
     <button onclick="setFiltroRecria('Ternera')" id="rf-ternera" class="rf-btn">Terneras</button>
     <button onclick="setFiltroRecria('Ternero')" id="rf-ternero" class="rf-btn">Terneros</button>
+    <button onclick="setFiltroRecria('Novillito')" id="rf-novillito" class="rf-btn">Novillitos</button>
     <button onclick="setFiltroRecria('vaq-pre')" id="rf-vaqpre" class="rf-btn">Vaq. preservicio</button>
     <button onclick="setFiltroRecria('Inseminada')" id="rf-vaqinsem" class="rf-btn">Vaq. inseminadas</button>
     <button onclick="setFiltroRecria('Preñada')" id="rf-vaqpren" class="rf-btn">Vaq. preñadas</button>
@@ -2130,6 +2133,8 @@ function renderGuachera() {
   var bajas=guachera.filter(function(c){return c.salio==='baja';}).length;
   var tot=guachera.length;
   document.getElementById('g-total').textContent=activas.length;
+  document.getElementById('g-hembras').textContent=activas.filter(function(c){return c.sexo==='H';}).length;
+  document.getElementById('g-machos').textContent=activas.filter(function(c){return c.sexo==='M';}).length;
   document.getElementById('g-mort').textContent=tot>0?Math.round(bajas/tot*100)+'%':'0%';
   var vac=activas.filter(function(c){var d=diasDeVida(c.fechaNac);return d>=43&&d<=47&&!c.vacunado;}).length;
   var cor=activas.filter(function(c){var d=diasDeVida(c.fechaNac);return d>=68;}).length;
@@ -2179,7 +2184,7 @@ function setFiltroRecria(filtro) {
   _filtroRecria = filtro;
   // Actualizar botones activos
   document.querySelectorAll('.rf-btn').forEach(function(b){ b.classList.remove('rf-active'); });
-  var map = {'':'rf-todos','Ternera':'rf-ternera','Ternero':'rf-ternero','vaq-pre':'rf-vaqpre','Inseminada':'rf-vaqinsem','Preñada':'rf-vaqpren'};
+  var map = {'':'rf-todos','Ternera':'rf-ternera','Ternero':'rf-ternero','Novillito':'rf-novillito','vaq-pre':'rf-vaqpre','Inseminada':'rf-vaqinsem','Preñada':'rf-vaqpren'};
   var el = document.getElementById(map[filtro]);
   if(el) el.classList.add('rf-active');
   renderRecria();
@@ -2192,6 +2197,7 @@ function renderRecria() {
     if(buscar && !a.nombre.toLowerCase().includes(buscar) && !String(a.rp).includes(buscar)) return false;
     if(_filtroRecria==='Ternera') return (a.rodeoManual==='R11'||a.cat==='Ternera') && a.sexo==='H';
     if(_filtroRecria==='Ternero') return (a.rodeoManual==='R11'||a.cat==='Ternero') && a.sexo==='M';
+    if(_filtroRecria==='Novillito') return (a.cat==='Novillito'||a.cat==='Novillo') && a.sexo==='M';
     if(_filtroRecria==='vaq-pre') return a.rodeoManual==='R10' || a.estadoRepro==='Preservicio' || (a.sexo==='H' && (a.cat==='Vaquillona'||a.cat==='Ternera') && (!a.estadoRepro||a.estadoRepro===''||a.estadoRepro==='Vaquillona'||a.estadoRepro==='Ternera') && a.rodeoManual!=='R8' && a.rodeoManual!=='R9');
     if(_filtroRecria==='Inseminada') return a.rodeoManual==='R9' || a.estadoRepro==='Inseminada';
     if(_filtroRecria==='Preñada') return a.rodeoManual==='R8' || a.estadoRepro==='Preñada';
@@ -3692,16 +3698,16 @@ function confirmarImportDIRSA() {
       recria.length = 0;
 
       animalesMergeados.forEach(function(a) {
-        var cat = a.cat;
-        if(cat === 'Ternera' || cat === 'Ternero') {
+        var cat = calcCat(a); a.cat = cat;
+        if(cat === 'Ternera' || cat === 'Ternero' || cat === 'Novillito' || cat === 'Novillo') {
           var d = a.fechaNac ? -diasHasta(a.fechaNac) : null;
-          if(d !== null && d <= 75) {
-            guachera.push({rp:a.rp,nombre:a.nombre,sexo:'H',padre:a.padre,fechaNac:a.fechaNac,vacunado:false,salio:false,eventos:[]});
+          if(d !== null && d <= 75 && (cat === 'Ternera' || cat === 'Ternero')) {
+            guachera.push({rp:a.rp,nombre:a.nombre,sexo:a.sexo||'H',padre:a.padre,fechaNac:a.fechaNac,vacunado:false,salio:false,eventos:[]});
           } else {
-            recria.push({rp:a.rp,nombre:a.nombre,sexo:'H',cat:cat,fechaNac:a.fechaNac,padre:a.padre,madre:'',eventos:[],activo:true});
+            recria.push({rp:a.rp,nombre:a.nombre,sexo:a.sexo||'H',cat:cat,fechaNac:a.fechaNac,padre:a.padre,madre:'',eventos:[],activo:true});
           }
         } else if(cat === 'Vaquillona') {
-          recria.push({rp:a.rp,nombre:a.nombre,sexo:'H',cat:cat,fechaNac:a.fechaNac,padre:a.padre,madre:'',eventos:[],activo:true});
+          recria.push({rp:a.rp,nombre:a.nombre,sexo:a.sexo||'H',cat:cat,fechaNac:a.fechaNac,padre:a.padre,madre:'',eventos:[],activo:true});
         }
         rodeo.push(a);
       });
@@ -4221,15 +4227,16 @@ async function _fetchPadronFirebase(callback) {
 
       rodeo.push(animal);
 
-      if(animal.cat === 'Ternera' || animal.cat === 'Ternero') {
+      var _cat = calcCat(animal); animal.cat = _cat;
+      if(_cat === 'Ternera' || _cat === 'Ternero' || _cat === 'Novillito' || _cat === 'Novillo') {
         var d = animal.fechaNac ? -diasHasta(animal.fechaNac) : null;
-        if(d !== null && d <= 75) {
+        if(d !== null && d <= 75 && (_cat === 'Ternera' || _cat === 'Ternero')) {
           guachera.push({rp:animal.rp,nombre:animal.nombre,sexo:animal.sexo,padre:animal.ultimaInsemToro,fechaNac:animal.fechaNac,vacunado:false,salio:false,eventos:[]});
         } else {
-          recria.push({rp:animal.rp,nombre:animal.nombre,sexo:animal.sexo,cat:animal.cat,estadoRepro:animal.estadoRepro,rodeoManual:animal.rodeoManual,fechaNac:animal.fechaNac,padre:animal.ultimaInsemToro,madre:'',eventos:[],activo:true});
+          recria.push({rp:animal.rp,nombre:animal.nombre,sexo:animal.sexo,cat:_cat,estadoRepro:animal.estadoRepro,rodeoManual:animal.rodeoManual,fechaNac:animal.fechaNac,padre:animal.ultimaInsemToro,madre:'',eventos:[],activo:true});
         }
-      } else if(animal.cat === 'Vaquillona') {
-        recria.push({rp:animal.rp,nombre:animal.nombre,sexo:'H',cat:animal.cat,estadoRepro:animal.estadoRepro,rodeoManual:animal.rodeoManual,fechaNac:animal.fechaNac,padre:animal.ultimaInsemToro,madre:'',eventos:[],activo:true});
+      } else if(_cat === 'Vaquillona') {
+        recria.push({rp:animal.rp,nombre:animal.nombre,sexo:animal.sexo||'H',cat:_cat,estadoRepro:animal.estadoRepro,rodeoManual:animal.rodeoManual,fechaNac:animal.fechaNac,padre:animal.ultimaInsemToro,madre:'',eventos:[],activo:true});
       }
       importados++;
     });
