@@ -2677,36 +2677,79 @@ var MANGA_BIOTIPOS=[{v:'Holando',s:'grande'},{v:'Cruza media',s:'interm.'},{v:'C
 var _mangaModo='aplicacion';          // 'aplicacion' (martes) | 'lectura' (viernes)
 var _mangaTipo='PPD';                 // PPD | Vacunación | Sanidad | Conteo | Stock (solo PPD activo)
 var MANGA_TIPOS=[{v:'PPD',on:true},{v:'Vacunación',on:false},{v:'Sanidad',on:false},{v:'Conteo',on:false},{v:'Stock',on:false}];
-var _mangaCargas={};                  // aplicacion: rp -> carga de hoy
+var _mangaCargas={};                  // aplicacion: rp -> carga de la sesión
 var _mangaPendientes={}, _mangaLeidasHoy=0; // lectura
-var _mangaEntry='', _mangaStage='entry';
+var _mangaQuery='', _mangaStage='entry';
 var _mangaWRP=null,_mangaWBio=null,_mangaWPPD=true,_mangaWNueva=false,_mangaWDoc=null;
 var _mangaUnsub=null, _mangaPend=false;
+var _mangaSesion=null;                 // sesión activa (cruza días)
+var _mangaCerrarArmado=false, _mangaLimpiarArmado=false;
 
+function _mangaEsAdmin(){ return !!(window.usuarioActual && window.usuarioActual.rol==='admin'); }
+
+// ---- SESIÓN (cruza días) ----
+function mangaCargarSesionActiva(cb){
+  if(!_db){ _mangaSesion=null; if(cb)cb(); return; }
+  _db.collection('Sesiones_Manga').where('estado','==','abierta').get().then(function(snap){
+    _mangaSesion=null;
+    snap.forEach(function(d){ var s=d.data(); if(s && s.tipo===_mangaTipo && !_mangaSesion) _mangaSesion=s; });
+    if(cb)cb();
+  }).catch(function(e){ console.warn('cargar sesion:',e); _mangaSesion=null; if(cb)cb(); });
+}
+function mangaEmpezarSesion(){
+  var id='S_'+Date.now();
+  var ses={id:id, tipo:_mangaTipo, estado:'abierta', fechaInicio:TODAY, ts:Date.now()};
+  _mangaSesion=ses;
+  if(_db){ _db.collection('Sesiones_Manga').doc(id).set(ses).catch(function(e){ console.warn('crear sesion:',e); }); }
+  mangaListen(); renderManga();
+}
+function mangaCerrarSesion(){
+  if(_mangaSesion && _db){ _db.collection('Sesiones_Manga').doc(_mangaSesion.id).update({estado:'cerrada',fechaCierre:TODAY}).catch(function(e){ console.warn('cerrar sesion:',e); }); }
+  _mangaSesion=null; _mangaCerrarArmado=false; _mangaCargas={};
+  if(_mangaUnsub){ try{_mangaUnsub();}catch(e){} _mangaUnsub=null; }
+  mangaCerrarCierre(); renderManga();
+}
+function mangaCerrarSesionTap(){
+  if(!_mangaCerrarArmado){ _mangaCerrarArmado=true; mangaAbrirCierre(); setTimeout(function(){ _mangaCerrarArmado=false; },4000); }
+  else { mangaCerrarSesion(); }
+}
+
+// ---- CICLO DE VIDA ----
 function iniciarManga(){
-  _mangaEntry=''; _mangaStage='entry'; _mangaWRP=null; _mangaWBio=null; _mangaWDoc=null;
-  mangaListen();
-  renderManga();
+  _mangaQuery=''; _mangaStage='entry'; _mangaWRP=null; _mangaWBio=null; _mangaWDoc=null; _mangaCerrarArmado=false; _mangaLimpiarArmado=false;
+  if(_mangaModo==='lectura'){ mangaListen(); renderManga(); }
+  else { mangaCargarSesionActiva(function(){ mangaListen(); renderManga(); }); }
 }
 function mangaModo(m){
   if(_mangaModo===m) return;
-  _mangaModo=m; _mangaEntry=''; _mangaStage='entry'; _mangaWRP=null; _mangaWBio=null; _mangaWDoc=null;
-  mangaListen(); renderManga();
+  _mangaModo=m; _mangaQuery=''; _mangaStage='entry'; _mangaWRP=null; _mangaWBio=null; _mangaWDoc=null; _mangaCerrarArmado=false; _mangaLimpiarArmado=false;
+  if(m==='lectura'){ mangaListen(); renderManga(); }
+  else { mangaCargarSesionActiva(function(){ mangaListen(); renderManga(); }); }
 }
+function mangaSetTipo(t){
+  var def=null; MANGA_TIPOS.forEach(function(x){if(x.v===t)def=x;});
+  if(!def) return;
+  if(!def.on){ if(typeof showToast==='function') showToast(t+': próximamente'); return; }
+  _mangaTipo=t; _mangaQuery=''; _mangaStage='entry'; _mangaWRP=null;
+  if(_mangaModo==='lectura'){ mangaListen(); renderManga(); }
+  else { mangaCargarSesionActiva(function(){ mangaListen(); renderManga(); }); }
+}
+
 function mangaListen(){
   if(_mangaUnsub){ try{_mangaUnsub();}catch(e){} _mangaUnsub=null; }
   if(!_db){ renderManga(); return; }
   try{
     if(_mangaModo==='aplicacion'){
-      _mangaUnsub=_db.collection('Reg_Manga').where('fecha','==',TODAY).onSnapshot(function(snap){
+      if(!_mangaSesion){ _mangaCargas={}; renderManga(); return; }
+      _mangaUnsub=_db.collection('Reg_Manga').where('sesionId','==',_mangaSesion.id).onSnapshot(function(snap){
         _mangaCargas={}; _mangaPend=snap.metadata.hasPendingWrites;
-        snap.forEach(function(doc){ var d=doc.data(); if(d && d.rp) _mangaCargas[String(d.rp)]=d; });
+        snap.forEach(function(doc){ var d=doc.data(); if(d&&d.rp){ d._docId=doc.id; _mangaCargas[String(d.rp)]=d; } });
         renderManga();
       }, function(err){ console.warn('manga onSnapshot aplic:',err); });
     } else {
       _mangaUnsub=_db.collection('Reg_Manga').where('ppd','==',true).onSnapshot(function(snap){
         _mangaPendientes={}; _mangaLeidasHoy=0; _mangaPend=snap.metadata.hasPendingWrites;
-        snap.forEach(function(doc){ var d=doc.data(); if(!d||!d.rp) return;
+        snap.forEach(function(doc){ var d=doc.data(); if(!d||!d.rp) return; d._docId=doc.id;
           if(!d.resultadoPPD) _mangaPendientes[String(d.rp)]=d;
           else if(d.fechaLectura===TODAY) _mangaLeidasHoy++;
         });
@@ -2716,16 +2759,15 @@ function mangaListen(){
   }catch(e){ console.warn('mangaListen:',e); renderManga(); }
 }
 function mangaGuardarCarga(carga){
-  _mangaCargas[String(carga.rp)]=carga;
-  if(_db){ _db.collection('Reg_Manga').doc(TODAY+'_'+carga.rp).set(carga).catch(function(e){ console.warn('guardar carga manga:',e); }); }
+  var sid=_mangaSesion?_mangaSesion.id:('S_'+TODAY);
+  carga.sesionId=sid;
+  var docId=sid+'_'+carga.rp;
+  if(_db){ _db.collection('Reg_Manga').doc(docId).set(carga).catch(function(e){ console.warn('guardar carga manga:',e); }); }
+  carga._docId=docId; _mangaCargas[String(carga.rp)]=carga;
   renderManga();
 }
-function mangaSetTipo(t){
-  var def=null; MANGA_TIPOS.forEach(function(x){if(x.v===t)def=x;});
-  if(!def) return;
-  if(!def.on){ if(typeof showToast==='function') showToast(t+': próximamente'); return; }
-  _mangaTipo=t; _mangaEntry=''; _mangaStage='entry'; _mangaWRP=null; renderManga();
-}
+
+// ---- SELECTORES ----
 function _mangaTipoSelectorHTML(){
   var chips=MANGA_TIPOS.map(function(x){
     var sel=_mangaTipo===x.v;
@@ -2739,27 +2781,58 @@ function _mangaSelectorHTML(){
   function b(m,txt){ var on=_mangaModo===m; return '<button onclick="mangaModo(\''+m+'\')" style="flex:1;padding:10px;border:none;border-radius:9px;font-size:13px;font-weight:700;cursor:pointer;background:'+(on?'#fff':'transparent')+';color:'+(on?'#1C1C1E':'#8E8E93')+';box-shadow:'+(on?'0 1px 2px rgba(0,0,0,.12)':'none')+';">'+txt+'</button>'; }
   return '<div style="display:flex;gap:4px;background:#E3E8EF;border-radius:12px;padding:4px;margin-bottom:12px;">'+b('aplicacion','Aplicación (martes)')+b('lectura','Lectura (viernes)')+'</div>';
 }
-function _mangaKeypadHTML(){
-  var keys='';
-  [1,2,3,4,5,6,7,8,9].forEach(function(n){ keys+='<button onclick="mangaTecla(\''+n+'\')" style="padding:20px 0;border:none;border-radius:14px;background:#fff;font-size:26px;font-weight:700;cursor:pointer;box-shadow:0 1px 2px rgba(0,0,0,.08);">'+n+'</button>'; });
-  keys+='<button onclick="mangaBorrar()" style="padding:20px 0;border:none;border-radius:14px;background:#EBF0F5;font-size:22px;cursor:pointer;">⌫</button>';
-  keys+='<button onclick="mangaTecla(\'0\')" style="padding:20px 0;border:none;border-radius:14px;background:#fff;font-size:26px;font-weight:700;cursor:pointer;box-shadow:0 1px 2px rgba(0,0,0,.08);">0</button>';
-  keys+='<button onclick="mangaBuscar()" '+(_mangaEntry.length>=1?'':'disabled')+' style="padding:20px 0;border:none;border-radius:14px;background:'+(_mangaEntry.length>=1?'#1C1C1E':'#C7CDD6')+';color:#fff;font-size:16px;font-weight:800;cursor:pointer;">Buscar</button>';
-  return '<div style="background:#fff;border-radius:16px;padding:16px;text-align:center;margin-bottom:10px;box-shadow:0 1px 3px rgba(0,0,0,.06);">'
-    +'<div style="font-size:11px;font-weight:800;color:#8E8E93;text-transform:uppercase;letter-spacing:.4px;">RP que entra</div>'
-    +'<div style="font-size:38px;font-weight:800;letter-spacing:3px;min-height:46px;margin-top:4px;'+(_mangaEntry?'':'color:#C7CDD6;')+'">'+(_mangaEntry||'0000')+'</div></div>'
-    +'<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;">'+keys+'</div>';
+
+// ---- SUGERENCIAS ----
+function mangaInput(v){ _mangaQuery=(v||'').trim(); mangaRenderSugerencias(); }
+function _mangaSugerencias(){
+  var q=_mangaQuery; if(!q) return [];
+  var list=(typeof rodeo!=='undefined'?rodeo:[]).filter(function(a){ return a && a.estadoRepro!=='Baja' && String(a.rp).indexOf(q)===0; });
+  list.sort(function(a,b){ return String(a.rp).localeCompare(String(b.rp),undefined,{numeric:true}); });
+  return list.slice(0,8);
 }
+function mangaRenderSugerencias(){
+  var cont=document.getElementById('manga-sugerencias'); if(!cont) return;
+  var q=_mangaQuery;
+  if(_mangaModo==='aplicacion'){
+    if(!q){ cont.innerHTML=''; return; }
+    var sug=_mangaSugerencias();
+    var h=sug.map(function(a){
+      var bio=a.biotipo?(' · '+a.biotipo):'';
+      return '<div onclick="mangaElegir(\''+a.rp+'\')" style="padding:12px 14px;border-bottom:0.5px solid #EBEBF0;cursor:pointer;"><span style="font-size:16px;font-weight:700;">RP '+a.rp+'</span> <span style="font-size:13px;color:#8E8E93;">· '+(a.cat||'—')+bio+'</span></div>';
+    }).join('');
+    var existe=(typeof getAnimal==='function') && getAnimal(q);
+    if(!existe){ h+='<div onclick="mangaAgregar(\''+q+'\')" style="padding:12px 14px;cursor:pointer;color:#0A5AAA;font-weight:700;">➕ Agregar RP '+q+' (no está en el padrón)</div>'; }
+    cont.innerHTML=h?('<div style="background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.06);margin-top:8px;">'+h+'</div>'):'';
+  } else {
+    if(!q){ cont.innerHTML=''; return; }
+    var keys=Object.keys(_mangaPendientes).filter(function(k){return k.indexOf(q)===0;}).sort().slice(0,8);
+    var h2=keys.map(function(rp){ var d=_mangaPendientes[rp]; return '<div onclick="mangaElegirLectura(\''+rp+'\')" style="padding:12px 14px;border-bottom:0.5px solid #EBEBF0;cursor:pointer;"><span style="font-size:16px;font-weight:700;">RP '+rp+'</span> <span style="font-size:13px;color:#8E8E93;">· '+(d.biotipo||'—')+'</span></div>'; }).join('');
+    if(!h2) h2='<div style="padding:12px 14px;color:#8E8E93;font-size:13px;">Sin PPD pendiente para "'+q+'"</div>';
+    cont.innerHTML='<div style="background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.06);margin-top:8px;">'+h2+'</div>';
+  }
+}
+function mangaElegir(rp){
+  var a=(typeof getAnimal==='function')?getAnimal(rp):null;
+  _mangaWRP=rp; _mangaWBio=a?(a.biotipo||null):null; _mangaWPPD=true; _mangaWNueva=false; _mangaStage='work'; _mangaQuery=''; renderManga();
+}
+function mangaElegirLectura(rp){
+  var d=_mangaPendientes[rp];
+  if(d){ _mangaWRP=rp; _mangaWDoc=d; _mangaStage='work'; _mangaQuery=''; renderManga(); }
+  else if(typeof showToast==='function') showToast('RP '+rp+' sin PPD pendiente');
+}
+function mangaAgregar(rp){
+  _mangaWRP=rp;
+  document.getElementById('manga-alta-titulo').textContent='RP '+rp+' no está en el padrón';
+  document.getElementById('modal-manga-alta').style.display='flex';
+}
+
+// ---- RENDER ----
 function renderManga(){
   var sc=document.getElementById('screen-manga'); if(!sc) return;
   var pill=document.getElementById('manga-sync');
   if(pill){ if(_mangaPend){ pill.className='badge badge-amber'; pill.textContent='▲ sin subir'; } else { pill.className='badge badge-green'; pill.textContent='● En la nube'; } }
-
-  // selector de tipo de trabajo (solo PPD activo) + selector de modo
   var tipoWrap=document.getElementById('manga-tipo-sel'); if(tipoWrap) tipoWrap.innerHTML=_mangaTipoSelectorHTML();
   var selWrap=document.getElementById('manga-modo-sel'); if(selWrap) selWrap.innerHTML=_mangaSelectorHTML();
-
-  // progreso segun modo
   var prog=document.getElementById('manga-progreso');
   if(prog){
     if(_mangaModo==='aplicacion'){
@@ -2777,18 +2850,41 @@ function renderManga(){
         +'</div>';
     }
   }
-
   var st=document.getElementById('manga-stage'); if(!st) return;
-  if(_mangaStage==='entry'){ st.innerHTML=_mangaKeypadHTML(); return; }
-
-  // WORK card
+  var typing = document.activeElement && document.activeElement.id==='manga-buscar';
+  if(_mangaStage==='entry' && typing){ mangaRenderSugerencias(); return; }
+  st.innerHTML = (_mangaStage==='entry') ? _mangaEntryHTML() : _mangaWorkHTML();
+  if(_mangaStage==='entry') mangaRenderSugerencias();
+}
+function _mangaEntryHTML(){
+  if(_mangaModo==='aplicacion' && !_mangaSesion){
+    return '<div style="background:#fff;border-radius:16px;padding:22px 16px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,.06);">'
+      +'<div style="font-size:15px;font-weight:700;margin-bottom:6px;">No hay sesión de '+_mangaTipo+' abierta</div>'
+      +'<div style="font-size:13px;color:#8E8E93;margin-bottom:16px;">Empezá una sesión para cargar. Podés seguir en días distintos hasta cerrarla.</div>'
+      +'<button onclick="mangaEmpezarSesion()" style="width:100%;padding:15px;border-radius:14px;border:none;background:#1C1C1E;color:#fff;font-size:16px;font-weight:800;cursor:pointer;">Empezar sesión de '+_mangaTipo+'</button></div>';
+  }
+  var head='';
+  if(_mangaModo==='aplicacion' && _mangaSesion){
+    head='<div style="font-size:12px;color:#8E8E93;font-weight:600;margin-bottom:8px;">Sesión '+_mangaTipo+' abierta · desde '+((typeof fmtFecha==='function')?fmtFecha(_mangaSesion.fechaInicio):_mangaSesion.fechaInicio)+'</div>';
+  }
+  var ph=_mangaModo==='aplicacion'?'Buscar / teclear RP a cargar...':'Buscar / teclear RP a leer...';
+  var h=head
+    +'<input type="text" id="manga-buscar" inputmode="numeric" autocomplete="off" placeholder="'+ph+'" oninput="mangaInput(this.value)" value="'+_mangaQuery+'" style="width:100%;padding:14px 15px;border:1px solid #B0BCC8;border-radius:12px;font-size:19px;font-weight:600;background:#fff;color:#1C1C1E;box-sizing:border-box;">'
+    +'<div id="manga-sugerencias"></div>';
+  if(_mangaEsAdmin() && Object.keys(_mangaCargas).length>0){
+    var t=_mangaLimpiarArmado?'⚠ Tocá de nuevo para borrar TODO el trabajo de prueba':'🧹 Limpiar trabajo (prueba)';
+    h+='<button onclick="mangaLimpiarTap()" style="width:100%;margin-top:16px;padding:11px;border-radius:12px;border:1px solid '+(_mangaLimpiarArmado?'#A0200A':'#D0D5DC')+';background:'+(_mangaLimpiarArmado?'#FFD6D6':'#fff')+';color:'+(_mangaLimpiarArmado?'#A0200A':'#8E8E93')+';font-size:13px;font-weight:700;cursor:pointer;">'+t+'</button>';
+  }
+  return h;
+}
+function _mangaWorkHTML(){
   var rp=_mangaWRP;
   if(_mangaModo==='aplicacion'){
     var a=(typeof getAnimal==='function')?getAnimal(rp):null;
     var meta=_mangaWNueva?'Datos incompletos — completar después':(a?((a.cat||'—')+' · '+(a.sexo==='M'?'♂':a.sexo==='H'?'♀':'')):'—');
     var bio='';
     MANGA_BIOTIPOS.forEach(function(b){ bio+='<button onclick="mangaSelBio(\''+b.v+'\')" style="padding:15px 4px;border:2px solid '+(_mangaWBio===b.v?'#1C1C1E':'#E0E0E5')+';border-radius:14px;background:'+(_mangaWBio===b.v?'#1C1C1E':'#fff')+';color:'+(_mangaWBio===b.v?'#fff':'#1C1C1E')+';font-size:13px;font-weight:700;cursor:pointer;line-height:1.15;">'+b.v.replace('Cruza ','C. ')+'<br><small style="font-weight:500;font-size:10px;opacity:.7;">'+b.s+'</small></button>'; });
-    st.innerHTML='<div style="background:#fff;border-radius:18px;padding:18px 16px;box-shadow:0 4px 16px rgba(0,0,0,.1);">'
+    return '<div style="background:#fff;border-radius:18px;padding:18px 16px;box-shadow:0 4px 16px rgba(0,0,0,.1);">'
       +'<div style="display:flex;align-items:center;justify-content:space-between;"><div style="font-size:26px;font-weight:800;">RP '+rp+'</div>'+(_mangaWNueva?'<span class="badge badge-amber" style="font-size:11px;padding:5px 10px;">ALTA NUEVA</span>':'')+'</div>'
       +'<div style="font-size:13px;color:#8E8E93;margin:2px 0 16px;">'+meta+'</div>'
       +'<div style="font-size:11.5px;font-weight:800;color:#8E8E93;text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px;">Biotipo</div>'
@@ -2799,10 +2895,9 @@ function renderManga(){
       +'<button onclick="mangaGuardar()" '+(_mangaWBio?'':'disabled')+' style="flex:1;padding:16px;border-radius:14px;border:none;background:'+(_mangaWBio?'#1C1C1E':'#C7CDD6')+';color:#fff;font-size:16px;font-weight:800;cursor:pointer;">Guardar y siguiente</button></div>'
       +'</div>';
   } else {
-    // LECTURA: resultado de PPD
     var doc=_mangaWDoc||{};
     var fApl=(doc.fecha&&typeof fmtFecha==='function')?fmtFecha(doc.fecha):(doc.fecha||'—');
-    st.innerHTML='<div style="background:#fff;border-radius:18px;padding:18px 16px;box-shadow:0 4px 16px rgba(0,0,0,.1);">'
+    return '<div style="background:#fff;border-radius:18px;padding:18px 16px;box-shadow:0 4px 16px rgba(0,0,0,.1);">'
       +'<div style="font-size:26px;font-weight:800;">RP '+rp+'</div>'
       +'<div style="font-size:13px;color:#8E8E93;margin:2px 0 16px;">'+(doc.biotipo||'—')+' · PPD aplicado '+fApl+'</div>'
       +'<div style="font-size:11.5px;font-weight:800;color:#8E8E93;text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px;">Resultado de lectura</div>'
@@ -2815,20 +2910,8 @@ function renderManga(){
       +'</div>';
   }
 }
-function mangaTecla(n){ if(_mangaEntry.length>=6) return; _mangaEntry+=n; renderManga(); }
-function mangaBorrar(){ _mangaEntry=_mangaEntry.slice(0,-1); renderManga(); }
-function mangaBuscar(){
-  var rp=_mangaEntry.trim(); if(!rp) return;
-  if(_mangaModo==='aplicacion'){
-    var a=(typeof getAnimal==='function')?getAnimal(rp):null;
-    if(a){ _mangaWRP=rp; _mangaWBio=a.biotipo||null; _mangaWPPD=true; _mangaWNueva=false; _mangaStage='work'; renderManga(); }
-    else { _mangaWRP=rp; document.getElementById('manga-alta-titulo').textContent='RP '+rp+' no está en el padrón'; document.getElementById('modal-manga-alta').style.display='flex'; }
-  } else {
-    var pend=_mangaPendientes[rp];
-    if(pend){ _mangaWRP=rp; _mangaWDoc=pend; _mangaStage='work'; renderManga(); }
-    else { if(typeof showToast==='function') showToast('RP '+rp+' sin PPD pendiente de lectura'); _mangaEntry=''; renderManga(); }
-  }
-}
+function mangaSelBio(v){ _mangaWBio=v; renderManga(); }
+function mangaTogglePPD(){ _mangaWPPD=!_mangaWPPD; renderManga(); }
 function mangaConfirmarAlta(){
   document.getElementById('modal-manga-alta').style.display='none';
   var nuevo={rp:_mangaWRP,cat:'?',sexo:'?',biotipo:null,incompleta:true,altaManga:true,estadoRepro:'',estadoProd:''};
@@ -2836,30 +2919,57 @@ function mangaConfirmarAlta(){
   if(typeof fb_guardarAnimal==='function') fb_guardarAnimal(nuevo);
   _mangaWBio=null; _mangaWPPD=true; _mangaWNueva=true; _mangaStage='work'; renderManga();
 }
-function mangaSelBio(v){ _mangaWBio=v; renderManga(); }
-function mangaTogglePPD(){ _mangaWPPD=!_mangaWPPD; renderManga(); }
 function mangaGuardar(){
   if(!_mangaWBio) return;
   var rp=_mangaWRP;
   var a=(typeof getAnimal==='function')?getAnimal(rp):null;
-  // Snapshot de lo que ERA el animal al pasar (la app lo deriva del padrón, no lo pregunta)
   var rodeoAlPasar = a ? (a.rodeoManual || (typeof calcRodeo==='function'?calcRodeo(a):'')) : '';
   var carga={fecha:TODAY,rp:rp,tipoTrabajo:_mangaTipo,biotipo:_mangaWBio,ppd:_mangaWPPD,nueva:_mangaWNueva,tipo:'aplicacion',
     catAlPasar:(a?(a.cat||''):''), estadoProdAlPasar:(a?(a.estadoProd||''):''), estadoReproAlPasar:(a?(a.estadoRepro||''):''), rodeoAlPasar:rodeoAlPasar,
     resultadoPPD:null,fechaLectura:null,ts:Date.now()};
   mangaGuardarCarga(carga);
   if(a){ a.biotipo=_mangaWBio; if(typeof fb_guardarAnimal==='function') fb_guardarAnimal(a); }
-  _mangaWRP=null; _mangaWBio=null; _mangaEntry=''; _mangaStage='entry'; renderManga();
+  _mangaWRP=null; _mangaWBio=null; _mangaQuery=''; _mangaStage='entry'; renderManga();
+  setTimeout(function(){ var i=document.getElementById('manga-buscar'); if(i) i.focus(); },60);
   if(typeof showToast==='function') showToast('RP '+rp+' cargada');
 }
 function mangaSetResultado(res){
   var rp=_mangaWRP, doc=_mangaWDoc; if(!doc) return;
-  if(_db){ _db.collection('Reg_Manga').doc(doc.fecha+'_'+rp).update({resultadoPPD:res,fechaLectura:TODAY}).catch(function(e){ console.warn('guardar lectura:',e); }); }
+  var docId=doc._docId || (doc.sesionId?doc.sesionId+'_'+rp:(doc.fecha+'_'+rp));
+  if(_db){ _db.collection('Reg_Manga').doc(docId).update({resultadoPPD:res,fechaLectura:TODAY}).catch(function(e){ console.warn('guardar lectura:',e); }); }
   delete _mangaPendientes[String(rp)]; _mangaLeidasHoy++;
-  _mangaWRP=null; _mangaWDoc=null; _mangaEntry=''; _mangaStage='entry'; renderManga();
+  _mangaWRP=null; _mangaWDoc=null; _mangaQuery=''; _mangaStage='entry'; renderManga();
+  setTimeout(function(){ var i=document.getElementById('manga-buscar'); if(i) i.focus(); },60);
   if(typeof showToast==='function') showToast('RP '+rp+': '+res);
 }
-function mangaVolverEntry(){ _mangaWRP=null; _mangaWBio=null; _mangaWDoc=null; _mangaEntry=''; _mangaStage='entry'; renderManga(); }
+function mangaVolverEntry(){ _mangaWRP=null; _mangaWBio=null; _mangaWDoc=null; _mangaQuery=''; _mangaStage='entry'; renderManga(); }
+
+// ---- LIMPIAR (solo admin) ----
+function mangaLimpiarTap(){
+  if(!_mangaLimpiarArmado){ _mangaLimpiarArmado=true; renderManga(); setTimeout(function(){ _mangaLimpiarArmado=false; renderManga(); },4000); }
+  else { mangaLimpiarReal(); }
+}
+function mangaLimpiarReal(){
+  var cargas=Object.keys(_mangaCargas).map(function(k){return _mangaCargas[k];});
+  cargas.forEach(function(c){
+    if(_db && c._docId){ _db.collection('Reg_Manga').doc(c._docId).delete().catch(function(e){ console.warn('del carga:',e); }); }
+    var a=(typeof getAnimal==='function')?getAnimal(String(c.rp)):null;
+    if(c.nueva){
+      if(typeof rodeo!=='undefined' && a){ var i=rodeo.indexOf(a); if(i>=0) rodeo.splice(i,1); }
+      if(_db){ _db.collection('padron').doc(String(c.rp)).delete().catch(function(e){ console.warn('del fantasma:',e); }); }
+    } else if(a){
+      a.biotipo='';
+      if(typeof fb_guardarAnimal==='function') fb_guardarAnimal(a);
+    }
+  });
+  if(_mangaSesion && _db){ _db.collection('Sesiones_Manga').doc(_mangaSesion.id).delete().catch(function(e){ console.warn('del sesion:',e); }); }
+  if(_mangaUnsub){ try{_mangaUnsub();}catch(e){} _mangaUnsub=null; }
+  _mangaSesion=null; _mangaCargas={}; _mangaLimpiarArmado=false;
+  renderManga();
+  if(typeof showToast==='function') showToast('Trabajo de prueba borrado');
+}
+
+// ---- CIERRE / RESUMEN ----
 function mangaAbrirCierre(){
   var body=document.getElementById('manga-cierre-body');
   var res=document.getElementById('manga-cierre-resumen');
@@ -2879,6 +2989,10 @@ function mangaAbrirCierre(){
       nuevas.forEach(function(rp){ h+='<div style="display:flex;justify-content:space-between;align-items:center;padding:9px 11px;border-radius:10px;background:#F7F8FA;margin-bottom:5px;font-size:13.5px;"><span>RP '+rp+' · '+_mangaCargas[rp].biotipo+'</span></div>'; });
     }
     if(!ausentes.length && !nuevas.length) h='<p style="color:#0F6E56;font-weight:700;">Todo el padrón pasó, sin altas pendientes. ✓</p>';
+    if(_mangaSesion){
+      var tc=_mangaCerrarArmado?'⚠ Tocá de nuevo: cerrar sesión definitivamente':'Terminar y cerrar sesión '+_mangaTipo;
+      h+='<button onclick="mangaCerrarSesionTap()" style="width:100%;margin-top:14px;padding:14px;border-radius:12px;border:none;background:'+(_mangaCerrarArmado?'#A0200A':'#EBF0F5')+';color:'+(_mangaCerrarArmado?'#fff':'#1C1C1E')+';font-size:15px;font-weight:800;cursor:pointer;">'+tc+'</button>';
+    }
     body.innerHTML=h;
   } else {
     var pend=Object.keys(_mangaPendientes);
