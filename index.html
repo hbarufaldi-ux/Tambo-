@@ -102,6 +102,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 .alert-banner{padding:12px 14px;border-radius:12px;font-size:17px;margin-bottom:8px;display:flex;align-items:flex-start;gap:8px;font-weight:500;}
 .alert-warn{background:#FFF8E0;color:#7A5500;}
 .alert-danger{background:#FFE8E8;color:#A0200A;}
+.alert-sel{outline:2px solid #1C1C1E;outline-offset:1px;}
 .alert-info{background:#D6EAFF;color:#0A4FA6;}
 .alert-success{background:#D1F2E0;color:#1A7A40;}
 .alert-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;margin-top:3px;}
@@ -218,6 +219,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
   <div style="position:absolute;top:96px;right:12px;background:#fff;border-radius:16px;padding:8px;min-width:180px;box-shadow:0 8px 24px rgba(0,0,0,0.18);">
     <button id="mas-reportes" onclick="cerrarMasMenu();goTo('reportes')" style="display:block;width:100%;padding:14px 16px;border:none;background:none;font-size:16px;font-weight:600;color:#1C1C1E;text-align:left;cursor:pointer;border-radius:10px;">Reportes</button>
     <button id="mas-botiquin" onclick="cerrarMasMenu();goTo('botiquin')" style="display:block;width:100%;padding:14px 16px;border:none;background:none;font-size:16px;font-weight:600;color:#1C1C1E;text-align:left;cursor:pointer;border-radius:10px;">Botiquín</button>
+    <button id="mas-manga" onclick="cerrarMasMenu();goTo('manga')" style="display:block;width:100%;padding:14px 16px;border:none;background:none;font-size:16px;font-weight:600;color:#1C1C1E;text-align:left;cursor:pointer;border-radius:10px;">Trabajo en manga</button>
     <button id="mas-config"   onclick="cerrarMasMenu();goTo('config')"   style="display:block;width:100%;padding:14px 16px;border:none;background:none;font-size:16px;font-weight:600;color:#1C1C1E;text-align:left;cursor:pointer;border-radius:10px;">Configuración</button>
   </div>
 </div>
@@ -2132,6 +2134,34 @@ function renderRodeo() {
   });
 }
 
+// ---- VACUNACIÓN GUACHERA: config, migración y estado ----
+var GUA_VENT_MIN=43, GUA_VENT_MAX=47, GUA_CORRAL=68, GUA_INT_D2=20, GUA_VENC_D2=25;
+var GUA_GRUPOS={d1p:'1ª dosis pendiente',d1v:'1ª dosis vencida',d2p:'2ª dosis pendiente',d2v:'2ª dosis vencida'};
+var _filtroGuachera=null;
+function migrarVac(c){
+  if(!c.vac){
+    c.vac={ap1:null,ap2:null};
+    if(c.vacunado){ c.vac.ap1='?'; } // legacy: 1ª dosis aplicada, fecha desconocida
+  }
+  return c.vac;
+}
+function _diasDesdeFecha(f){ if(!f||f==='?') return null; var dt=new Date(f); if(isNaN(dt.getTime())) return null; return Math.round((new Date()-dt)/86400000); }
+function estadoCriaVac(c){
+  var d=diasDeVida(c.fechaNac)||0; var v=migrarVac(c);
+  if(v.ap2) return {label:'Completa ✓✓',cls:'badge-green',accion:null,grupo:null,urgente:false};
+  if(v.ap1){
+    var dd=_diasDesdeFecha(v.ap1);
+    var due = d>=GUA_CORRAL || (dd!==null && dd>=GUA_INT_D2);
+    if(due){ var venc=dd!==null && dd>GUA_VENC_D2; return {label:'Aplicar 2ª',cls:venc?'badge-red':'badge-amber',accion:'ap2',grupo:venc?'d2v':'d2p',urgente:venc}; }
+    return {label:'1ª ✓',cls:'badge-green',accion:null,grupo:null,urgente:false};
+  }
+  if(d<GUA_VENT_MIN) return {label:'Espera',cls:'badge-gray',accion:null,grupo:null,urgente:false};
+  var venc1=d>GUA_VENT_MAX;
+  return {label:'Aplicar 1ª',cls:venc1?'badge-red':'badge-amber',accion:'ap1',grupo:venc1?'d1v':'d1p',urgente:venc1};
+}
+function filtrarGuachera(k){ _filtroGuachera=(_filtroGuachera===k?null:k); renderGuachera(); }
+function limpiarFiltroGuachera(){ _filtroGuachera=null; renderGuachera(); }
+
 // ---- RENDER GUACHERA ----
 function renderGuachera() {
   var activas=guachera.filter(function(c){return !c.salio;});
@@ -2141,20 +2171,34 @@ function renderGuachera() {
   document.getElementById('g-hembras').textContent=activas.filter(function(c){return c.sexo==='H';}).length;
   document.getElementById('g-machos').textContent=activas.filter(function(c){return c.sexo==='M';}).length;
   document.getElementById('g-mort').textContent=tot>0?Math.round(bajas/tot*100)+'%':'0%';
-  var vac=activas.filter(function(c){var d=diasDeVida(c.fechaNac);return d>=43&&d<=47&&!c.vacunado;}).length;
-  var cor=activas.filter(function(c){var d=diasDeVida(c.fechaNac);return d>=68;}).length;
+  activas.forEach(migrarVac);
+  var vac=activas.filter(function(c){return estadoCriaVac(c).accion;}).length;
+  var cor=activas.filter(function(c){var d=diasDeVida(c.fechaNac);return d>=GUA_CORRAL;}).length;
   document.getElementById('g-vacunar').textContent=vac;
   document.getElementById('g-corral').textContent=cor;
 
-  var alerts=calcGuacheraAlertas();
+  // Alertas agrupadas (solo accionable), clicables como filtro
+  var grupos={d1p:[],d1v:[],d2p:[],d2v:[]};
+  activas.forEach(function(c){var e=estadoCriaVac(c);if(e.grupo)grupos[e.grupo].push(c.rp);});
+  var orden=[['d1v','danger'],['d2v','danger'],['d1p','warn'],['d2p','warn']];
   var ga=document.getElementById('g-alertas'); ga.innerHTML='';
-  if(alerts.length===0) { ga.innerHTML='<div class="alert-banner alert-success"><div class="alert-dot" style="background:#1A7A40;"></div><span>Todo en orden</span></div>'; }
-  else { alerts.forEach(function(a){var d=document.createElement('div');d.className='alert-banner '+(a.tipo==='danger'?'alert-danger':'alert-warn');d.innerHTML='<div class="alert-dot '+(a.tipo==='danger'?'dot-danger':'dot-warn')+'"></div><span>'+a.msg+'</span>';ga.appendChild(d);}); }
+  var hayAlerta=false;
+  orden.forEach(function(o){
+    var k=o[0]; if(!grupos[k].length) return; hayAlerta=true;
+    var d=document.createElement('div');
+    d.className='alert-banner '+(o[1]==='danger'?'alert-danger':'alert-warn')+(_filtroGuachera===k?' alert-sel':'');
+    d.style.cursor='pointer';
+    d.innerHTML='<div class="alert-dot '+(o[1]==='danger'?'dot-danger':'dot-warn')+'"></div><span>'+grupos[k].length+' cría'+(grupos[k].length>1?'s':'')+' — '+GUA_GRUPOS[k]+'</span><span style="margin-left:auto;opacity:.5;font-size:16px;">›</span>';
+    d.onclick=function(){ filtrarGuachera(k); };
+    ga.appendChild(d);
+  });
+  if(!hayAlerta){ _filtroGuachera=null; ga.innerHTML='<div class="alert-banner alert-success"><div class="alert-dot" style="background:#1A7A40;"></div><span>Todo en orden</span></div>'; }
 
   var lista=document.getElementById('g-lista'); lista.innerHTML='';
   if(activas.length===0){lista.innerHTML='<div style="padding:12px 0;text-align:center;color:#8E8E93;font-size:14px;">Sin crías en guachera</div>';return;}
   var buscarG = (document.getElementById('guachera-buscar') ? document.getElementById('guachera-buscar').value : '').trim();
   var activasFiltradas = buscarG ? activas.filter(function(c){ return String(c.rp).startsWith(buscarG); }) : activas;
+  if(_filtroGuachera){ activasFiltradas = activasFiltradas.filter(function(c){ return estadoCriaVac(c).grupo===_filtroGuachera; }); }
   if(activasFiltradas.length===0){lista.innerHTML='<div style="padding:12px 0;text-align:center;color:#8E8E93;font-size:14px;">Sin resultados para ese RP</div>';return;}
   activasFiltradas.sort(function(a,b){ return (b.fechaNac||'').localeCompare(a.fechaNac||''); });
   activasFiltradas.forEach(function(c) {
@@ -2168,15 +2212,11 @@ function renderGuachera() {
     inf.textContent=(c.sexo==='H'?'Hembra':'Macho')+' · Día '+(d||0)+' · Nació '+fmtFecha(c.fechaNac);
     left.appendChild(nm); left.appendChild(inf);
     var right=document.createElement('div'); right.style.cssText='display:flex;flex-direction:column;gap:4px;align-items:flex-end;';
-    var estadoG=''; var badgeG='badge-gray';
-    if(d<45){estadoG='Espera vacuna';}
-    else if(d>=43&&d<=47&&!c.vacunado){estadoG='Vacunar';badgeG='badge-amber';}
-    else if(d>=68){estadoG='Salir a corral';badgeG='badge-blue';}
-    else{estadoG='En guachera';}
-    var bg=document.createElement('span'); bg.className='badge '+badgeG; bg.textContent=estadoG;
+    var ev=estadoCriaVac(c);
+    var bg=document.createElement('span'); bg.className='badge '+ev.cls; bg.style.fontSize='12px'; bg.style.padding='5px 11px'; bg.textContent=ev.label;
     var btns=document.createElement('div'); btns.style.cssText='display:flex;gap:4px;margin-top:2px;';
-    if(!c.vacunado&&d>=43){var bv=document.createElement('button');bv.style.cssText='font-size:11px;padding:3px 8px;border:1px solid #B0BCC8;border-radius:8px;background:#fff;cursor:pointer;';bv.textContent='Vacunar';bv.onclick=function(e){e.stopPropagation();vacunarCria(c.rp);};btns.appendChild(bv);}
-    if(d>=68){var bs=document.createElement('button');bs.style.cssText='font-size:11px;padding:3px 8px;border:1px solid #B0BCC8;border-radius:8px;background:#fff;cursor:pointer;';bs.textContent='Salió';bs.onclick=function(e){e.stopPropagation();salirCorral(c.rp);};btns.appendChild(bs);}
+    if(ev.accion){var bv=document.createElement('button');bv.style.cssText='font-size:11px;font-weight:700;padding:5px 11px;border:none;border-radius:9px;background:'+(ev.urgente?'#A0200A':'#1C1C1E')+';color:#fff;cursor:pointer;';bv.textContent='Aplicar';bv.onclick=function(e){e.stopPropagation();aplicarVacunaGuachera(c.rp,ev.accion);};btns.appendChild(bv);}
+    if(d>=GUA_CORRAL){var bs=document.createElement('button');bs.style.cssText='font-size:11px;padding:3px 8px;border:1px solid #B0BCC8;border-radius:8px;background:#fff;cursor:pointer;';bs.textContent='Salió';bs.onclick=function(e){e.stopPropagation();salirCorral(c.rp);};btns.appendChild(bs);}
     var bb=document.createElement('button');bb.style.cssText='font-size:11px;padding:3px 8px;border:1px solid #FFD6D6;color:#A0200A;border-radius:8px;background:#fff;cursor:pointer;';bb.textContent='Baja';bb.onclick=function(e){e.stopPropagation();darDeBajaAnimal(c.rp);};btns.appendChild(bb);
     right.appendChild(bg); right.appendChild(btns);
     row.appendChild(left); row.appendChild(right); lista.appendChild(row);
@@ -2606,14 +2646,255 @@ function abrirFichaJoven(rp) {
 }
 
 // ---- GUACHERA ACTIONS ----
-function vacunarCria(rp) {
-  var c=guachera.find(function(g){return g.rp===rp;});
-  if(!c) return;
-  c.vacunado=true;
-  renderGuachera(); renderDashboard();
-  enviarASheets('Guachera_Eventos',[generarID('Vac',rp),TODAY,rp,c.nombre,'Vacunación',diasDeVida(c.fechaNac)||0]);
-  showToast(c.nombre+' vacunada');
+var _vacGuaRP=null, _vacGuaTipo=null;
+function aplicarVacunaGuachera(rp, tipo){
+  var c=guachera.find(function(g){return g.rp===rp;}); if(!c) return;
+  _vacGuaRP=rp; _vacGuaTipo=tipo;
+  var n=(tipo==='ap1'?'1':'2');
+  document.getElementById('mvg-titulo').textContent='Aplicar '+n+'ª dosis — RP '+rp;
+  document.getElementById('mvg-doses').innerHTML='<div style="color:#0F6E56;padding:3px 0;">✓ Diarrea neonatal — dosis '+n+'</div><div style="color:#0F6E56;padding:3px 0;">✓ Neumonía — dosis '+n+'</div>';
+  document.getElementById('mvg-fecha').value=TODAY;
+  document.getElementById('modal-vacuna-gua').style.display='flex';
 }
+function cerrarModalVacunaGua(){ document.getElementById('modal-vacuna-gua').style.display='none'; }
+function confirmarVacunaGua(){
+  var c=guachera.find(function(g){return g.rp===_vacGuaRP;}); if(!c){ cerrarModalVacunaGua(); return; }
+  var f=document.getElementById('mvg-fecha').value||TODAY;
+  migrarVac(c);
+  c.vac[_vacGuaTipo]=f;
+  if(_vacGuaTipo==='ap1') c.vacunado=true; // compat con lógica anterior
+  var n=(_vacGuaTipo==='ap1'?'1':'2');
+  var dias=diasDeVida(c.fechaNac)||0;
+  // Trazabilidad: registra las 2 vacunas de esta dosis
+  enviarASheets('Guachera_Eventos',[generarID('VacD'+n,_vacGuaRP),f,_vacGuaRP,c.nombre,'Diarrea neonatal dosis '+n,dias]);
+  enviarASheets('Guachera_Eventos',[generarID('VacN'+n,_vacGuaRP),f,_vacGuaRP,c.nombre,'Neumonía dosis '+n,dias]);
+  cerrarModalVacunaGua();
+  renderGuachera(); renderDashboard();
+  showToast('RP '+_vacGuaRP+': '+n+'ª dosis registrada');
+}
+// ================= TRABAJO EN MANGA (PPD + biotipo) =================
+var MANGA_BIOTIPOS=[{v:'Holando',s:'grande'},{v:'Cruza media',s:'interm.'},{v:'Cruza chica',s:'Kiwi/J'}];
+var _mangaModo='aplicacion';          // 'aplicacion' (martes) | 'lectura' (viernes)
+var _mangaTipo='PPD';                 // PPD | Vacunación | Sanidad | Conteo | Stock (solo PPD activo)
+var MANGA_TIPOS=[{v:'PPD',on:true},{v:'Vacunación',on:false},{v:'Sanidad',on:false},{v:'Conteo',on:false},{v:'Stock',on:false}];
+var _mangaCargas={};                  // aplicacion: rp -> carga de hoy
+var _mangaPendientes={}, _mangaLeidasHoy=0; // lectura
+var _mangaEntry='', _mangaStage='entry';
+var _mangaWRP=null,_mangaWBio=null,_mangaWPPD=true,_mangaWNueva=false,_mangaWDoc=null;
+var _mangaUnsub=null, _mangaPend=false;
+
+function iniciarManga(){
+  _mangaEntry=''; _mangaStage='entry'; _mangaWRP=null; _mangaWBio=null; _mangaWDoc=null;
+  mangaListen();
+  renderManga();
+}
+function mangaModo(m){
+  if(_mangaModo===m) return;
+  _mangaModo=m; _mangaEntry=''; _mangaStage='entry'; _mangaWRP=null; _mangaWBio=null; _mangaWDoc=null;
+  mangaListen(); renderManga();
+}
+function mangaListen(){
+  if(_mangaUnsub){ try{_mangaUnsub();}catch(e){} _mangaUnsub=null; }
+  if(!_db){ renderManga(); return; }
+  try{
+    if(_mangaModo==='aplicacion'){
+      _mangaUnsub=_db.collection('Reg_Manga').where('fecha','==',TODAY).onSnapshot(function(snap){
+        _mangaCargas={}; _mangaPend=snap.metadata.hasPendingWrites;
+        snap.forEach(function(doc){ var d=doc.data(); if(d && d.rp) _mangaCargas[String(d.rp)]=d; });
+        renderManga();
+      }, function(err){ console.warn('manga onSnapshot aplic:',err); });
+    } else {
+      _mangaUnsub=_db.collection('Reg_Manga').where('ppd','==',true).onSnapshot(function(snap){
+        _mangaPendientes={}; _mangaLeidasHoy=0; _mangaPend=snap.metadata.hasPendingWrites;
+        snap.forEach(function(doc){ var d=doc.data(); if(!d||!d.rp) return;
+          if(!d.resultadoPPD) _mangaPendientes[String(d.rp)]=d;
+          else if(d.fechaLectura===TODAY) _mangaLeidasHoy++;
+        });
+        renderManga();
+      }, function(err){ console.warn('manga onSnapshot lect:',err); });
+    }
+  }catch(e){ console.warn('mangaListen:',e); renderManga(); }
+}
+function mangaGuardarCarga(carga){
+  _mangaCargas[String(carga.rp)]=carga;
+  if(_db){ _db.collection('Reg_Manga').doc(TODAY+'_'+carga.rp).set(carga).catch(function(e){ console.warn('guardar carga manga:',e); }); }
+  renderManga();
+}
+function mangaSetTipo(t){
+  var def=null; MANGA_TIPOS.forEach(function(x){if(x.v===t)def=x;});
+  if(!def) return;
+  if(!def.on){ if(typeof showToast==='function') showToast(t+': próximamente'); return; }
+  _mangaTipo=t; _mangaEntry=''; _mangaStage='entry'; _mangaWRP=null; renderManga();
+}
+function _mangaTipoSelectorHTML(){
+  var chips=MANGA_TIPOS.map(function(x){
+    var sel=_mangaTipo===x.v;
+    var bg = sel?'#1C1C1E':(x.on?'#fff':'#EDEDF0');
+    var col= sel?'#fff':(x.on?'#1C1C1E':'#A0A0A8');
+    return '<button onclick="mangaSetTipo(\''+x.v+'\')" style="padding:8px 12px;border:1px solid '+(sel?'#1C1C1E':'#D0D5DC')+';border-radius:20px;background:'+bg+';color:'+col+';font-size:12.5px;font-weight:700;cursor:pointer;white-space:nowrap;">'+x.v+(x.on?'':' ·')+'</button>';
+  }).join('');
+  return '<div style="display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;margin-bottom:10px;-webkit-overflow-scrolling:touch;">'+chips+'</div>';
+}
+function _mangaSelectorHTML(){
+  function b(m,txt){ var on=_mangaModo===m; return '<button onclick="mangaModo(\''+m+'\')" style="flex:1;padding:10px;border:none;border-radius:9px;font-size:13px;font-weight:700;cursor:pointer;background:'+(on?'#fff':'transparent')+';color:'+(on?'#1C1C1E':'#8E8E93')+';box-shadow:'+(on?'0 1px 2px rgba(0,0,0,.12)':'none')+';">'+txt+'</button>'; }
+  return '<div style="display:flex;gap:4px;background:#E3E8EF;border-radius:12px;padding:4px;margin-bottom:12px;">'+b('aplicacion','Aplicación (martes)')+b('lectura','Lectura (viernes)')+'</div>';
+}
+function _mangaKeypadHTML(){
+  var keys='';
+  [1,2,3,4,5,6,7,8,9].forEach(function(n){ keys+='<button onclick="mangaTecla(\''+n+'\')" style="padding:20px 0;border:none;border-radius:14px;background:#fff;font-size:26px;font-weight:700;cursor:pointer;box-shadow:0 1px 2px rgba(0,0,0,.08);">'+n+'</button>'; });
+  keys+='<button onclick="mangaBorrar()" style="padding:20px 0;border:none;border-radius:14px;background:#EBF0F5;font-size:22px;cursor:pointer;">⌫</button>';
+  keys+='<button onclick="mangaTecla(\'0\')" style="padding:20px 0;border:none;border-radius:14px;background:#fff;font-size:26px;font-weight:700;cursor:pointer;box-shadow:0 1px 2px rgba(0,0,0,.08);">0</button>';
+  keys+='<button onclick="mangaBuscar()" '+(_mangaEntry.length>=1?'':'disabled')+' style="padding:20px 0;border:none;border-radius:14px;background:'+(_mangaEntry.length>=1?'#1C1C1E':'#C7CDD6')+';color:#fff;font-size:16px;font-weight:800;cursor:pointer;">Buscar</button>';
+  return '<div style="background:#fff;border-radius:16px;padding:16px;text-align:center;margin-bottom:10px;box-shadow:0 1px 3px rgba(0,0,0,.06);">'
+    +'<div style="font-size:11px;font-weight:800;color:#8E8E93;text-transform:uppercase;letter-spacing:.4px;">RP que entra</div>'
+    +'<div style="font-size:38px;font-weight:800;letter-spacing:3px;min-height:46px;margin-top:4px;'+(_mangaEntry?'':'color:#C7CDD6;')+'">'+(_mangaEntry||'0000')+'</div></div>'
+    +'<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;">'+keys+'</div>';
+}
+function renderManga(){
+  var sc=document.getElementById('screen-manga'); if(!sc) return;
+  var pill=document.getElementById('manga-sync');
+  if(pill){ if(_mangaPend){ pill.className='badge badge-amber'; pill.textContent='▲ sin subir'; } else { pill.className='badge badge-green'; pill.textContent='● En la nube'; } }
+
+  // selector de tipo de trabajo (solo PPD activo) + selector de modo
+  var tipoWrap=document.getElementById('manga-tipo-sel'); if(tipoWrap) tipoWrap.innerHTML=_mangaTipoSelectorHTML();
+  var selWrap=document.getElementById('manga-modo-sel'); if(selWrap) selWrap.innerHTML=_mangaSelectorHTML();
+
+  // progreso segun modo
+  var prog=document.getElementById('manga-progreso');
+  if(prog){
+    if(_mangaModo==='aplicacion'){
+      var claves=Object.keys(_mangaCargas);
+      var nuevas=claves.filter(function(k){return _mangaCargas[k].nueva;}).length;
+      prog.innerHTML='<div style="display:flex;gap:8px;margin-bottom:12px;">'
+        +'<div style="flex:1;background:#fff;border-radius:14px;padding:10px 12px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,.06);"><div style="font-size:22px;font-weight:800;">'+claves.length+'</div><div style="font-size:10.5px;color:#8E8E93;font-weight:700;text-transform:uppercase;">Pasadas</div></div>'
+        +'<div style="flex:1;background:#fff;border-radius:14px;padding:10px 12px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,.06);"><div style="font-size:22px;font-weight:800;color:#B06E00;">'+nuevas+'</div><div style="font-size:10.5px;color:#8E8E93;font-weight:700;text-transform:uppercase;">Altas</div></div>'
+        +'</div>';
+    } else {
+      var pend=Object.keys(_mangaPendientes).length;
+      prog.innerHTML='<div style="display:flex;gap:8px;margin-bottom:12px;">'
+        +'<div style="flex:1;background:#fff;border-radius:14px;padding:10px 12px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,.06);"><div style="font-size:22px;font-weight:800;color:#0F6E56;">'+_mangaLeidasHoy+'</div><div style="font-size:10.5px;color:#8E8E93;font-weight:700;text-transform:uppercase;">Leídas hoy</div></div>'
+        +'<div style="flex:1;background:#fff;border-radius:14px;padding:10px 12px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,.06);"><div style="font-size:22px;font-weight:800;color:#A0200A;">'+pend+'</div><div style="font-size:10.5px;color:#8E8E93;font-weight:700;text-transform:uppercase;">Pendientes</div></div>'
+        +'</div>';
+    }
+  }
+
+  var st=document.getElementById('manga-stage'); if(!st) return;
+  if(_mangaStage==='entry'){ st.innerHTML=_mangaKeypadHTML(); return; }
+
+  // WORK card
+  var rp=_mangaWRP;
+  if(_mangaModo==='aplicacion'){
+    var a=(typeof getAnimal==='function')?getAnimal(rp):null;
+    var meta=_mangaWNueva?'Datos incompletos — completar después':(a?((a.cat||'—')+' · '+(a.sexo==='M'?'♂':a.sexo==='H'?'♀':'')):'—');
+    var bio='';
+    MANGA_BIOTIPOS.forEach(function(b){ bio+='<button onclick="mangaSelBio(\''+b.v+'\')" style="padding:15px 4px;border:2px solid '+(_mangaWBio===b.v?'#1C1C1E':'#E0E0E5')+';border-radius:14px;background:'+(_mangaWBio===b.v?'#1C1C1E':'#fff')+';color:'+(_mangaWBio===b.v?'#fff':'#1C1C1E')+';font-size:13px;font-weight:700;cursor:pointer;line-height:1.15;">'+b.v.replace('Cruza ','C. ')+'<br><small style="font-weight:500;font-size:10px;opacity:.7;">'+b.s+'</small></button>'; });
+    st.innerHTML='<div style="background:#fff;border-radius:18px;padding:18px 16px;box-shadow:0 4px 16px rgba(0,0,0,.1);">'
+      +'<div style="display:flex;align-items:center;justify-content:space-between;"><div style="font-size:26px;font-weight:800;">RP '+rp+'</div>'+(_mangaWNueva?'<span class="badge badge-amber" style="font-size:11px;padding:5px 10px;">ALTA NUEVA</span>':'')+'</div>'
+      +'<div style="font-size:13px;color:#8E8E93;margin:2px 0 16px;">'+meta+'</div>'
+      +'<div style="font-size:11.5px;font-weight:800;color:#8E8E93;text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px;">Biotipo</div>'
+      +'<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:16px;">'+bio+'</div>'
+      +'<div style="display:flex;align-items:center;justify-content:space-between;background:#EBF0F5;border-radius:14px;padding:13px 15px;margin-bottom:16px;"><div><div style="font-size:15px;font-weight:800;">PPD aplicado</div><div style="font-size:11px;color:#8E8E93;font-weight:600;">Lectura 72 h</div></div>'
+      +'<div onclick="mangaTogglePPD()" style="width:52px;height:31px;border-radius:20px;background:'+(_mangaWPPD?'#0F6E56':'#C7CDD6')+';position:relative;cursor:pointer;flex-shrink:0;"><div style="position:absolute;top:3px;left:'+(_mangaWPPD?'24px':'3px')+';width:25px;height:25px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.3);transition:left .15s;"></div></div></div>'
+      +'<div style="display:flex;gap:8px;"><button onclick="mangaVolverEntry()" style="flex:0 0 90px;padding:16px;border-radius:14px;border:none;background:#EBF0F5;font-size:16px;font-weight:800;cursor:pointer;">Cancelar</button>'
+      +'<button onclick="mangaGuardar()" '+(_mangaWBio?'':'disabled')+' style="flex:1;padding:16px;border-radius:14px;border:none;background:'+(_mangaWBio?'#1C1C1E':'#C7CDD6')+';color:#fff;font-size:16px;font-weight:800;cursor:pointer;">Guardar y siguiente</button></div>'
+      +'</div>';
+  } else {
+    // LECTURA: resultado de PPD
+    var doc=_mangaWDoc||{};
+    var fApl=(doc.fecha&&typeof fmtFecha==='function')?fmtFecha(doc.fecha):(doc.fecha||'—');
+    st.innerHTML='<div style="background:#fff;border-radius:18px;padding:18px 16px;box-shadow:0 4px 16px rgba(0,0,0,.1);">'
+      +'<div style="font-size:26px;font-weight:800;">RP '+rp+'</div>'
+      +'<div style="font-size:13px;color:#8E8E93;margin:2px 0 16px;">'+(doc.biotipo||'—')+' · PPD aplicado '+fApl+'</div>'
+      +'<div style="font-size:11.5px;font-weight:800;color:#8E8E93;text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px;">Resultado de lectura</div>'
+      +'<div style="display:grid;grid-template-columns:1fr;gap:8px;margin-bottom:14px;">'
+      +'<button onclick="mangaSetResultado(\'Negativa\')" style="padding:16px;border:none;border-radius:14px;background:#D1F2E0;color:#0F6E56;font-size:16px;font-weight:800;cursor:pointer;">Negativa</button>'
+      +'<button onclick="mangaSetResultado(\'Sospechosa\')" style="padding:16px;border:none;border-radius:14px;background:#FFF3CC;color:#8A6000;font-size:16px;font-weight:800;cursor:pointer;">Sospechosa</button>'
+      +'<button onclick="mangaSetResultado(\'Positiva\')" style="padding:16px;border:none;border-radius:14px;background:#FFD6D6;color:#A0200A;font-size:16px;font-weight:800;cursor:pointer;">Positiva</button>'
+      +'</div>'
+      +'<button onclick="mangaVolverEntry()" style="width:100%;padding:14px;border-radius:14px;border:none;background:#EBF0F5;font-size:15px;font-weight:700;cursor:pointer;">Cancelar</button>'
+      +'</div>';
+  }
+}
+function mangaTecla(n){ if(_mangaEntry.length>=6) return; _mangaEntry+=n; renderManga(); }
+function mangaBorrar(){ _mangaEntry=_mangaEntry.slice(0,-1); renderManga(); }
+function mangaBuscar(){
+  var rp=_mangaEntry.trim(); if(!rp) return;
+  if(_mangaModo==='aplicacion'){
+    var a=(typeof getAnimal==='function')?getAnimal(rp):null;
+    if(a){ _mangaWRP=rp; _mangaWBio=a.biotipo||null; _mangaWPPD=true; _mangaWNueva=false; _mangaStage='work'; renderManga(); }
+    else { _mangaWRP=rp; document.getElementById('manga-alta-titulo').textContent='RP '+rp+' no está en el padrón'; document.getElementById('modal-manga-alta').style.display='flex'; }
+  } else {
+    var pend=_mangaPendientes[rp];
+    if(pend){ _mangaWRP=rp; _mangaWDoc=pend; _mangaStage='work'; renderManga(); }
+    else { if(typeof showToast==='function') showToast('RP '+rp+' sin PPD pendiente de lectura'); _mangaEntry=''; renderManga(); }
+  }
+}
+function mangaConfirmarAlta(){
+  document.getElementById('modal-manga-alta').style.display='none';
+  var nuevo={rp:_mangaWRP,cat:'?',sexo:'?',biotipo:null,incompleta:true,altaManga:true,estadoRepro:'',estadoProd:''};
+  if(typeof rodeo!=='undefined' && !(typeof getAnimal==='function' && getAnimal(_mangaWRP))) rodeo.push(nuevo);
+  if(typeof fb_guardarAnimal==='function') fb_guardarAnimal(nuevo);
+  _mangaWBio=null; _mangaWPPD=true; _mangaWNueva=true; _mangaStage='work'; renderManga();
+}
+function mangaSelBio(v){ _mangaWBio=v; renderManga(); }
+function mangaTogglePPD(){ _mangaWPPD=!_mangaWPPD; renderManga(); }
+function mangaGuardar(){
+  if(!_mangaWBio) return;
+  var rp=_mangaWRP;
+  var a=(typeof getAnimal==='function')?getAnimal(rp):null;
+  // Snapshot de lo que ERA el animal al pasar (la app lo deriva del padrón, no lo pregunta)
+  var rodeoAlPasar = a ? (a.rodeoManual || (typeof calcRodeo==='function'?calcRodeo(a):'')) : '';
+  var carga={fecha:TODAY,rp:rp,tipoTrabajo:_mangaTipo,biotipo:_mangaWBio,ppd:_mangaWPPD,nueva:_mangaWNueva,tipo:'aplicacion',
+    catAlPasar:(a?(a.cat||''):''), estadoProdAlPasar:(a?(a.estadoProd||''):''), estadoReproAlPasar:(a?(a.estadoRepro||''):''), rodeoAlPasar:rodeoAlPasar,
+    resultadoPPD:null,fechaLectura:null,ts:Date.now()};
+  mangaGuardarCarga(carga);
+  if(a){ a.biotipo=_mangaWBio; if(typeof fb_guardarAnimal==='function') fb_guardarAnimal(a); }
+  _mangaWRP=null; _mangaWBio=null; _mangaEntry=''; _mangaStage='entry'; renderManga();
+  if(typeof showToast==='function') showToast('RP '+rp+' cargada');
+}
+function mangaSetResultado(res){
+  var rp=_mangaWRP, doc=_mangaWDoc; if(!doc) return;
+  if(_db){ _db.collection('Reg_Manga').doc(doc.fecha+'_'+rp).update({resultadoPPD:res,fechaLectura:TODAY}).catch(function(e){ console.warn('guardar lectura:',e); }); }
+  delete _mangaPendientes[String(rp)]; _mangaLeidasHoy++;
+  _mangaWRP=null; _mangaWDoc=null; _mangaEntry=''; _mangaStage='entry'; renderManga();
+  if(typeof showToast==='function') showToast('RP '+rp+': '+res);
+}
+function mangaVolverEntry(){ _mangaWRP=null; _mangaWBio=null; _mangaWDoc=null; _mangaEntry=''; _mangaStage='entry'; renderManga(); }
+function mangaAbrirCierre(){
+  var body=document.getElementById('manga-cierre-body');
+  var res=document.getElementById('manga-cierre-resumen');
+  if(_mangaModo==='aplicacion'){
+    var pasadas=Object.keys(_mangaCargas);
+    var nuevas=pasadas.filter(function(k){return _mangaCargas[k].nueva;});
+    var ausentes=(typeof rodeo!=='undefined'?rodeo:[]).filter(function(a){ return a.estadoRepro!=='Baja' && !a.altaManga && !_mangaCargas[String(a.rp)]; });
+    res.innerHTML='<b>'+pasadas.length+'</b> pasaron · <b style="color:#A0200A;">'+ausentes.length+'</b> no pasaron · <b style="color:#B06E00;">'+nuevas.length+'</b> altas nuevas';
+    var h='';
+    if(ausentes.length){
+      h+='<div style="font-size:12.5px;font-weight:800;color:#A0200A;text-transform:uppercase;margin:10px 0 8px;">No pasaron ('+ausentes.length+')</div>';
+      ausentes.slice(0,80).forEach(function(a){ h+='<div style="display:flex;justify-content:space-between;align-items:center;padding:9px 11px;border-radius:10px;background:#F7F8FA;margin-bottom:5px;font-size:13.5px;"><span>RP '+a.rp+' · '+(a.cat||'—')+'</span></div>'; });
+      if(ausentes.length>80) h+='<div style="font-size:12px;color:#8E8E93;text-align:center;padding:6px;">... y '+(ausentes.length-80)+' más</div>';
+    }
+    if(nuevas.length){
+      h+='<div style="font-size:12.5px;font-weight:800;color:#B06E00;text-transform:uppercase;margin:10px 0 8px;">Altas nuevas — completar datos</div>';
+      nuevas.forEach(function(rp){ h+='<div style="display:flex;justify-content:space-between;align-items:center;padding:9px 11px;border-radius:10px;background:#F7F8FA;margin-bottom:5px;font-size:13.5px;"><span>RP '+rp+' · '+_mangaCargas[rp].biotipo+'</span></div>'; });
+    }
+    if(!ausentes.length && !nuevas.length) h='<p style="color:#0F6E56;font-weight:700;">Todo el padrón pasó, sin altas pendientes. ✓</p>';
+    body.innerHTML=h;
+  } else {
+    var pend=Object.keys(_mangaPendientes);
+    res.innerHTML='<b style="color:#0F6E56;">'+_mangaLeidasHoy+'</b> leídas hoy · <b style="color:#A0200A;">'+pend.length+'</b> pendientes de lectura';
+    var h2='';
+    if(pend.length){
+      h2+='<div style="font-size:12.5px;font-weight:800;color:#A0200A;text-transform:uppercase;margin:10px 0 8px;">Pendientes de lectura ('+pend.length+')</div>';
+      pend.slice(0,80).forEach(function(rp){ var d=_mangaPendientes[rp]; h2+='<div style="display:flex;justify-content:space-between;align-items:center;padding:9px 11px;border-radius:10px;background:#F7F8FA;margin-bottom:5px;font-size:13.5px;"><span>RP '+rp+' · '+(d.biotipo||'—')+'</span></div>'; });
+      if(pend.length>80) h2+='<div style="font-size:12px;color:#8E8E93;text-align:center;padding:6px;">... y '+(pend.length-80)+' más</div>';
+    } else h2='<p style="color:#0F6E56;font-weight:700;">Todas las lecturas al día. ✓</p>';
+    body.innerHTML=h2;
+  }
+  document.getElementById('modal-manga-cierre').style.display='flex';
+}
+function mangaCerrarCierre(){ document.getElementById('modal-manga-cierre').style.display='none'; }
+
 function salirCorral(rp) {
   var c=guachera.find(function(g){return g.rp===rp;});
   if(!c) return;
@@ -3199,9 +3480,10 @@ function goToNav(screen) {
 var _navAnterior = null; // {screen, navId}
 
 function goTo(screen, btn) {
-  var SCREENS_SIN_NAV = ['config', 'reportes', 'botiquin'];
+  var SCREENS_SIN_NAV = ['config', 'reportes', 'botiquin', 'manga'];
   var esSinNav = SCREENS_SIN_NAV.indexOf(screen) >= 0;
 
+  if(screen==='manga'){ setTimeout(function(){ iniciarManga(); }, 60); }
   if(screen==='reportes'){
     cargarCacheLeche();
     cargarProduccionDesdeSheets();
@@ -6639,6 +6921,54 @@ function cerrarJovenFab() {
     <div style="font-size:13px;color:#8E8E93;margin-bottom:16px;" id="mev-subtitulo"></div>
     <div id="mev-opciones" style="display:flex;flex-direction:column;gap:8px;"></div>
     <button class="btn-secondary" style="margin-top:8px;" onclick="document.getElementById('modal-evento-vaca').style.display='none';">Cancelar</button>
+  </div>
+</div>
+
+<!-- SCREEN MANGA (PPD + biotipo) -->
+<div id="screen-manga" class="screen">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+    <div style="font-size:20px;font-weight:800;">Trabajo en manga</div>
+    <span id="manga-sync" class="badge badge-green" style="font-size:11px;padding:5px 10px;">● En la nube</span>
+  </div>
+  <div id="manga-tipo-sel"></div>
+  <div id="manga-modo-sel"></div>
+  <div id="manga-progreso"></div>
+  <div id="manga-stage"></div>
+  <button onclick="mangaAbrirCierre()" style="width:100%;margin-top:12px;padding:14px;border-radius:12px;border:1.5px solid #1C1C1E;background:#fff;font-weight:700;font-size:14px;cursor:pointer;">Cerrar trabajo del día →</button>
+</div>
+
+<!-- MODAL MANGA: ALTA EXPRÉS -->
+<div id="modal-manga-alta" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:300;align-items:flex-end;justify-content:center;">
+  <div style="background:#fff;border-radius:20px 20px 0 0;padding:22px 16px;width:100%;max-width:420px;">
+    <div id="manga-alta-titulo" style="font-size:18px;font-weight:800;margin-bottom:4px;">RP no está en el padrón</div>
+    <p style="font-size:14px;color:#3C3C43;margin:0 0 16px;">Se da de alta con lo mínimo (RP + biotipo + PPD). Los datos completos se cargan después, sin frenar la fila.</p>
+    <div style="display:flex;gap:8px;">
+      <button onclick="document.getElementById('modal-manga-alta').style.display='none';mangaVolverEntry();" style="flex:1;padding:15px;border-radius:14px;border:none;background:#EBF0F5;font-weight:700;cursor:pointer;">Cancelar</button>
+      <button onclick="mangaConfirmarAlta()" style="flex:1;padding:15px;border-radius:14px;border:none;background:#1C1C1E;color:#fff;font-weight:700;cursor:pointer;">Agregar y cargar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL MANGA: CIERRE -->
+<div id="modal-manga-cierre" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:300;align-items:flex-end;justify-content:center;">
+  <div style="background:#fff;border-radius:20px 20px 0 0;padding:22px 16px;width:100%;max-width:420px;max-height:82vh;overflow-y:auto;">
+    <div style="font-size:18px;font-weight:800;margin-bottom:4px;">Cierre del trabajo</div>
+    <p id="manga-cierre-resumen" style="font-size:14px;color:#3C3C43;margin:0 0 14px;"></p>
+    <div id="manga-cierre-body"></div>
+    <button onclick="mangaCerrarCierre()" style="width:100%;margin-top:10px;padding:15px;border-radius:14px;border:none;background:#1C1C1E;color:#fff;font-weight:700;cursor:pointer;">Listo</button>
+  </div>
+</div>
+
+<!-- MODAL VACUNA GUACHERA -->
+<div id="modal-vacuna-gua" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:300;align-items:flex-end;justify-content:center;">
+  <div style="background:#fff;border-radius:20px 20px 0 0;padding:22px 16px;width:100%;max-width:420px;">
+    <div id="mvg-titulo" style="font-size:18px;font-weight:800;margin-bottom:12px;">Aplicar dosis</div>
+    <div id="mvg-doses" style="background:#F2F6FA;border-radius:12px;padding:14px;margin-bottom:16px;font-size:15px;font-weight:600;"></div>
+    <div style="margin-bottom:14px;"><label style="display:block;font-size:13px;font-weight:600;margin-bottom:5px;">Fecha</label><input type="date" id="mvg-fecha" style="width:100%;padding:12px;border:1px solid #E0E0E5;border-radius:12px;font-size:16px;box-sizing:border-box;"></div>
+    <div style="display:flex;gap:8px;">
+      <button onclick="cerrarModalVacunaGua()" style="flex:1;padding:15px;border-radius:14px;font-size:15px;font-weight:700;border:none;background:#EBF0F5;color:#1C1C1E;cursor:pointer;">Cancelar</button>
+      <button onclick="confirmarVacunaGua()" style="flex:1;padding:15px;border-radius:14px;font-size:15px;font-weight:700;border:none;background:#1C1C1E;color:#fff;cursor:pointer;">Registrar</button>
+    </div>
   </div>
 </div>
 
