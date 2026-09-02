@@ -3011,6 +3011,69 @@ function mangaAbrirCierre(){
 }
 function mangaCerrarCierre(){ document.getElementById('modal-manga-cierre').style.display='none'; }
 
+// ---- LISTA DE RP + FILTROS + EXPORT ----
+var _mangaLista=[], _mangaFiltroLista='todas';
+function mangaVerLista(){
+  _mangaFiltroLista='todas';
+  document.getElementById('modal-manga-lista').style.display='flex';
+  document.getElementById('manga-lista-count').textContent='(cargando...)';
+  document.getElementById('manga-lista-body').innerHTML='<div style="padding:24px;text-align:center;color:#8E8E93;">Cargando...</div>';
+  function traer(){
+    if(!_db || !_mangaSesion){ _mangaLista=Object.keys(_mangaCargas).map(function(k){return _mangaCargas[k];}); mangaRenderLista(); return; }
+    _db.collection('Reg_Manga').where('sesionId','==',_mangaSesion.id).get().then(function(snap){
+      _mangaLista=[]; snap.forEach(function(doc){ var d=doc.data(); if(d&&d.rp){ d._docId=doc.id; _mangaLista.push(d); } });
+      _mangaLista.sort(function(a,b){ return String(a.rp).localeCompare(String(b.rp),undefined,{numeric:true}); });
+      mangaRenderLista();
+    }).catch(function(e){ console.warn('lista:',e); _mangaLista=Object.keys(_mangaCargas).map(function(k){return _mangaCargas[k];}); mangaRenderLista(); });
+  }
+  if(!_mangaSesion){ mangaCargarSesionActiva(traer); } else { traer(); }
+}
+function mangaCerrarLista(){ document.getElementById('modal-manga-lista').style.display='none'; }
+function _mangaResLabel(c){ return c.resultadoPPD || (c.ppd?'Pendiente':'—'); }
+function _mangaListaFiltrada(){
+  var f=_mangaFiltroLista;
+  return _mangaLista.filter(function(c){
+    if(f==='todas') return true;
+    if(f==='Negativa'||f==='Sospechosa'||f==='Positiva') return c.resultadoPPD===f;
+    if(f==='Pendiente') return c.ppd && !c.resultadoPPD;
+    if(f==='Ordeñe') return (c.estadoProdAlPasar||'').toLowerCase().indexOf('orde')>=0;
+    if(f==='Seca') return (c.estadoProdAlPasar||'').toLowerCase().indexOf('seca')>=0;
+    if(f==='Altas') return c.nueva;
+    return true;
+  });
+}
+function mangaFiltrarLista(f){ _mangaFiltroLista=f; mangaRenderLista(); }
+function mangaRenderLista(){
+  var filtros=[['todas','Todas'],['Pendiente','Pendientes'],['Negativa','Neg.'],['Sospechosa','Sosp.'],['Positiva','Pos.'],['Ordeñe','Ordeñe'],['Seca','Secas'],['Altas','Altas']];
+  document.getElementById('manga-lista-filtros').innerHTML=filtros.map(function(o){
+    var sel=_mangaFiltroLista===o[0];
+    return '<button onclick="mangaFiltrarLista(\''+o[0]+'\')" style="padding:7px 12px;border:1px solid '+(sel?'#1C1C1E':'#D0D5DC')+';border-radius:20px;background:'+(sel?'#1C1C1E':'#fff')+';color:'+(sel?'#fff':'#3C3C43')+';font-size:12.5px;font-weight:700;cursor:pointer;white-space:nowrap;">'+o[1]+'</button>';
+  }).join('');
+  var lista=_mangaListaFiltrada();
+  document.getElementById('manga-lista-count').textContent='('+lista.length+(_mangaFiltroLista!=='todas'?' de '+_mangaLista.length:'')+')';
+  function resColor(c){ var r=c.resultadoPPD; if(r==='Positiva')return '#A0200A'; if(r==='Sospechosa')return '#8A6000'; if(r==='Negativa')return '#0F6E56'; return '#8E8E93'; }
+  var rows=lista.slice(0,600).map(function(c){
+    return '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 8px;border-bottom:0.5px solid #EBEBF0;">'
+      +'<div><div style="font-size:15px;font-weight:700;">RP '+c.rp+(c.nueva?' <span style="color:#B06E00;font-size:11px;">nueva</span>':'')+'</div>'
+      +'<div style="font-size:11.5px;color:#8E8E93;">'+(c.catAlPasar||'—')+' · '+(c.biotipo||'s/biotipo')+' · '+(c.estadoProdAlPasar||'')+(c.rodeoAlPasar?' · '+c.rodeoAlPasar:'')+'</div></div>'
+      +'<div style="text-align:right;"><div style="font-size:12.5px;font-weight:800;color:'+resColor(c)+';">'+_mangaResLabel(c)+'</div>'
+      +'<div style="font-size:10.5px;color:#8E8E93;">PPD '+(c.ppd?'sí':'no')+'</div></div></div>';
+  }).join('');
+  if(lista.length>600) rows+='<div style="padding:10px;text-align:center;color:#8E8E93;font-size:12px;">Mostrando 600 de '+lista.length+' — el Excel trae todas</div>';
+  if(!lista.length) rows='<div style="padding:24px;text-align:center;color:#8E8E93;">Sin resultados para este filtro</div>';
+  document.getElementById('manga-lista-body').innerHTML=rows;
+}
+function mangaExportarLista(){
+  var lista=_mangaListaFiltrada();
+  if(!lista.length){ if(typeof showToast==='function') showToast('Nada para exportar'); return; }
+  var enc=['RP','Categoría','Biotipo','PPD aplicado','Resultado','Estado al pasar','Rodeo al pasar','Alta nueva','Fecha aplic.','Fecha lectura'];
+  var filas=lista.map(function(c){
+    return [c.rp, c.catAlPasar||'', c.biotipo||'', (c.ppd?'Sí':'No'), (c.resultadoPPD||(c.ppd?'Pendiente':'')), c.estadoProdAlPasar||'', c.rodeoAlPasar||'', (c.nueva?'Sí':''), c.fecha||'', c.fechaLectura||''];
+  });
+  var nombre='Manga_'+_mangaTipo+(_mangaFiltroLista!=='todas'?'_'+_mangaFiltroLista:'');
+  if(typeof exportarCSV==='function') exportarCSV(nombre, enc, filas);
+}
+
 function salirCorral(rp) {
   var c=guachera.find(function(g){return g.rp===rp;});
   if(!c) return;
@@ -7050,7 +7113,8 @@ function cerrarJovenFab() {
   <div id="manga-modo-sel"></div>
   <div id="manga-progreso"></div>
   <div id="manga-stage"></div>
-  <button onclick="mangaAbrirCierre()" style="width:100%;margin-top:12px;padding:14px;border-radius:12px;border:1.5px solid #1C1C1E;background:#fff;font-weight:700;font-size:14px;cursor:pointer;">Cerrar trabajo del día →</button>
+  <button onclick="mangaVerLista()" style="width:100%;margin-top:12px;padding:13px;border-radius:12px;border:1px solid #B0BCC8;background:#fff;font-weight:700;font-size:14px;color:#1C1C1E;cursor:pointer;">📋 Ver lista de RP cargadas</button>
+  <button onclick="mangaAbrirCierre()" style="width:100%;margin-top:10px;padding:14px;border-radius:12px;border:1.5px solid #1C1C1E;background:#fff;font-weight:700;font-size:14px;cursor:pointer;">Cerrar trabajo del día →</button>
 </div>
 
 <!-- MODAL MANGA: ALTA EXPRÉS -->
@@ -7062,6 +7126,19 @@ function cerrarJovenFab() {
       <button onclick="document.getElementById('modal-manga-alta').style.display='none';mangaVolverEntry();" style="flex:1;padding:15px;border-radius:14px;border:none;background:#EBF0F5;font-weight:700;cursor:pointer;">Cancelar</button>
       <button onclick="mangaConfirmarAlta()" style="flex:1;padding:15px;border-radius:14px;border:none;background:#1C1C1E;color:#fff;font-weight:700;cursor:pointer;">Agregar y cargar</button>
     </div>
+  </div>
+</div>
+
+<!-- MODAL MANGA: LISTA DE RP -->
+<div id="modal-manga-lista" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:300;align-items:flex-end;justify-content:center;">
+  <div style="background:#fff;border-radius:20px 20px 0 0;padding:20px 14px 14px;width:100%;max-width:460px;height:88vh;display:flex;flex-direction:column;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+      <div style="font-size:18px;font-weight:800;">RP cargadas <span id="manga-lista-count" style="color:#8E8E93;font-weight:600;font-size:14px;"></span></div>
+      <button onclick="mangaCerrarLista()" style="border:none;background:#EBF0F5;border-radius:10px;padding:7px 12px;font-weight:700;cursor:pointer;">Cerrar</button>
+    </div>
+    <div id="manga-lista-filtros" style="display:flex;gap:6px;overflow-x:auto;padding-bottom:8px;-webkit-overflow-scrolling:touch;"></div>
+    <div id="manga-lista-body" style="flex:1;overflow-y:auto;border-top:1px solid #EBEBF0;"></div>
+    <button onclick="mangaExportarLista()" style="width:100%;margin-top:10px;padding:14px;border-radius:14px;border:none;background:#1C1C1E;color:#fff;font-size:15px;font-weight:800;cursor:pointer;">⬇ Exportar a Excel</button>
   </div>
 </div>
 
