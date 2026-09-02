@@ -3845,11 +3845,18 @@ var _dirsaAnimalesParsed = []; // buffer de animales parseados antes de confirma
 function importarPadronDIRSA(input) {
   var file = input.files[0];
   if(!file) return;
+  var _esCSV = /\.csv$/i.test(file.name);   // ranking DIRSA sale como .csv (; + windows-1252)
   var reader = new FileReader();
   reader.onload = function(e) {
     try {
-      var data = new Uint8Array(e.target.result);
-      var wb = XLSX.read(data, {type:'array', cellDates:true});
+      var wb;
+      if(_esCSV) {
+        // Texto ya decodificado como windows-1252; XLSX detecta solo el separador ';'
+        wb = XLSX.read(e.target.result, {type:'string', raw:true});
+      } else {
+        var data = new Uint8Array(e.target.result);
+        wb = XLSX.read(data, {type:'array', cellDates:true});
+      }
       var ws = wb.Sheets[wb.SheetNames[0]];
       var rows = XLSX.utils.sheet_to_json(ws, {defval:''});
       if(rows.length === 0) { mostrarResultadoImport('error','El archivo está vacío.'); return; }
@@ -4095,7 +4102,7 @@ function importarPadronDIRSA(input) {
       mostrarResultadoImport('error','Error al leer el archivo: '+err.message);
     }
   };
-  reader.readAsArrayBuffer(file);
+  if(_esCSV) { reader.readAsText(file, 'windows-1252'); } else { reader.readAsArrayBuffer(file); }
 }
 
 // ── Helpers de fecha para merge ──────────────────────────────
