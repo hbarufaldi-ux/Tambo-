@@ -3112,12 +3112,15 @@ function mangaRenderLista(){
   if(!lista.length) rows='<div style="padding:24px;text-align:center;color:#8E8E93;">Sin resultados para este filtro</div>';
   document.getElementById('manga-lista-body').innerHTML=rows;
 }
+function _mangaHora(ts){ if(!ts) return ''; var d=new Date(ts); function p(n){return (n<10?'0':'')+n;} return p(d.getHours())+':'+p(d.getMinutes()); }
 function mangaExportarLista(){
-  var lista=_mangaListaFiltrada();
+  var lista=_mangaListaFiltrada().slice();
   if(!lista.length){ if(typeof showToast==='function') showToast('Nada para exportar'); return; }
-  var enc=['RP','Categoría','Biotipo','PPD aplicado','Resultado','Estado al pasar','Rodeo al pasar','Alta nueva','Fecha aplic.','Fecha lectura'];
-  var filas=lista.map(function(c){
-    return [c.rp, c.catAlPasar||'', c.biotipo||'', (c.ppd?'Sí':'No'), (c.resultadoPPD||(c.ppd?'Pendiente':'')), c.estadoProdAlPasar||'', c.rodeoAlPasar||'', (c.nueva?'Sí':''), c.fecha||'', c.fechaLectura||''];
+  // Ordenar por momento de carga = orden real de paso por la manga (la hora del día indica el grupo)
+  lista.sort(function(a,b){ return (a.ts||0)-(b.ts||0); });
+  var enc=['Orden','Hora','RP','Categoría','Biotipo','PPD aplicado','Resultado','Estado al pasar','Rodeo al pasar','Alta nueva','Fecha aplic.','Fecha lectura'];
+  var filas=lista.map(function(c,i){
+    return [i+1, _mangaHora(c.ts), c.rp, c.catAlPasar||'', c.biotipo||'', (c.ppd?'Sí':'No'), (c.resultadoPPD||(c.ppd?'Pendiente':'')), c.estadoProdAlPasar||'', c.rodeoAlPasar||'', (c.nueva?'Sí':''), c.fecha||'', c.fechaLectura||''];
   });
   var nombre='Manga_'+_mangaTipo+(_mangaFiltroLista!=='todas'?'_'+_mangaFiltroLista:'');
   if(typeof exportarCSV==='function') exportarCSV(nombre, enc, filas);
