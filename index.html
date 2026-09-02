@@ -2685,7 +2685,7 @@ var _mangaQuery='', _mangaStage='entry';
 var _mangaWRP=null,_mangaWBio=null,_mangaWPPD=true,_mangaWNueva=false,_mangaWDoc=null;
 var _mangaUnsub=null, _mangaPend=false;
 var _mangaSesion=null;                 // sesión activa (cruza días)
-var _mangaCerrarArmado=false, _mangaLimpiarArmado=false;
+var _mangaCerrarArmado=false, _mangaLimpiarArmado=false, _mangaCerrarLecturaArmado=false;
 
 function _mangaEsAdmin(){ return !!(window.usuarioActual && window.usuarioActual.rol==='admin'); }
 
@@ -2873,6 +2873,14 @@ function _mangaEntryHTML(){
   var h=head
     +'<input type="tel" id="manga-buscar" inputmode="numeric" autocomplete="off" placeholder="'+ph+'" oninput="mangaInput(this.value)" value="'+_mangaQuery+'" style="width:100%;padding:14px 15px;border:1px solid #B0BCC8;border-radius:12px;font-size:19px;font-weight:600;background:#fff;color:#1C1C1E;box-sizing:border-box;">'
     +'<div id="manga-sugerencias"></div>';
+  if(_mangaModo==='lectura'){
+    var pendN=Object.keys(_mangaPendientes).length;
+    h+='<div style="font-size:12.5px;color:#8E8E93;text-align:center;margin-top:14px;line-height:1.4;">Marcá solo las <b style="color:#A0200A;">positivas</b> o <b style="color:#8A6000;">sospechosas</b>.<br>Las que no marques quedan negativas al cerrar.</div>';
+    if(pendN>0){
+      var tcl=_mangaCerrarLecturaArmado?('⚠ Tocá de nuevo: marcar '+pendN+' como NEGATIVA'):('Terminar lectura — el resto ('+pendN+') queda Negativa');
+      h+='<button onclick="mangaCerrarLecturaTap()" style="width:100%;margin-top:12px;padding:15px;border-radius:14px;border:none;background:'+(_mangaCerrarLecturaArmado?'#A0200A':'#0F6E56')+';color:#fff;font-size:15px;font-weight:800;cursor:pointer;">'+tcl+'</button>';
+    }
+  }
   if(_mangaEsAdmin() && Object.keys(_mangaCargas).length>0){
     var t=_mangaLimpiarArmado?'⚠ Tocá de nuevo para borrar TODO el trabajo de prueba':'🧹 Limpiar trabajo (prueba)';
     h+='<button onclick="mangaLimpiarTap()" style="width:100%;margin-top:16px;padding:11px;border-radius:12px;border:1px solid '+(_mangaLimpiarArmado?'#A0200A':'#D0D5DC')+';background:'+(_mangaLimpiarArmado?'#FFD6D6':'#fff')+';color:'+(_mangaLimpiarArmado?'#A0200A':'#8E8E93')+';font-size:13px;font-weight:700;cursor:pointer;">'+t+'</button>';
@@ -2946,6 +2954,34 @@ function mangaSetResultado(res){
 }
 function mangaVolverEntry(){ _mangaWRP=null; _mangaWBio=null; _mangaWDoc=null; _mangaQuery=''; _mangaStage='entry'; renderManga(); }
 
+// ---- CERRAR LECTURA: el resto queda Negativa (doble toque) ----
+function mangaCerrarLecturaTap(){
+  if(!_mangaCerrarLecturaArmado){ _mangaCerrarLecturaArmado=true; renderManga(); setTimeout(function(){ _mangaCerrarLecturaArmado=false; renderManga(); },4000); }
+  else { _mangaCerrarLecturaArmado=false; mangaCerrarLecturaReal(); }
+}
+function mangaCerrarLecturaReal(){
+  var rps=Object.keys(_mangaPendientes);
+  if(!rps.length){ if(typeof showToast==='function') showToast('No hay pendientes'); return; }
+  var docs=rps.map(function(rp){ return _mangaPendientes[rp]; }).filter(function(d){ return d && (d._docId || d.sesionId || d.fecha); });
+  if(_db){
+    var i=0, CH=400;
+    (function commitChunk(){
+      if(i>=docs.length){ if(typeof showToast==='function') showToast(rps.length+' cerradas como Negativa'); return; }
+      var batch=_db.batch();
+      docs.slice(i,i+CH).forEach(function(d){
+        var id=d._docId || (d.sesionId?d.sesionId+'_'+d.rp:(d.fecha+'_'+d.rp));
+        batch.update(_db.collection('Reg_Manga').doc(id),{resultadoPPD:'Negativa',fechaLectura:TODAY});
+      });
+      i+=CH;
+      batch.commit().then(commitChunk).catch(function(e){ console.warn('cerrar lectura batch:',e); if(typeof showToast==='function') showToast('Error al cerrar lectura'); });
+    })();
+  }
+  // feedback inmediato (el listener re-sincroniza al confirmar)
+  rps.forEach(function(rp){ delete _mangaPendientes[rp]; });
+  _mangaLeidasHoy+=rps.length;
+  _mangaQuery=''; _mangaStage='entry'; renderManga();
+}
+
 // ---- LIMPIAR (solo admin) ----
 function mangaLimpiarTap(){
   if(!_mangaLimpiarArmado){ _mangaLimpiarArmado=true; renderManga(); setTimeout(function(){ _mangaLimpiarArmado=false; renderManga(); },4000); }
@@ -3018,6 +3054,19 @@ function mangaVerLista(){
   document.getElementById('modal-manga-lista').style.display='flex';
   document.getElementById('manga-lista-count').textContent='(cargando...)';
   document.getElementById('manga-lista-body').innerHTML='<div style="padding:24px;text-align:center;color:#8E8E93;">Cargando...</div>';
+
+  // LECTURA: mostrar TODAS las RP con PPD (pendientes + ya leídas), sin filtrar por sesión
+  if(_mangaModo==='lectura'){
+    if(!_db){ _mangaLista=Object.keys(_mangaPendientes).map(function(k){return _mangaPendientes[k];}); mangaRenderLista(); return; }
+    _db.collection('Reg_Manga').where('ppd','==',true).get().then(function(snap){
+      _mangaLista=[]; snap.forEach(function(doc){ var d=doc.data(); if(d&&d.rp){ d._docId=doc.id; _mangaLista.push(d); } });
+      _mangaLista.sort(function(a,b){ return String(a.rp).localeCompare(String(b.rp),undefined,{numeric:true}); });
+      mangaRenderLista();
+    }).catch(function(e){ console.warn('lista lectura:',e); _mangaLista=Object.keys(_mangaPendientes).map(function(k){return _mangaPendientes[k];}); mangaRenderLista(); });
+    return;
+  }
+
+  // APLICACIÓN: por sesión (como antes)
   function traer(){
     if(!_db || !_mangaSesion){ _mangaLista=Object.keys(_mangaCargas).map(function(k){return _mangaCargas[k];}); mangaRenderLista(); return; }
     _db.collection('Reg_Manga').where('sesionId','==',_mangaSesion.id).get().then(function(snap){
