@@ -2416,7 +2416,7 @@ function abrirFicha(rp) {
     var fabMenu=document.createElement('div');fabMenu.id='ficha-fab-menu';
     fabMenu.style.cssText='display:none;position:fixed;bottom:88px;right:20px;z-index:201;width:180px;';
     var todasOps=[
-      {label:'Parto',      s:'ficha-sheet-parto', prenadaOnly:true},
+      {label:'Parto',      s:'ficha-sheet-parto'},
       {label:'Aborto',     s:'ficha-sheet-aborto', prenadaOnly:true},
       {label:'Celo',       s:'ficha-sheet-celo'},
       {label:'Inseminar',  s:'ficha-sheet-inseminar'},
@@ -4084,7 +4084,7 @@ function importarPadronDIRSA(input) {
       var tituloConflictos = 'Conflictos detectados';
       if(conflictos.length > 0) tituloConflictos += ' <span style="background:#FFF3CC;color:#7A5500;padding:2px 8px;border-radius:8px;font-size:11px;font-weight:600;margin-left:4px;">'+conflictos.length+'</span>';
       document.getElementById('dirsa-conflictos-titulo').innerHTML = tituloConflictos;
-      document.getElementById('dirsa-conflictos-lista').innerHTML = listaHTML || '<div style="font-size:13px;color:#8E8E93;">Sin conflictos — todos los animales son nuevos.</div>';
+      document.getElementById('dirsa-conflictos-lista').innerHTML = listaHTML || '<div style="font-size:13px;color:#8E8E93;">Sin conflictos — se aplican los datos del ranking sin pisar nada más reciente en la app.</div>';
 
       // Texto de confirmación
       var nuevos = _dirsaAnimalesParsed.filter(function(a){return !rodeo.find(function(r){return r.rp===a.rp;});}).length;
@@ -6626,7 +6626,7 @@ function fichaCheck(sheetId) {
   var btn = document.getElementById(sheetId+'-g'); if(!btn) return;
   var ok = false;
   if(sheetId==='ficha-sheet-aborto') ok = !!document.getElementById('fsa2-fecha').value;
-  else if(sheetId==='ficha-sheet-parto') ok = !!(document.getElementById('fsp2-fecha').value && document.getElementById('fsp2-sexo').value && document.getElementById('fsp2-toro').value);
+  else if(sheetId==='ficha-sheet-parto') ok = !!(document.getElementById('fsp2-fecha').value && document.getElementById('fsp2-sexo').value);
   else if(sheetId==='ficha-sheet-celo') ok = !!document.getElementById('fsc-fecha').value;
   else if(sheetId==='ficha-sheet-inseminar') ok = !!(document.getElementById('fsi-fecha').value && document.getElementById('fsi-toro').value);
   else if(sheetId==='ficha-sheet-tacto') ok = !!document.getElementById('ficha-sheet-tacto').getAttribute('data-res');
@@ -6694,6 +6694,36 @@ async function fichaGuardar(sheetId, rp) {
     guardarCacheLocal(); fb_syncAnimal(rp);
     await enviarASheets('Reg_Partos',[generarID('Par',rp),fecha,rp,a.nombre,tipo,sexo,rpCria,toroNombre,obs]);
     agregarReciente('parto', rp, 'Cría RP '+rpCria+' · '+sexo);
+    // Crear/vincular la cría automáticamente según su edad (fecha del parto = nacimiento)
+    if(rpCria && sexo){
+      var rpCriaN=parseInt(rpCria);
+      var sx=sexo==='Hembra'?'H':'M';
+      var catCria=sexo==='Hembra'?'Ternera':'Ternero';
+      var edadDias=Math.round((new Date()-new Date(fecha))/864e5);
+      // vínculo madre-cría siempre
+      if(typeof historialPartos!=='undefined'){
+        if(!historialPartos[parseInt(rp)]) historialPartos[parseInt(rp)]=[];
+        historialPartos[parseInt(rp)].push({fecha:fecha,padre:toroNombre||'',sexoCria:sexo,rpCria:rpCriaN,nombreCria:'Cría',tipo:tipo});
+      }
+      var yaExiste=(typeof getAnimal==='function'&&getAnimal(rpCriaN))||
+                   (typeof guachera!=='undefined'&&guachera.find(function(g){return g.rp===rpCriaN;}))||
+                   (typeof recria!=='undefined'&&recria.find(function(x){return x.rp===rpCriaN;}));
+      if(!yaExiste){
+        rodeo.push({rp:rpCriaN,nombre:'Cría',sexo:sx,raza:a.raza,cat:catCria,estadoRepro:catCria,estadoProd:'',fechaNac:fecha,madre:parseInt(rp),padre:toroNombre||'',ultimoParto:null,ultimaInsem:null,ultimaInsemToro:null,partoEstimado:null,nroServicios:0,produccionUltima:null});
+        fb_syncAnimal(rpCriaN);
+        enviarASheets('Padron',[rpCriaN,'Cría','Holando','Activa',fecha,toroNombre||'',catCria,0,'','',0,'','',0,0,0,'',catCria,'',0,0,'']);
+        if(edadDias<=70){
+          guachera.push({rp:rpCriaN,nombre:'Cría',sexo:sx,padre:toroNombre||'',madre:a.nombre+' (RP '+rp+')',fechaNac:fecha,vacunado:false,salio:false,eventos:[]});
+          enviarASheets('Guachera_Eventos',[generarID('Ing',rpCriaN),fecha,rpCriaN,'Cría','Ingreso',0,'',a.nombre,toroNombre||'',sexo]);
+          agregarReciente('guachera', rpCriaN, fecha);
+        } else {
+          recria.push({rp:rpCriaN,nombre:'Cría',sexo:sx,cat:catCria,fechaNac:fecha,padre:toroNombre||'',madre:a.nombre+' (RP '+rp+')',eventos:[],activo:true});
+          enviarASheets('Recria_Eventos',[generarID('Ing',rpCriaN),fecha,rpCriaN,'Cría','Ingreso recría',edadDias,'']);
+        }
+        if(typeof renderGuachera==='function') renderGuachera();
+        if(typeof renderRecria==='function') renderRecria();
+      }
+    }
     showToast('Parto registrado ✓'); renderDashboard(); renderRodeo(); goBack(); return;
   } else if(sheetId==='ficha-sheet-celo') {
     var celoEnPreniada = a.estadoRepro && a.estadoRepro.normalize('NFC')==='Preñada';
