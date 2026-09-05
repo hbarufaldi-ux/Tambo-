@@ -2804,7 +2804,7 @@ function mangaRenderSugerencias(){
     var sug=_mangaSugerencias();
     var h=sug.map(function(a){
       var bio=a.biotipo?(' · '+a.biotipo):'';
-      return '<div onclick="mangaElegir(\''+a.rp+'\')" style="padding:16px 16px;border-bottom:0.5px solid #EBEBF0;cursor:pointer;"><span style="font-size:18px;font-weight:800;">RP '+a.rp+'</span> <span style="font-size:13.5px;color:#8E8E93;font-weight:600;">· '+(a.cat||'—')+bio+'</span></div>';
+      return '<div onclick="mangaElegir(\''+a.rp+'\')" style="padding:19px 16px;border-bottom:0.5px solid #EBEBF0;cursor:pointer;"><span style="font-size:21px;font-weight:800;">RP '+a.rp+'</span> <span style="font-size:14px;color:#8E8E93;font-weight:600;">· '+(a.cat||'—')+bio+'</span></div>';
     }).join('');
     var existe=(typeof getAnimal==='function') && getAnimal(q);
     if(!existe){ h+='<div onclick="mangaAgregar(\''+q+'\')" style="padding:16px 16px;cursor:pointer;color:#0A5AAA;font-weight:800;font-size:15px;display:flex;align-items:center;gap:8px;"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Agregar RP '+q+' (no está en el padrón)</div>'; }
@@ -2812,7 +2812,7 @@ function mangaRenderSugerencias(){
   } else {
     if(!q){ cont.innerHTML=''; return; }
     var keys=Object.keys(_mangaPendientes).filter(function(k){return k.indexOf(q)===0;}).sort().slice(0,8);
-    var h2=keys.map(function(rp){ var d=_mangaPendientes[rp]; return '<div onclick="mangaElegirLectura(\''+rp+'\')" style="padding:16px 16px;border-bottom:0.5px solid #EBEBF0;cursor:pointer;"><span style="font-size:18px;font-weight:800;">RP '+rp+'</span> <span style="font-size:13.5px;color:#8E8E93;font-weight:600;">· '+(d.biotipo||'—')+'</span></div>'; }).join('');
+    var h2=keys.map(function(rp){ var d=_mangaPendientes[rp]; return '<div onclick="mangaElegirLectura(\''+rp+'\')" style="padding:19px 16px;border-bottom:0.5px solid #EBEBF0;cursor:pointer;"><span style="font-size:21px;font-weight:800;">RP '+rp+'</span> <span style="font-size:14px;color:#8E8E93;font-weight:600;">· '+(d.biotipo||'—')+'</span></div>'; }).join('');
     if(!h2) h2='<div style="padding:12px 14px;color:#8E8E93;font-size:13px;">Sin PPD pendiente para "'+q+'"</div>';
     cont.innerHTML='<div style="background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.06);margin-top:8px;">'+h2+'</div>';
   }
@@ -2962,18 +2962,18 @@ function _mangaWorkHTML(){
       var bio=''; MANGA_BIOTIPOS.forEach(function(b){ bio+='<button onclick="mangaSelBio(\''+b.v+'\')" style="padding:15px 4px;border:2px solid '+(_mangaWBio===b.v?'#1C1C1E':'#E0E0E5')+';border-radius:14px;background:'+(_mangaWBio===b.v?'#1C1C1E':'#fff')+';color:'+(_mangaWBio===b.v?'#fff':'#1C1C1E')+';font-size:13px;font-weight:700;cursor:pointer;line-height:1.15;">'+b.v.replace('Cruza ','C. ')+'<br><small style="font-weight:500;font-size:10px;opacity:.7;">'+b.s+'</small></button>'; });
       bioField='<div style="margin-bottom:16px;"><div class="mg-lbl">Biotipo</div><div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">'+bio+'</div></div>';
     }
-    return '<div style="background:#fff;border-radius:18px;padding:18px 16px;box-shadow:0 8px 26px rgba(0,0,0,.14);">'
-      +'<div style="font-size:27px;font-weight:800;line-height:1;">RP '+rp+'</div>'
-      +'<div style="font-size:13px;color:#8E8E93;margin:4px 0 16px;font-weight:600;">'+meta+'</div>'
+    return '<div style="background:#fff;border-radius:20px;padding:26px 20px 22px;box-shadow:0 8px 26px rgba(0,0,0,.14);">'
+      +'<div style="font-size:34px;font-weight:800;line-height:1;">RP '+rp+'</div>'
+      +'<div style="font-size:13.5px;color:#8E8E93;margin:6px 0 20px;font-weight:600;">'+meta+'</div>'
       +bioField+extra
       +'<div style="display:flex;gap:8px;"><button onclick="mangaVolverEntry()" style="flex:0 0 90px;padding:16px;border-radius:14px;border:none;background:#EBF0F5;font-size:16px;font-weight:800;cursor:pointer;">Cancelar</button>'
       +'<button onclick="mangaGuardar()" style="flex:1;padding:16px;border-radius:14px;border:none;background:#1C1C1E;color:#fff;font-size:16px;font-weight:800;cursor:pointer;">Guardar y siguiente</button></div></div>';
   } else {
     var doc=_mangaWDoc||{};
     var fApl=(doc.fecha&&typeof fmtFecha==='function')?fmtFecha(doc.fecha):(doc.fecha||'—');
-    return '<div style="background:#fff;border-radius:18px;padding:18px 16px;box-shadow:0 8px 26px rgba(0,0,0,.14);">'
-      +'<div style="font-size:27px;font-weight:800;line-height:1;">RP '+rp+'</div>'
-      +'<div style="font-size:13px;color:#8E8E93;margin:4px 0 16px;font-weight:600;">'+(doc.biotipo||'—')+' · PPD aplicado '+fApl+'</div>'
+    return '<div style="background:#fff;border-radius:20px;padding:26px 20px 22px;box-shadow:0 8px 26px rgba(0,0,0,.14);">'
+      +'<div style="font-size:34px;font-weight:800;line-height:1;">RP '+rp+'</div>'
+      +'<div style="font-size:13.5px;color:#8E8E93;margin:6px 0 20px;font-weight:600;">'+(doc.biotipo||'—')+' · PPD aplicado '+fApl+'</div>'
       +extra
       +'<div class="mg-lbl">Resultado de lectura</div>'
       +'<div style="display:grid;gap:8px;margin:9px 0 14px;">'
