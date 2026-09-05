@@ -2735,7 +2735,7 @@ function mangaCerrarSesionTap(){
 // ---- CICLO DE VIDA ----
 function iniciarManga(){
   _mangaQuery=''; _mangaWRP=null; _mangaWBio=null; _mangaWDoc=null; _mangaCerrarArmado=false; _mangaLimpiarArmado=false;
-  _mangaStage = _mangaCfgListo ? 'entry' : 'config';   // dentro de la jornada retoma la carga; si no, config
+  _mangaStage = _mangaCfgListo ? 'entry' : 'home';   // entra al home de sesiones; si venías cargando, retoma
   mangaCargarSesionesAbiertas(function(){ if(_mangaCfgListo) mangaListen(); renderManga(); });
 }
 function mangaModo(m){
@@ -2879,66 +2879,72 @@ function mangaCrearSesion(){
   setTimeout(function(){ var b=document.getElementById('manga-buscar'); if(b) b.focus(); },80);
 }
 
+function mangaHome(){
+  _mangaStage='home'; _mangaCfgListo=false; _mangaSesion=null; _mangaCreandoSesion=false; _mangaQuery='';
+  if(_mangaUnsub){ try{_mangaUnsub();}catch(e){} _mangaUnsub=null; }
+  mangaCargarSesionesAbiertas(function(){ renderManga(); });
+}
+function mangaIrNueva(){
+  _mangaModo='aplicacion'; _mangaSesion=null; _mangaNombreSesion=''; _mangaCreandoSesion=true; _mangaStage='config';
+  renderManga(); setTimeout(function(){ var i=document.getElementById('manga-ns'); if(i) i.focus(); },60);
+}
+function mangaContinuarSesion(id){
+  var s=null; _mangaSesionesAbiertas.forEach(function(x){ if(x.id===id) s=x; });
+  if(!s) return;
+  _mangaSesion=s; _mangaModo='aplicacion'; _mangaCfgListo=true; _mangaStage='entry'; _mangaQuery='';
+  mangaListen(); renderManga();
+  setTimeout(function(){ var i=document.getElementById('manga-buscar'); if(i) i.focus(); },80);
+}
+function mangaLeerPendiente(){
+  _mangaModo='lectura'; _mangaSesion=null; _mangaCfgListo=true; _mangaStage='entry'; _mangaQuery='';
+  mangaListen(); renderManga();
+  setTimeout(function(){ var i=document.getElementById('manga-buscar'); if(i) i.focus(); },80);
+}
+function _mangaHomeHTML(){
+  var rows=_mangaSesionesAbiertas.map(function(s){
+    return '<div onclick="mangaContinuarSesion(\''+s.id+'\')" style="background:#fff;border-radius:15px;padding:14px 15px;margin-bottom:11px;cursor:pointer;display:flex;align-items:center;gap:12px;box-shadow:0 1px 3px rgba(0,0,0,.06);">'
+      +'<div style="flex:1;min-width:0;"><div style="font-size:16.5px;font-weight:800;">'+(s.nombre||'Sesión')+'</div><div style="font-size:12.5px;color:#8E8E93;font-weight:600;margin-top:3px;">'+(s.tipo||'PPD')+' · '+fmtFecha(s.fechaAplicacion||s.fechaInicio)+'</div></div>'
+      +'<span style="font-size:11px;font-weight:800;padding:5px 10px;border-radius:8px;background:#EEF4FF;color:#5A7BB0;">Aplicando</span>'
+      +'<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#C2CAD4" stroke-width="2.4"><polyline points="9 6 15 12 9 18"/></svg></div>';
+  }).join('');
+  var vacio=_mangaSesionesAbiertas.length?'':'<div style="background:#fff;border-radius:15px;padding:20px 16px;text-align:center;color:#8E8E93;font-size:13.5px;font-weight:600;box-shadow:0 1px 3px rgba(0,0,0,.06);margin-bottom:11px;">No hay sesiones abiertas. Creá una nueva.</div>';
+  return '<div style="display:flex;align-items:center;gap:10px;margin:6px 0 14px;">'
+      +'<div style="font-size:22px;font-weight:800;flex:1;">Trabajo en manga</div>'
+      +'<div onclick="mangaSalir()" style="width:40px;height:40px;flex:0 0 auto;border:1px solid #DCE2E9;background:#fff;border-radius:11px;display:flex;align-items:center;justify-content:center;cursor:pointer;"><svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="#1C1C1E" stroke-width="2.4" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></div></div>'
+    +'<button onclick="mangaIrNueva()" style="display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:16px;border:none;border-radius:15px;background:#1C1C1E;color:#fff;font-size:16px;font-weight:800;cursor:pointer;font-family:inherit;margin-bottom:18px;"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Nueva sesión</button>'
+    +'<div style="font-size:12px;font-weight:800;color:#8E8E93;letter-spacing:.3px;margin:2px 2px 10px;text-transform:uppercase;">Sesiones en progreso</div>'
+    +rows+vacio
+    +'<div style="text-align:center;margin-top:14px;"><span onclick="mangaLeerPendiente()" style="color:#0A5AAA;font-weight:800;font-size:13.5px;cursor:pointer;">Leer PPD pendiente &rarr;</span></div>';
+}
+
 function _mangaConfigHTML(){
   var tipos=MANGA_TIPOS.map(function(x){
-    if(x.v==='PPD'){ var on=_mangaTipo==='PPD';
-      return '<div onclick="mangaCfgTipo(\'PPD\')" style="padding:10px 15px;border:1.5px solid '+(on?'#1C1C1E':'#D0D5DC')+';border-radius:20px;background:'+(on?'#1C1C1E':'#fff')+';color:'+(on?'#fff':'#1C1C1E')+';font-size:13.5px;font-weight:800;cursor:pointer;">PPD</div>';
-    }
+    if(x.v==='PPD'){ return '<div style="padding:10px 15px;border:1.5px solid #1C1C1E;border-radius:20px;background:#1C1C1E;color:#fff;font-size:13.5px;font-weight:800;">PPD</div>'; }
     return '<div style="padding:10px 15px;border:1.5px solid #E2E5EA;border-radius:20px;background:#EDEDF0;color:#A6ADB6;font-size:13.5px;font-weight:800;">'+x.v+' · próx.</div>';
   }).join('');
-  var seg=function(m,txt){ var on=_mangaModo===m; return '<button onclick="mangaCfgDia(\''+m+'\')" style="flex:1;padding:13px;border:none;border-radius:10px;background:'+(on?'#fff':'transparent')+';color:'+(on?'#1C1C1E':'#8E8E93')+';font-size:14px;font-weight:800;cursor:pointer;box-shadow:'+(on?'0 1px 2px rgba(0,0,0,.12)':'none')+';">'+txt+'</button>'; };
-  var dia='<div class="mg-card"><div class="mg-cap">Fase</div><div style="display:flex;gap:4px;background:#E3E8EF;border-radius:13px;padding:4px;">'+seg('aplicacion','Aplicación')+seg('lectura','Lectura')+'</div></div>';
-
-  var sesCard='';
-  if(_mangaModo==='aplicacion'){
-    var rows=_mangaSesionesAbiertas.map(function(s){
-      var on=_mangaSesion && _mangaSesion.id===s.id;
-      return '<div onclick="mangaPickSesion(\''+s.id+'\')" style="display:flex;align-items:center;gap:12px;border:1.5px solid '+(on?'#1C1C1E':'#E4E9EF')+';border-radius:14px;padding:13px 14px;margin-bottom:10px;cursor:pointer;'+(on?'box-shadow:0 0 0 3px rgba(28,28,30,.08);':'')+'">'
-        +'<div style="flex:1;min-width:0;"><div style="font-size:16px;font-weight:800;">'+(s.nombre||'Sesión')+'</div><div style="font-size:12px;color:#8E8E93;font-weight:600;margin-top:3px;">Abierta '+fmtFecha(s.fechaAplicacion||s.fechaInicio)+'</div></div>'
-        +'<span style="font-size:11px;font-weight:800;padding:5px 9px;border-radius:8px;background:#EEF4FF;color:#5A7BB0;">Aplicando</span>'
-        +'<div style="width:22px;height:22px;border-radius:50%;border:2px solid '+(on?'#1C1C1E':'#CDD4DD')+';background:'+(on?'#1C1C1E':'transparent')+';flex:0 0 auto;display:flex;align-items:center;justify-content:center;">'+(on?'<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>':'')+'</div></div>';
-    }).join('');
-    var nuevo=_mangaCreandoSesion
-      ? '<div style="border:1.5px solid #B9CDEA;border-radius:14px;padding:14px;background:#EEF4FF;"><input id="manga-ns" placeholder="Nombre de la sesión (ej. Vacas de tambo)" oninput="mangaSesionNombreInput(this.value)" value="'+(_mangaNombreSesion||'')+'" style="width:100%;padding:13px;border:1.5px solid #C7D3E4;border-radius:11px;font-size:16px;font-weight:700;font-family:inherit;background:#fff;outline:none;margin-bottom:10px;box-sizing:border-box;"><button onclick="mangaCrearSesion()" style="width:100%;padding:14px;border:none;border-radius:12px;background:#1C1C1E;color:#fff;font-size:15px;font-weight:800;cursor:pointer;">Crear y cargar · Hoy '+fmtFecha(TODAY)+'</button></div>'
-      : '<div onclick="mangaNuevaSesion()" style="display:flex;align-items:center;gap:10px;padding:14px;border:1.5px dashed #C3CDDA;border-radius:14px;color:#0A5AAA;font-weight:800;font-size:14px;cursor:pointer;background:#FAFCFF;"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Nueva sesión</div>';
-    sesCard='<div class="mg-card"><div class="mg-cap">Sesión de aplicación</div>'+rows+nuevo+'</div>';
-  }
-
   var campos=[{k:'biotipo',t:'Biotipo',d:'Holando / Cruza media / Cruza chica'},{k:'corral',t:'Corral',d:'Número de corral o lote'},{k:'peso',t:'Peso',d:'Kilos (pesada)'},{k:'obs',t:'Observación',d:'Nota libre por animal'}];
   var sw=campos.map(function(c){ var on=_mangaCampos[c.k];
     return '<div class="mg-swrow"><div><div style="font-size:15.5px;font-weight:800;">'+c.t+'</div><div style="font-size:11.5px;color:#8E8E93;font-weight:600;margin-top:1px;">'+c.d+'</div></div>'
       +'<div class="mg-toggle'+(on?' on':'')+'" onclick="mangaToggleCampo(\''+c.k+'\')"><div class="mg-knob"></div></div></div>';
   }).join('');
-  var fixedTxt=_mangaModo==='aplicacion'?'PPD aplicado':'Resultado (Neg / Sosp / Pos)';
-  var camposCard='<div class="mg-card"><div class="mg-cap">Datos por animal (opcionales)</div>'+sw
-      +'<div style="font-size:11.5px;color:#8E8E93;font-weight:600;margin-top:10px;line-height:1.45;">Siempre se registra <b style="color:#5A6270;">'+fixedTxt+'</b> — es el trabajo, no hace falta prenderlo.</div></div>';
-
-  var entrar;
-  if(_mangaModo==='aplicacion'){
-    if(_mangaCreandoSesion){ entrar=''; }
-    else if(_mangaSesion){ entrar='<button onclick="mangaEntrarCarga()" style="width:100%;padding:16px;border-radius:14px;border:none;background:#1C1C1E;color:#fff;font-size:16px;font-weight:800;cursor:pointer;">Entrar a cargar · '+(_mangaSesion.nombre||'Sesión')+'</button>'; }
-    else { entrar='<button disabled style="width:100%;padding:16px;border-radius:14px;border:none;background:#C7CDD6;color:#fff;font-size:16px;font-weight:800;">Elegí o creá una sesión</button>'; }
-  } else {
-    entrar='<button onclick="mangaEntrarCarga()" style="width:100%;padding:16px;border-radius:14px;border:none;background:#1C1C1E;color:#fff;font-size:16px;font-weight:800;cursor:pointer;">Entrar a cargar</button>';
-  }
-
-  return '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">'
-      +'<div style="font-size:22px;font-weight:800;">Trabajo en manga</div>'
-      +'<div onclick="mangaSalir()" style="width:38px;height:38px;flex:0 0 auto;border:1px solid #DCE2E9;background:#fff;border-radius:11px;display:flex;align-items:center;justify-content:center;cursor:pointer;"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#1C1C1E" stroke-width="2.4" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></div></div>'
-    +'<div style="font-size:13.5px;color:#8E8E93;font-weight:600;line-height:1.5;margin-bottom:16px;">Cada pasada por la manga es una <b>sesión</b>. Elegí la fase, la sesión y qué datos capturar.</div>'
-    +'<div class="mg-card"><div class="mg-cap">Tipo de trabajo</div><div style="display:flex;gap:8px;flex-wrap:wrap;">'+tipos+'</div></div>'
-    +dia+sesCard+camposCard+entrar;
+  return '<div style="display:flex;align-items:center;gap:10px;margin:6px 0 14px;">'
+      +'<div onclick="mangaHome()" style="width:40px;height:40px;flex:0 0 auto;border:1px solid #DCE2E9;background:#fff;border-radius:11px;display:flex;align-items:center;justify-content:center;cursor:pointer;"><svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="#1C1C1E" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg></div>'
+      +'<div style="font-size:20px;font-weight:800;">Nueva sesión</div></div>'
+    +'<div class="mg-card"><div class="mg-cap">Nombre de la sesión</div><input id="manga-ns" placeholder="ej. Vacas de tambo" oninput="mangaSesionNombreInput(this.value)" value="'+(_mangaNombreSesion||'')+'" style="width:100%;padding:14px;border:1.5px solid #C7D3E4;border-radius:12px;font-size:16px;font-weight:700;font-family:inherit;background:#fff;outline:none;box-sizing:border-box;"></div>'
+    +'<div class="mg-card"><div class="mg-cap">Actividad principal</div><div style="display:flex;gap:8px;flex-wrap:wrap;">'+tipos+'</div></div>'
+    +'<div class="mg-card"><div class="mg-cap">Datos secundarios (opcionales)</div>'+sw+'</div>'
+    +'<button onclick="mangaCrearSesion()" style="width:100%;padding:16px;border-radius:14px;border:none;background:#1C1C1E;color:#fff;font-size:16px;font-weight:800;cursor:pointer;">Crear y empezar a cargar</button>';
 }
+
 function _mangaTopbarHTML(){
-  var sub=_mangaModo==='aplicacion'?'Aplicación · martes':'Lectura · viernes';
+  var nom=_mangaSesion?(_mangaSesion.nombre||'Sesión'):(_mangaModo==='lectura'?'PPD pendiente':'Sesión');
+  var sub=_mangaTipo+' · '+(_mangaModo==='aplicacion'?'Aplicación':'Lectura');
   return '<div style="display:flex;align-items:center;gap:8px;">'
-    +'<div onclick="mangaSalir()" style="width:42px;height:42px;flex:0 0 auto;border:1px solid #DCE2E9;background:#fff;border-radius:12px;display:flex;align-items:center;justify-content:center;cursor:pointer;"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#1C1C1E" stroke-width="2.4" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></div>'
-    +'<div onclick="mangaMenu(\'cambiar\')" style="display:flex;align-items:center;gap:8px;flex:1;min-width:0;background:#fff;border:1px solid #DCE2E9;border-radius:12px;padding:9px 12px;cursor:pointer;">'
-      +'<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#8E8E93" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>'
-      +'<div style="min-width:0;"><div style="font-size:14px;font-weight:800;">'+_mangaTipo+'</div><div style="font-size:11px;color:#8E8E93;font-weight:600;">'+sub+'</div></div></div>'
-    +'<div onclick="mangaAbrirMenu()" style="width:42px;height:42px;flex:0 0 auto;border:1px solid #DCE2E9;background:#fff;border-radius:12px;display:flex;align-items:center;justify-content:center;cursor:pointer;">'
-      +'<svg viewBox="0 0 24 24" width="20" height="20" fill="#1C1C1E"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg></div></div>';
+    +'<div onclick="mangaHome()" style="width:42px;height:42px;flex:0 0 auto;border:1px solid #DCE2E9;background:#fff;border-radius:12px;display:flex;align-items:center;justify-content:center;cursor:pointer;"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#1C1C1E" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg></div>'
+    +'<div onclick="mangaHome()" style="display:flex;align-items:center;gap:8px;flex:1;min-width:0;background:#fff;border:1px solid #DCE2E9;border-radius:12px;padding:9px 12px;cursor:pointer;"><div style="min-width:0;"><div style="font-size:14px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+nom+'</div><div style="font-size:11px;color:#8E8E93;font-weight:600;">'+sub+'</div></div></div>'
+    +'<div onclick="mangaAbrirMenu()" style="width:42px;height:42px;flex:0 0 auto;border:1px solid #DCE2E9;background:#fff;border-radius:12px;display:flex;align-items:center;justify-content:center;cursor:pointer;"><svg viewBox="0 0 24 24" width="20" height="20" fill="#1C1C1E"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg></div></div>';
 }
+
 function _mangaCounterHTML(){
   var sinSubir=_mangaPend?'<span style="color:#8A6000;">▲ sin subir</span>':'';
   if(_mangaModo==='aplicacion'){
@@ -2954,24 +2960,26 @@ function mangaCerrarMenu(){ var b=document.getElementById('manga-sheet-back'),s=
 function mangaMenu(a){
   mangaCerrarMenu();
   if(a==='lista'){ mangaVerLista(); return; }
-  if(a==='cambiar'){ _mangaCfgListo=false; _mangaStage='config'; mangaCargarSesionesAbiertas(function(){ renderManga(); }); return; }
+  if(a==='cambiar'){ mangaHome(); return; }
   if(a==='cerrar'){ mangaAbrirCierre(); return; }
   if(a==='limpiar'){ if(window.confirm('¿Borrar TODO el trabajo de prueba? No se puede deshacer.')) mangaLimpiarReal(); return; }
 }
 
 function renderManga(){
   var sc=document.getElementById('screen-manga'); if(!sc) return;
-  var enConfig=(_mangaStage==='config');
-  var cfg=document.getElementById('manga-config'), carga=document.getElementById('manga-carga');
-  if(cfg) cfg.style.display=enConfig?'block':'none';
-  if(carga) carga.style.display=enConfig?'none':'block';
-  if(enConfig){ if(cfg) cfg.innerHTML=_mangaConfigHTML(); return; }
+  var st=_mangaStage;
+  var home=document.getElementById('manga-home'), cfg=document.getElementById('manga-config'), carga=document.getElementById('manga-carga');
+  if(home) home.style.display=(st==='home')?'block':'none';
+  if(cfg) cfg.style.display=(st==='config')?'block':'none';
+  if(carga) carga.style.display=(st==='home'||st==='config')?'none':'block';
+  if(st==='home'){ if(home) home.innerHTML=_mangaHomeHTML(); return; }
+  if(st==='config'){ if(cfg) cfg.innerHTML=_mangaConfigHTML(); return; }
   var tb=document.getElementById('manga-topbar'); if(tb) tb.innerHTML=_mangaTopbarHTML();
   var cnt=document.getElementById('manga-counter'); if(cnt) cnt.innerHTML=_mangaCounterHTML();
-  var st=document.getElementById('manga-stage'); if(!st) return;
+  var stg=document.getElementById('manga-stage'); if(!stg) return;
   var typing=document.activeElement && document.activeElement.id==='manga-buscar';
   if(_mangaStage==='entry' && typing){ mangaRenderSugerencias(); return; }
-  st.innerHTML=(_mangaStage==='entry')?_mangaEntryHTML():_mangaWorkHTML();
+  stg.innerHTML=(_mangaStage==='entry')?_mangaEntryHTML():_mangaWorkHTML();
   if(_mangaStage==='entry') mangaRenderSugerencias();
 }
 
@@ -7412,6 +7420,8 @@ function cerrarJovenFab() {
     #manga-sheet .mg-item svg{width:22px;height:22px;flex:0 0 auto;color:#5A6270;}
     #manga-sheet .mg-item.danger,#manga-sheet .mg-item.danger svg{color:#A0200A;}
   </style>
+
+  <div id="manga-home"></div>
 
   <div id="manga-config"></div>
 
