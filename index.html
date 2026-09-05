@@ -2622,7 +2622,7 @@ function abrirFichaJoven(rp) {
 
     var btnParto=document.createElement('button'); btnParto.className='btn-primary';
     btnParto.textContent='Registrar parto → pasa a Padrón';
-    btnParto.onclick=function(){partoRecriaAbrir(rp);}; btns.appendChild(btnParto);
+    btnParto.onclick=function(){confirmarPartoVaquillona(rp);}; btns.appendChild(btnParto);
   }
 
   var bb=document.createElement('button'); bb.style.cssText='width:100%;padding:12px;background:#fff;color:#A0200A;border:0.5px solid #FFD6D6;border-radius:14px;font-size:15px;cursor:pointer;'; bb.textContent='Dar de baja'; bb.onclick=function(){darDeBajaAnimal(rp);}; btns.appendChild(bb);
@@ -2681,7 +2681,9 @@ var _mangaTipo='PPD';                 // PPD | Vacunación | Sanidad | Conteo | 
 var MANGA_TIPOS=[{v:'PPD',on:true},{v:'Vacunación',on:false},{v:'Sanidad',on:false},{v:'Conteo',on:false},{v:'Stock',on:false}];
 var _mangaCargas={};                  // aplicacion: rp -> carga de la sesión
 var _mangaPendientes={}, _mangaLeidasHoy=0; // lectura
-var _mangaQuery='', _mangaStage='entry';
+var _mangaQuery='', _mangaStage='config';
+var _mangaCampos={biotipo:true, corral:false, peso:false, obs:false}; // datos por animal (opcionales), se eligen en la config
+var _mangaCfgListo=false;             // el trabajo del día ya se configuró (no volver a config al reentrar en la jornada)
 var _mangaWRP=null,_mangaWBio=null,_mangaWPPD=true,_mangaWNueva=false,_mangaWDoc=null;
 var _mangaUnsub=null, _mangaPend=false;
 var _mangaSesion=null;                 // sesión activa (cruza días)
@@ -2718,9 +2720,9 @@ function mangaCerrarSesionTap(){
 
 // ---- CICLO DE VIDA ----
 function iniciarManga(){
-  _mangaQuery=''; _mangaStage='entry'; _mangaWRP=null; _mangaWBio=null; _mangaWDoc=null; _mangaCerrarArmado=false; _mangaLimpiarArmado=false;
-  if(_mangaModo==='lectura'){ mangaListen(); renderManga(); }
-  else { mangaCargarSesionActiva(function(){ mangaListen(); renderManga(); }); }
+  _mangaQuery=''; _mangaWRP=null; _mangaWBio=null; _mangaWDoc=null; _mangaCerrarArmado=false; _mangaLimpiarArmado=false;
+  _mangaStage = _mangaCfgListo ? 'entry' : 'config';   // dentro de la jornada retoma la carga; si no, config
+  mangaCargarSesionActiva(function(){ if(_mangaCfgListo) mangaListen(); renderManga(); });
 }
 function mangaModo(m){
   if(_mangaModo===m) return;
@@ -2829,35 +2831,93 @@ function mangaAgregar(rp){
 }
 
 // ---- RENDER ----
+function mangaCfgTipo(t){
+  var def=null; MANGA_TIPOS.forEach(function(x){ if(x.v===t) def=x; });
+  if(!def || !def.on){ if(typeof showToast==='function') showToast(t+': próximamente'); return; }
+  _mangaTipo=t; mangaCargarSesionActiva(function(){ renderManga(); });
+}
+function mangaCfgDia(m){ _mangaModo=m; mangaCargarSesionActiva(function(){ renderManga(); }); }
+function mangaToggleCampo(k){ _mangaCampos[k]=!_mangaCampos[k]; renderManga(); }
+function mangaEntrarCarga(){
+  _mangaCfgListo=true; _mangaStage='entry'; _mangaQuery='';
+  if(_mangaModo==='aplicacion' && !_mangaSesion){ mangaEmpezarSesion(); }
+  else { mangaListen(); renderManga(); }
+  setTimeout(function(){ var i=document.getElementById('manga-buscar'); if(i) i.focus(); },80);
+}
+function _mangaLeerCampo(id){ var e=document.getElementById(id); return e?(e.value||'').trim():''; }
+function _mangaConfigHTML(){
+  var tipos=MANGA_TIPOS.map(function(x){
+    if(x.v==='PPD'){ var on=_mangaTipo==='PPD';
+      return '<div onclick="mangaCfgTipo(\'PPD\')" style="padding:10px 15px;border:1.5px solid '+(on?'#1C1C1E':'#D0D5DC')+';border-radius:20px;background:'+(on?'#1C1C1E':'#fff')+';color:'+(on?'#fff':'#1C1C1E')+';font-size:13.5px;font-weight:800;cursor:pointer;">PPD</div>';
+    }
+    return '<div style="padding:10px 15px;border:1.5px solid #E2E5EA;border-radius:20px;background:#EDEDF0;color:#A6ADB6;font-size:13.5px;font-weight:800;">'+x.v+' · próx.</div>';
+  }).join('');
+  var dia='';
+  if(_mangaTipo==='PPD'){
+    var seg=function(m,txt){ var on=_mangaModo===m; return '<button onclick="mangaCfgDia(\''+m+'\')" style="flex:1;padding:13px;border:none;border-radius:10px;background:'+(on?'#fff':'transparent')+';color:'+(on?'#1C1C1E':'#8E8E93')+';font-size:14px;font-weight:800;cursor:pointer;box-shadow:'+(on?'0 1px 2px rgba(0,0,0,.12)':'none')+';">'+txt+'</button>'; };
+    dia='<div class="mg-card"><div class="mg-cap">Día de PPD</div><div style="display:flex;gap:4px;background:#E3E8EF;border-radius:13px;padding:4px;">'+seg('aplicacion','Aplicación · martes')+seg('lectura','Lectura · viernes')+'</div></div>';
+  }
+  var campos=[{k:'biotipo',t:'Biotipo',d:'Holando / Cruza media / Cruza chica'},{k:'corral',t:'Corral',d:'Número de corral o lote'},{k:'peso',t:'Peso',d:'Kilos (pesada)'},{k:'obs',t:'Observación',d:'Nota libre por animal'}];
+  var sw=campos.map(function(c){ var on=_mangaCampos[c.k];
+    return '<div class="mg-swrow"><div><div style="font-size:15.5px;font-weight:800;">'+c.t+'</div><div style="font-size:11.5px;color:#8E8E93;font-weight:600;margin-top:1px;">'+c.d+'</div></div>'
+      +'<div class="mg-toggle'+(on?' on':'')+'" onclick="mangaToggleCampo(\''+c.k+'\')"><div class="mg-knob"></div></div></div>';
+  }).join('');
+  var fixedTxt=_mangaModo==='aplicacion'?'PPD aplicado':'Resultado (Neg / Sosp / Pos)';
+  var ses=(_mangaModo==='aplicacion'&&_mangaSesion)?('<div style="font-size:12px;color:#0F6E56;font-weight:700;margin-top:6px;">● Sesión PPD abierta — seguís cargando en la misma</div>'):'';
+  return '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">'
+      +'<div style="font-size:22px;font-weight:800;">Trabajo en manga</div>'
+      +'<span id="manga-sync" class="badge badge-green" style="font-size:11px;padding:5px 10px;">● En la nube</span></div>'
+    +'<div style="font-size:13.5px;color:#8E8E93;font-weight:600;line-height:1.5;margin-bottom:16px;">Armá el trabajo del día: elegí qué vas a hacer y qué datos capturar por animal. Después entrás a la pantalla de carga, que queda limpia.</div>'
+    +'<div class="mg-card"><div class="mg-cap">Tipo de trabajo</div><div style="display:flex;gap:8px;flex-wrap:wrap;">'+tipos+'</div></div>'
+    +dia
+    +'<div class="mg-card"><div class="mg-cap">Datos por animal (opcionales)</div>'+sw
+      +'<div style="font-size:11.5px;color:#8E8E93;font-weight:600;margin-top:10px;line-height:1.45;">Siempre se registra <b style="color:#5A6270;">'+fixedTxt+'</b> — es el trabajo, no hace falta prenderlo.</div>'+ses+'</div>'
+    +'<button onclick="mangaEntrarCarga()" style="width:100%;padding:16px;border-radius:14px;border:none;background:#1C1C1E;color:#fff;font-size:16px;font-weight:800;cursor:pointer;">Entrar a cargar</button>';
+}
+function _mangaTopbarHTML(){
+  var sub=_mangaModo==='aplicacion'?'Aplicación · martes':'Lectura · viernes';
+  return '<div style="display:flex;align-items:center;gap:8px;">'
+    +'<div onclick="mangaMenu(\'cambiar\')" style="display:flex;align-items:center;gap:8px;flex:1;min-width:0;background:#fff;border:1px solid #DCE2E9;border-radius:12px;padding:9px 12px;cursor:pointer;">'
+      +'<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#8E8E93" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>'
+      +'<div style="min-width:0;"><div style="font-size:14px;font-weight:800;">'+_mangaTipo+'</div><div style="font-size:11px;color:#8E8E93;font-weight:600;">'+sub+'</div></div></div>'
+    +'<div onclick="mangaAbrirMenu()" style="width:42px;height:42px;flex:0 0 auto;border:1px solid #DCE2E9;background:#fff;border-radius:12px;display:flex;align-items:center;justify-content:center;cursor:pointer;">'
+      +'<svg viewBox="0 0 24 24" width="20" height="20" fill="#1C1C1E"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg></div></div>';
+}
+function _mangaCounterHTML(){
+  var sinSubir=_mangaPend?'<span style="color:#8A6000;">▲ sin subir</span>':'';
+  if(_mangaModo==='aplicacion'){
+    var n=Object.keys(_mangaCargas).length, altas=Object.keys(_mangaCargas).filter(function(k){return _mangaCargas[k].nueva;}).length;
+    return '<div style="text-align:center;font-size:12.5px;font-weight:700;color:#8E8E93;margin:8px 4px 12px;"><b style="color:#0F6E56;">'+n+'</b> pasadas'+(altas?(' · <b style="color:#8A6000;">'+altas+'</b> altas'):'')+' '+sinSubir+'</div>';
+  }
+  var pend=Object.keys(_mangaPendientes).length;
+  return '<div style="text-align:center;font-size:12.5px;font-weight:700;color:#8E8E93;margin:8px 4px 12px;"><b style="color:#0F6E56;">'+_mangaLeidasHoy+'</b> leídas · <b style="color:#A0200A;">'+pend+'</b> pendientes '+sinSubir+'</div>';
+}
+function mangaAbrirMenu(){ var d=document.getElementById('manga-sheet-danger'); if(d) d.style.display=_mangaEsAdmin()?'block':'none'; var b=document.getElementById('manga-sheet-back'),s=document.getElementById('manga-sheet'); if(b)b.classList.add('on'); if(s)s.classList.add('on'); }
+function mangaCerrarMenu(){ var b=document.getElementById('manga-sheet-back'),s=document.getElementById('manga-sheet'); if(b)b.classList.remove('on'); if(s)s.classList.remove('on'); }
+function mangaMenu(a){
+  mangaCerrarMenu();
+  if(a==='lista'){ mangaVerLista(); return; }
+  if(a==='cambiar'){ _mangaCfgListo=false; _mangaStage='config'; mangaCargarSesionActiva(function(){ renderManga(); }); return; }
+  if(a==='cerrar'){ mangaAbrirCierre(); return; }
+  if(a==='limpiar'){ if(window.confirm('¿Borrar TODO el trabajo de prueba? No se puede deshacer.')) mangaLimpiarReal(); return; }
+}
+
 function renderManga(){
   var sc=document.getElementById('screen-manga'); if(!sc) return;
-  var pill=document.getElementById('manga-sync');
-  if(pill){ if(_mangaPend){ pill.className='badge badge-amber'; pill.textContent='▲ sin subir'; } else { pill.className='badge badge-green'; pill.textContent='● En la nube'; } }
-  var tipoWrap=document.getElementById('manga-tipo-sel'); if(tipoWrap) tipoWrap.innerHTML=_mangaTipoSelectorHTML();
-  var selWrap=document.getElementById('manga-modo-sel'); if(selWrap) selWrap.innerHTML=_mangaSelectorHTML();
-  var prog=document.getElementById('manga-progreso');
-  if(prog){
-    if(_mangaModo==='aplicacion'){
-      var claves=Object.keys(_mangaCargas);
-      var nuevas=claves.filter(function(k){return _mangaCargas[k].nueva;}).length;
-      prog.innerHTML='<div style="display:flex;gap:8px;margin-bottom:12px;">'
-        +'<div style="flex:1;background:#fff;border-radius:14px;padding:10px 12px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,.06);"><div style="font-size:22px;font-weight:800;">'+claves.length+'</div><div style="font-size:10.5px;color:#8E8E93;font-weight:700;text-transform:uppercase;">Pasadas</div></div>'
-        +'<div style="flex:1;background:#fff;border-radius:14px;padding:10px 12px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,.06);"><div style="font-size:22px;font-weight:800;color:#B06E00;">'+nuevas+'</div><div style="font-size:10.5px;color:#8E8E93;font-weight:700;text-transform:uppercase;">Altas</div></div>'
-        +'</div>';
-    } else {
-      var pend=Object.keys(_mangaPendientes).length;
-      prog.innerHTML='<div style="display:flex;gap:8px;margin-bottom:12px;">'
-        +'<div style="flex:1;background:#fff;border-radius:14px;padding:10px 12px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,.06);"><div style="font-size:22px;font-weight:800;color:#0F6E56;">'+_mangaLeidasHoy+'</div><div style="font-size:10.5px;color:#8E8E93;font-weight:700;text-transform:uppercase;">Leídas hoy</div></div>'
-        +'<div style="flex:1;background:#fff;border-radius:14px;padding:10px 12px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,.06);"><div style="font-size:22px;font-weight:800;color:#A0200A;">'+pend+'</div><div style="font-size:10.5px;color:#8E8E93;font-weight:700;text-transform:uppercase;">Pendientes</div></div>'
-        +'</div>';
-    }
-  }
+  var enConfig=(_mangaStage==='config');
+  var cfg=document.getElementById('manga-config'), carga=document.getElementById('manga-carga');
+  if(cfg) cfg.style.display=enConfig?'block':'none';
+  if(carga) carga.style.display=enConfig?'none':'block';
+  if(enConfig){ if(cfg) cfg.innerHTML=_mangaConfigHTML(); return; }
+  var tb=document.getElementById('manga-topbar'); if(tb) tb.innerHTML=_mangaTopbarHTML();
+  var cnt=document.getElementById('manga-counter'); if(cnt) cnt.innerHTML=_mangaCounterHTML();
   var st=document.getElementById('manga-stage'); if(!st) return;
-  var typing = document.activeElement && document.activeElement.id==='manga-buscar';
+  var typing=document.activeElement && document.activeElement.id==='manga-buscar';
   if(_mangaStage==='entry' && typing){ mangaRenderSugerencias(); return; }
-  st.innerHTML = (_mangaStage==='entry') ? _mangaEntryHTML() : _mangaWorkHTML();
+  st.innerHTML=(_mangaStage==='entry')?_mangaEntryHTML():_mangaWorkHTML();
   if(_mangaStage==='entry') mangaRenderSugerencias();
 }
+
 function _mangaEntryHTML(){
   if(_mangaModo==='aplicacion' && !_mangaSesion){
     return '<div style="background:#fff;border-radius:16px;padding:22px 16px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,.06);">'
@@ -2881,45 +2941,47 @@ function _mangaEntryHTML(){
       h+='<button onclick="mangaCerrarLecturaTap()" style="width:100%;margin-top:12px;padding:15px;border-radius:14px;border:none;background:'+(_mangaCerrarLecturaArmado?'#A0200A':'#0F6E56')+';color:#fff;font-size:15px;font-weight:800;cursor:pointer;">'+tcl+'</button>';
     }
   }
-  if(_mangaEsAdmin() && Object.keys(_mangaCargas).length>0){
-    var t=_mangaLimpiarArmado?'⚠ Tocá de nuevo para borrar TODO el trabajo de prueba':'🧹 Limpiar trabajo (prueba)';
-    h+='<button onclick="mangaLimpiarTap()" style="width:100%;margin-top:16px;padding:11px;border-radius:12px;border:1px solid '+(_mangaLimpiarArmado?'#A0200A':'#D0D5DC')+';background:'+(_mangaLimpiarArmado?'#FFD6D6':'#fff')+';color:'+(_mangaLimpiarArmado?'#A0200A':'#8E8E93')+';font-size:13px;font-weight:700;cursor:pointer;">'+t+'</button>';
-  }
+  // (Limpiar movido al menú ⋯)
   return h;
 }
 function _mangaWorkHTML(){
   var rp=_mangaWRP;
+  var extra='';
+  if(_mangaCampos.corral) extra+='<div style="margin-bottom:14px;"><div class="mg-lbl">Corral</div><input id="manga-f-corral" type="tel" inputmode="numeric" placeholder="Nº de corral" class="mg-fin"></div>';
+  if(_mangaCampos.peso) extra+='<div style="margin-bottom:14px;"><div class="mg-lbl">Peso</div><div style="position:relative;"><input id="manga-f-peso" type="tel" inputmode="numeric" placeholder="0" class="mg-fin" style="padding-right:44px;"><span style="position:absolute;right:14px;top:50%;transform:translateY(-50%);color:#8E8E93;font-weight:700;font-size:14px;">kg</span></div></div>';
+  if(_mangaCampos.obs) extra+='<div style="margin-bottom:14px;"><div class="mg-lbl">Observación</div><input id="manga-f-obs" type="text" placeholder="Nota…" class="mg-fin"></div>';
   if(_mangaModo==='aplicacion'){
     var a=(typeof getAnimal==='function')?getAnimal(rp):null;
-    var meta=_mangaWNueva?'Datos incompletos — completar después':(a?((a.cat||'—')+' · '+(a.sexo==='M'?'♂':a.sexo==='H'?'♀':'')):'—');
-    var bio='';
-    MANGA_BIOTIPOS.forEach(function(b){ bio+='<button onclick="mangaSelBio(\''+b.v+'\')" style="padding:15px 4px;border:2px solid '+(_mangaWBio===b.v?'#1C1C1E':'#E0E0E5')+';border-radius:14px;background:'+(_mangaWBio===b.v?'#1C1C1E':'#fff')+';color:'+(_mangaWBio===b.v?'#fff':'#1C1C1E')+';font-size:13px;font-weight:700;cursor:pointer;line-height:1.15;">'+b.v.replace('Cruza ','C. ')+'<br><small style="font-weight:500;font-size:10px;opacity:.7;">'+b.s+'</small></button>'; });
-    return '<div style="background:#fff;border-radius:18px;padding:18px 16px;box-shadow:0 4px 16px rgba(0,0,0,.1);">'
-      +'<div style="display:flex;align-items:center;justify-content:space-between;"><div style="font-size:26px;font-weight:800;">RP '+rp+'</div>'+(_mangaWNueva?'<span class="badge badge-amber" style="font-size:11px;padding:5px 10px;">ALTA NUEVA</span>':'')+'</div>'
-      +'<div style="font-size:13px;color:#8E8E93;margin:2px 0 16px;">'+meta+'</div>'
-      +'<div style="font-size:11.5px;font-weight:800;color:#8E8E93;text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px;">Biotipo</div>'
-      +'<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:16px;">'+bio+'</div>'
-      +'<div style="display:flex;align-items:center;justify-content:space-between;background:#EBF0F5;border-radius:14px;padding:13px 15px;margin-bottom:16px;"><div><div style="font-size:15px;font-weight:800;">PPD aplicado</div><div style="font-size:11px;color:#8E8E93;font-weight:600;">Lectura 72 h</div></div>'
+    var meta=_mangaWNueva?'Alta nueva · completar después':(a?((a.cat||'—')+' · '+(a.sexo==='M'?'♂':a.sexo==='H'?'♀':'')):'—');
+    var bioField='';
+    if(_mangaCampos.biotipo){
+      var bio=''; MANGA_BIOTIPOS.forEach(function(b){ bio+='<button onclick="mangaSelBio(\''+b.v+'\')" style="padding:15px 4px;border:2px solid '+(_mangaWBio===b.v?'#1C1C1E':'#E0E0E5')+';border-radius:14px;background:'+(_mangaWBio===b.v?'#1C1C1E':'#fff')+';color:'+(_mangaWBio===b.v?'#fff':'#1C1C1E')+';font-size:13px;font-weight:700;cursor:pointer;line-height:1.15;">'+b.v.replace('Cruza ','C. ')+'<br><small style="font-weight:500;font-size:10px;opacity:.7;">'+b.s+'</small></button>'; });
+      bioField='<div style="margin-bottom:16px;"><div class="mg-lbl">Biotipo</div><div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">'+bio+'</div></div>';
+    }
+    return '<div style="background:#fff;border-radius:18px;padding:18px 16px;box-shadow:0 8px 26px rgba(0,0,0,.14);">'
+      +'<div style="font-size:27px;font-weight:800;line-height:1;">RP '+rp+'</div>'
+      +'<div style="font-size:13px;color:#8E8E93;margin:4px 0 16px;font-weight:600;">'+meta+'</div>'
+      +bioField+extra
+      +'<div style="display:flex;align-items:center;justify-content:space-between;background:#EBF0F5;border-radius:14px;padding:13px 15px;margin-bottom:16px;"><div><div style="font-size:15px;font-weight:800;">PPD aplicado</div><div style="font-size:11px;color:#8E8E93;font-weight:600;">Lectura a las 72 h</div></div>'
       +'<div onclick="mangaTogglePPD()" style="width:52px;height:31px;border-radius:20px;background:'+(_mangaWPPD?'#0F6E56':'#C7CDD6')+';position:relative;cursor:pointer;flex-shrink:0;"><div style="position:absolute;top:3px;left:'+(_mangaWPPD?'24px':'3px')+';width:25px;height:25px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.3);transition:left .15s;"></div></div></div>'
       +'<div style="display:flex;gap:8px;"><button onclick="mangaVolverEntry()" style="flex:0 0 90px;padding:16px;border-radius:14px;border:none;background:#EBF0F5;font-size:16px;font-weight:800;cursor:pointer;">Cancelar</button>'
-      +'<button onclick="mangaGuardar()" '+(_mangaWBio?'':'disabled')+' style="flex:1;padding:16px;border-radius:14px;border:none;background:'+(_mangaWBio?'#1C1C1E':'#C7CDD6')+';color:#fff;font-size:16px;font-weight:800;cursor:pointer;">Guardar y siguiente</button></div>'
-      +'</div>';
+      +'<button onclick="mangaGuardar()" style="flex:1;padding:16px;border-radius:14px;border:none;background:#1C1C1E;color:#fff;font-size:16px;font-weight:800;cursor:pointer;">Guardar y siguiente</button></div></div>';
   } else {
     var doc=_mangaWDoc||{};
     var fApl=(doc.fecha&&typeof fmtFecha==='function')?fmtFecha(doc.fecha):(doc.fecha||'—');
-    return '<div style="background:#fff;border-radius:18px;padding:18px 16px;box-shadow:0 4px 16px rgba(0,0,0,.1);">'
-      +'<div style="font-size:26px;font-weight:800;">RP '+rp+'</div>'
-      +'<div style="font-size:13px;color:#8E8E93;margin:2px 0 16px;">'+(doc.biotipo||'—')+' · PPD aplicado '+fApl+'</div>'
-      +'<div style="font-size:11.5px;font-weight:800;color:#8E8E93;text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px;">Resultado de lectura</div>'
-      +'<div style="display:grid;grid-template-columns:1fr;gap:8px;margin-bottom:14px;">'
+    return '<div style="background:#fff;border-radius:18px;padding:18px 16px;box-shadow:0 8px 26px rgba(0,0,0,.14);">'
+      +'<div style="font-size:27px;font-weight:800;line-height:1;">RP '+rp+'</div>'
+      +'<div style="font-size:13px;color:#8E8E93;margin:4px 0 16px;font-weight:600;">'+(doc.biotipo||'—')+' · PPD aplicado '+fApl+'</div>'
+      +extra
+      +'<div class="mg-lbl">Resultado de lectura</div>'
+      +'<div style="display:grid;gap:8px;margin:9px 0 14px;">'
       +'<button onclick="mangaSetResultado(\'Negativa\')" style="padding:16px;border:none;border-radius:14px;background:#D1F2E0;color:#0F6E56;font-size:16px;font-weight:800;cursor:pointer;">Negativa</button>'
       +'<button onclick="mangaSetResultado(\'Sospechosa\')" style="padding:16px;border:none;border-radius:14px;background:#FFF3CC;color:#8A6000;font-size:16px;font-weight:800;cursor:pointer;">Sospechosa</button>'
-      +'<button onclick="mangaSetResultado(\'Positiva\')" style="padding:16px;border:none;border-radius:14px;background:#FFD6D6;color:#A0200A;font-size:16px;font-weight:800;cursor:pointer;">Positiva</button>'
-      +'</div>'
-      +'<button onclick="mangaVolverEntry()" style="width:100%;padding:14px;border-radius:14px;border:none;background:#EBF0F5;font-size:15px;font-weight:700;cursor:pointer;">Cancelar</button>'
-      +'</div>';
+      +'<button onclick="mangaSetResultado(\'Positiva\')" style="padding:16px;border:none;border-radius:14px;background:#FFD6D6;color:#A0200A;font-size:16px;font-weight:800;cursor:pointer;">Positiva</button></div>'
+      +'<button onclick="mangaVolverEntry()" style="width:100%;padding:14px;border-radius:14px;border:none;background:#EBF0F5;font-size:15px;font-weight:700;cursor:pointer;">Cancelar</button></div>';
   }
 }
+
 function mangaSelBio(v){ _mangaWBio=v; renderManga(); }
 function mangaTogglePPD(){ _mangaWPPD=!_mangaWPPD; renderManga(); }
 function mangaConfirmarAlta(){
@@ -2930,28 +2992,34 @@ function mangaConfirmarAlta(){
   _mangaWBio=null; _mangaWPPD=true; _mangaWNueva=true; _mangaStage='work'; renderManga();
 }
 function mangaGuardar(){
-  if(!_mangaWBio) return;
   var rp=_mangaWRP;
   var a=(typeof getAnimal==='function')?getAnimal(rp):null;
   var rodeoAlPasar = a ? (a.rodeoManual || (typeof calcRodeo==='function'?calcRodeo(a):'')) : '';
-  var carga={fecha:TODAY,rp:rp,tipoTrabajo:_mangaTipo,biotipo:_mangaWBio,ppd:_mangaWPPD,nueva:_mangaWNueva,tipo:'aplicacion',
+  var carga={fecha:TODAY,rp:rp,tipoTrabajo:_mangaTipo,biotipo:(_mangaCampos.biotipo?_mangaWBio:null),ppd:_mangaWPPD,nueva:_mangaWNueva,tipo:'aplicacion',
+    corral:(_mangaCampos.corral?_mangaLeerCampo('manga-f-corral'):''), peso:(_mangaCampos.peso?_mangaLeerCampo('manga-f-peso'):''), obs:(_mangaCampos.obs?_mangaLeerCampo('manga-f-obs'):''),
     catAlPasar:(a?(a.cat||''):''), estadoProdAlPasar:(a?(a.estadoProd||''):''), estadoReproAlPasar:(a?(a.estadoRepro||''):''), rodeoAlPasar:rodeoAlPasar,
     resultadoPPD:null,fechaLectura:null,ts:Date.now()};
   mangaGuardarCarga(carga);
-  if(a){ a.biotipo=_mangaWBio; if(typeof fb_guardarAnimal==='function') fb_guardarAnimal(a); }
+  if(a && _mangaCampos.biotipo && _mangaWBio){ a.biotipo=_mangaWBio; if(typeof fb_guardarAnimal==='function') fb_guardarAnimal(a); }
   _mangaWRP=null; _mangaWBio=null; _mangaQuery=''; _mangaStage='entry'; renderManga();
   setTimeout(function(){ var i=document.getElementById('manga-buscar'); if(i) i.focus(); },60);
   if(typeof showToast==='function') showToast('RP '+rp+' cargada');
 }
+
 function mangaSetResultado(res){
   var rp=_mangaWRP, doc=_mangaWDoc; if(!doc) return;
   var docId=doc._docId || (doc.sesionId?doc.sesionId+'_'+rp:(doc.fecha+'_'+rp));
-  if(_db){ _db.collection('Reg_Manga').doc(docId).update({resultadoPPD:res,fechaLectura:TODAY}).catch(function(e){ console.warn('guardar lectura:',e); }); }
+  var upd={resultadoPPD:res,fechaLectura:TODAY};
+  if(_mangaCampos.corral) upd.corral=_mangaLeerCampo('manga-f-corral');
+  if(_mangaCampos.peso) upd.peso=_mangaLeerCampo('manga-f-peso');
+  if(_mangaCampos.obs) upd.obs=_mangaLeerCampo('manga-f-obs');
+  if(_db){ _db.collection('Reg_Manga').doc(docId).update(upd).catch(function(e){ console.warn('guardar lectura:',e); }); }
   delete _mangaPendientes[String(rp)]; _mangaLeidasHoy++;
   _mangaWRP=null; _mangaWDoc=null; _mangaQuery=''; _mangaStage='entry'; renderManga();
   setTimeout(function(){ var i=document.getElementById('manga-buscar'); if(i) i.focus(); },60);
   if(typeof showToast==='function') showToast('RP '+rp+': '+res);
 }
+
 function mangaVolverEntry(){ _mangaWRP=null; _mangaWBio=null; _mangaWDoc=null; _mangaQuery=''; _mangaStage='entry'; renderManga(); }
 
 // ---- CERRAR LECTURA: el resto queda Negativa (doble toque) ----
@@ -3212,120 +3280,6 @@ function confirmarPartoVaquillona(rp) {
   enviarASheets('Reg_Partos',[generarID('Par',rp),TODAY,rp,r.nombre,'—','—','','','','','','','','Vaca']);
   showToast('RP '+rp+' registrada como Vaca en Padrón ✓');
   goBack();
-}
-
-function partoRecriaAbrir(rp) {
-  var td=fechaLocal();
-  var old=document.getElementById('sheet-parto-recria'); if(old) old.remove();
-  var oldOv=document.getElementById('sheet-parto-recria-ov'); if(oldOv) oldOv.remove();
-  var si='width:100%;padding:10px 12px;border:1px solid #B0BCC8;border-radius:10px;font-size:15px;background:#EBF0F5;box-sizing:border-box;';
-  var sa='width:100%;padding:10px 12px;border:1px solid #E8A020;border-radius:10px;font-size:15px;background:#FFF8E8;box-sizing:border-box;';
-  var g2='display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;';
-  var lb='display:block;font-size:12px;font-weight:600;color:#3C3C43;margin-bottom:4px;';
-  var sb='position:fixed;bottom:0;left:0;right:0;z-index:203;background:#fff;border-radius:16px 16px 0 0;padding-bottom:20px;';
-  var ov=document.createElement('div'); ov.id='sheet-parto-recria-ov';
-  ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:202;';
-  ov.onclick=function(){partoRecriaCerrar();};
-  document.body.appendChild(ov);
-  var s=document.createElement('div'); s.id='sheet-parto-recria'; s.style.cssText=sb;
-  s.innerHTML='<div style="width:36px;height:4px;background:#C7CDD6;border-radius:2px;margin:10px auto 0;"><\/div>'
-    +'<div style="font-size:16px;font-weight:700;color:#1C1C1E;padding:14px 16px 4px;">Parto \u00b7 RP '+rp+'<\/div>'
-    +'<div style="padding:0 16px;">'
-      +'<div style="'+g2+'">'
-        +'<div><label style="'+lb+'">Fecha del parto<\/label><input id="prc-fecha" type="date" value="'+td+'" max="'+td+'" oninput="partoRecriaChk()" style="'+sa+'"><\/div>'
-        +'<div><label style="'+lb+'">Tipo parto<\/label><select id="prc-tipo" style="'+si+'"><option>Normal<\/option><option>Dist\u00f3cico<\/option><option>Ces\u00e1rea<\/option><\/select><\/div>'
-      +'<\/div>'
-      +'<div style="'+g2+'">'
-        +'<div><label style="'+lb+'">Sexo cr\u00eda<\/label><select id="prc-sexo" onchange="partoRecriaChk()" style="'+si+'"><option value="">Seleccionar...<\/option><option>Hembra<\/option><option>Macho<\/option><\/select><\/div>'
-        +'<div><label style="'+lb+'">RP cr\u00eda (opcional)<\/label><input id="prc-rp" type="text" placeholder="RP..." style="'+si+'"><\/div>'
-      +'<\/div>'
-      +'<div style="'+g2+'">'
-        +'<div><label style="'+lb+'">Toro\/Embri\u00f3n (opcional)<\/label><input id="prc-toro" type="text" placeholder="Toro..." style="'+si+'"><\/div>'
-        +'<div><\/div>'
-      +'<\/div>'
-      +'<div style="margin-bottom:8px;"><label style="'+lb+'">Observaciones<\/label><input id="prc-obs" type="text" placeholder="Opcional..." style="'+si+'"><\/div>'
-    +'<\/div>'
-    +'<div style="display:flex;gap:8px;padding:12px 16px 0;border-top:0.5px solid #E5E5EA;margin-top:8px;">'
-      +'<button id="prc-g" onclick="partoRecriaGuardar('+rp+')" style="flex:1;padding:14px;background:#C7CDD6;color:#8E8E93;border:none;border-radius:12px;font-size:15px;font-weight:600;cursor:not-allowed;" disabled>Guardar<\/button>'
-      +'<button onclick="partoRecriaCerrar()" style="flex:1;padding:14px;background:none;color:#1C1C1E;border:1.5px solid #1C1C1E;border-radius:12px;font-size:15px;font-weight:600;cursor:pointer;">Cancelar<\/button>'
-    +'<\/div>';
-  document.body.appendChild(s);
-  if(typeof lockScroll==='function') lockScroll();
-  partoRecriaChk();
-}
-
-function partoRecriaChk() {
-  var f=document.getElementById('prc-fecha'), sx=document.getElementById('prc-sexo'), b=document.getElementById('prc-g');
-  if(!f||!sx||!b) return;
-  var ok=!!(f.value && sx.value);
-  if(ok){ b.disabled=false; b.style.background='#1C1C1E'; b.style.color='#fff'; b.style.cursor='pointer'; }
-  else { b.disabled=true; b.style.background='#C7CDD6'; b.style.color='#8E8E93'; b.style.cursor='not-allowed'; }
-}
-
-function partoRecriaCerrar() {
-  var s=document.getElementById('sheet-parto-recria'); if(s) s.remove();
-  var ov=document.getElementById('sheet-parto-recria-ov'); if(ov) ov.remove();
-  if(typeof unlockScroll==='function') unlockScroll();
-}
-
-function partoRecriaGuardar(rp) {
-  var fecha=document.getElementById('prc-fecha').value||fechaLocal();
-  var tipo=document.getElementById('prc-tipo').value||'Normal';
-  var sexo=document.getElementById('prc-sexo').value||'';
-  var rpCria=document.getElementById('prc-rp').value||'';
-  var toroNombre=document.getElementById('prc-toro').value||'';
-  var obs=document.getElementById('prc-obs').value||'';
-
-  var a=getAnimal(rp);
-  if(!a){
-    var rr=recria.find(function(x){return x.rp===rp;})||{};
-    a={rp:rp,nombre:rr.nombre||'',raza:rr.raza||'Holando',sexo:'H'};
-    rodeo.push(a);
-  }
-  a.cat='Vaca'; a.estadoProd='En Orde\u00f1e'; a.estadoRepro='Vac\u00eda';
-  a.ultimoParto=fecha; a.partoEstimado=null; a.nPartos=(a.nPartos||0)+1;
-  if(toroNombre) a.ultimaInsemToro=toroNombre;
-
-  var r=recria.find(function(x){return x.rp===rp;});
-  if(r){ r.activo=false; if(!r.eventos) r.eventos=[]; r.eventos.push({fecha:fecha,tipo:'Parto',obs:'Pas\u00f3 a Padr\u00f3n como Vaca'}); }
-
-  if(typeof historialPartos!=='undefined'){
-    if(!historialPartos[parseInt(rp)]) historialPartos[parseInt(rp)]=[];
-    historialPartos[parseInt(rp)].push({fecha:fecha,padre:toroNombre,sexoCria:sexo,rpCria:parseInt(rpCria),nombreCria:'Cr\u00eda',tipo:tipo});
-  }
-
-  guardarCacheLocal(); fb_syncAnimal(rp);
-  enviarASheets('Reg_Partos',[generarID('Par',rp),fecha,rp,a.nombre,tipo,sexo,rpCria,toroNombre,obs]);
-  agregarReciente('parto', parseInt(rp), 'Cr\u00eda RP '+rpCria+' \u00b7 '+sexo);
-
-  if(rpCria && sexo){
-    var rpCriaN=parseInt(rpCria);
-    var sx=sexo==='Hembra'?'H':'M';
-    var catCria=sexo==='Hembra'?'Ternera':'Ternero';
-    var edadDias=Math.round((new Date()-new Date(fecha))/864e5);
-    var yaExiste=getAnimal(rpCriaN)||guachera.find(function(g){return g.rp===rpCriaN;})||recria.find(function(x){return x.rp===rpCriaN;});
-    if(!yaExiste){
-      rodeo.push({rp:rpCriaN,nombre:'Cr\u00eda',sexo:sx,raza:a.raza,cat:catCria,estadoRepro:catCria,estadoProd:'',fechaNac:fecha,madre:parseInt(rp),padre:toroNombre,ultimoParto:null,ultimaInsem:null,ultimaInsemToro:null,partoEstimado:null,nroServicios:0,produccionUltima:null});
-      fb_syncAnimal(rpCriaN);
-      enviarASheets('Padron',[rpCriaN,'Cr\u00eda','Holando','Activa',fecha,toroNombre,catCria,0,'','',0,'','',0,0,0,'',catCria,'',0,0,'']);
-      if(edadDias<=70){
-        guachera.push({rp:rpCriaN,nombre:'Cr\u00eda',sexo:sx,padre:toroNombre,madre:a.nombre+' (RP '+rp+')',fechaNac:fecha,vacunado:false,salio:false,eventos:[]});
-        enviarASheets('Guachera_Eventos',[generarID('Ing',rpCriaN),fecha,rpCriaN,'Cr\u00eda','Ingreso',0,'',a.nombre,toroNombre,sexo]);
-        agregarReciente('guachera', rpCriaN, fecha);
-      } else {
-        recria.push({rp:rpCriaN,nombre:'Cr\u00eda',sexo:sx,cat:catCria,fechaNac:fecha,padre:toroNombre,madre:a.nombre+' (RP '+rp+')',eventos:[],activo:true});
-        enviarASheets('Recria_Eventos',[generarID('Ing',rpCriaN),fecha,rpCriaN,'Cr\u00eda','Ingreso recr\u00eda',edadDias,'']);
-      }
-    }
-  }
-
-  partoRecriaCerrar();
-  if(typeof renderRecria==='function') renderRecria();
-  if(typeof renderGuachera==='function') renderGuachera();
-  if(typeof renderRodeo==='function') renderRodeo();
-  if(typeof renderDashboard==='function') renderDashboard();
-  showToast('Parto de RP '+rp+' registrado \u2713 Pas\u00f3 a Vaca.');
-  if(typeof goBack==='function') goBack();
 }
 
 function darDeBajaAnimal(rp) {
@@ -7308,16 +7262,50 @@ function cerrarJovenFab() {
 
 <!-- SCREEN MANGA (PPD + biotipo) -->
 <div id="screen-manga" class="screen">
-  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
-    <div style="font-size:20px;font-weight:800;">Trabajo en manga</div>
-    <span id="manga-sync" class="badge badge-green" style="font-size:11px;padding:5px 10px;">● En la nube</span>
+  <style>
+    #screen-manga .mg-card{background:#fff;border-radius:16px;padding:16px;margin-bottom:14px;box-shadow:0 1px 3px rgba(0,0,0,.05);}
+    #screen-manga .mg-cap{font-size:12px;font-weight:800;color:#8E8E93;margin-bottom:12px;letter-spacing:.2px;}
+    #screen-manga .mg-swrow{display:flex;align-items:center;justify-content:space-between;padding:13px 2px;border-bottom:.5px solid #EFEFF3;}
+    #screen-manga .mg-swrow:last-of-type{border-bottom:none;}
+    #screen-manga .mg-toggle{width:52px;height:31px;border-radius:20px;background:#C7CDD6;position:relative;cursor:pointer;flex:0 0 auto;transition:background .15s;}
+    #screen-manga .mg-toggle.on{background:#0F6E56;}
+    #screen-manga .mg-knob{position:absolute;top:3px;left:3px;width:25px;height:25px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.3);transition:left .15s;}
+    #screen-manga .mg-toggle.on .mg-knob{left:24px;}
+    #screen-manga .mg-lbl{font-size:12px;font-weight:800;color:#8E8E93;margin-bottom:9px;letter-spacing:.2px;}
+    #screen-manga .mg-fin{width:100%;padding:14px;border:1.5px solid #B0BCC8;border-radius:13px;font-size:17px;font-weight:700;background:#fff;color:#1C1C1E;box-sizing:border-box;font-family:inherit;outline:none;}
+    #screen-manga .mg-fin:focus{border-color:#1C1C1E;}
+    #manga-sheet-back{position:fixed;inset:0;background:rgba(0,0,0,.32);opacity:0;pointer-events:none;transition:opacity .18s;z-index:290;}
+    #manga-sheet-back.on{opacity:1;pointer-events:auto;}
+    #manga-sheet{position:fixed;left:0;right:0;bottom:0;background:#F4F6F9;border-radius:22px 22px 0 0;transform:translateY(102%);transition:transform .22s cubic-bezier(.2,.8,.2,1);z-index:291;padding:8px 12px calc(18px + env(safe-area-inset-bottom));box-shadow:0 -8px 30px rgba(0,0,0,.2);max-width:460px;margin:0 auto;}
+    #manga-sheet.on{transform:translateY(0);}
+    #manga-sheet .mg-grip{width:38px;height:5px;border-radius:3px;background:#CBD1DA;margin:8px auto 12px;}
+    #manga-sheet .mg-sheet-group{margin-bottom:10px;border-radius:14px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.06);}
+    #manga-sheet .mg-item{display:flex;align-items:center;gap:14px;width:100%;background:#fff;border:none;padding:16px;font-size:16px;font-weight:700;color:#1C1C1E;cursor:pointer;font-family:inherit;border-bottom:.5px solid #EDEDF2;text-align:left;}
+    #manga-sheet .mg-sheet-group .mg-item:last-child{border-bottom:none;}
+    #manga-sheet .mg-item svg{width:22px;height:22px;flex:0 0 auto;color:#5A6270;}
+    #manga-sheet .mg-item.danger,#manga-sheet .mg-item.danger svg{color:#A0200A;}
+  </style>
+
+  <div id="manga-config"></div>
+
+  <div id="manga-carga" style="display:none;">
+    <div id="manga-topbar" style="margin-bottom:2px;"></div>
+    <div id="manga-counter"></div>
+    <div id="manga-stage"></div>
   </div>
-  <div id="manga-tipo-sel"></div>
-  <div id="manga-modo-sel"></div>
-  <div id="manga-progreso"></div>
-  <div id="manga-stage"></div>
-  <button onclick="mangaVerLista()" style="width:100%;margin-top:12px;padding:13px;border-radius:12px;border:1px solid #B0BCC8;background:#fff;font-weight:700;font-size:14px;color:#1C1C1E;cursor:pointer;">📋 Ver lista de RP cargadas</button>
-  <button onclick="mangaAbrirCierre()" style="width:100%;margin-top:10px;padding:14px;border-radius:12px;border:1.5px solid #1C1C1E;background:#fff;font-weight:700;font-size:14px;cursor:pointer;">Cerrar trabajo del día →</button>
+
+  <div id="manga-sheet-back" onclick="mangaCerrarMenu()"></div>
+  <div id="manga-sheet">
+    <div class="mg-grip"></div>
+    <div class="mg-sheet-group">
+      <button class="mg-item" onclick="mangaMenu('lista')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><circle cx="3.5" cy="6" r="1.2" fill="currentColor" stroke="none"/><circle cx="3.5" cy="12" r="1.2" fill="currentColor" stroke="none"/><circle cx="3.5" cy="18" r="1.2" fill="currentColor" stroke="none"/></svg>Ver lista de RP cargadas</button>
+      <button class="mg-item" onclick="mangaMenu('cambiar')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>Cambiar trabajo o día</button>
+      <button class="mg-item" onclick="mangaMenu('cerrar')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>Cerrar trabajo del día</button>
+    </div>
+    <div class="mg-sheet-group" id="manga-sheet-danger">
+      <button class="mg-item danger" onclick="mangaMenu('limpiar')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>Limpiar trabajo de prueba</button>
+    </div>
+  </div>
 </div>
 
 <!-- MODAL MANGA: ALTA EXPRÉS -->
