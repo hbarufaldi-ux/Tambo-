@@ -3744,6 +3744,62 @@ async function guardarBaja() {
 }
 
 // ---- NAV ----
+/* ============ BOTÓN BACK DEL SISTEMA (Android / navegador) ============ */
+var _backArmadoSalir=false;
+function _overlayVisible(id){ var e=document.getElementById(id); if(!e) return false; if(e.classList && e.classList.contains('on')) return true; var d=e.style?e.style.display:''; return !!(d && d!=='none'); }
+function _cerrarOverlayAbierto(){
+  if(_overlayVisible('manga-sheet')){ if(typeof mangaCerrarMenu==='function') mangaCerrarMenu(); return true; }
+  var mapa=[
+    ['modal-manga-lista', (typeof mangaCerrarLista==='function')?mangaCerrarLista:null],
+    ['modal-manga-cierre', (typeof mangaCerrarCierre==='function')?mangaCerrarCierre:null],
+    ['modal-manga-alta', function(){ var m=document.getElementById('modal-manga-alta'); if(m)m.style.display='none'; if(typeof mangaVolverEntry==='function') mangaVolverEntry(); }],
+    ['modal-vacuna-gua', (typeof cerrarModalVacunaGua==='function')?cerrarModalVacunaGua:null],
+    ['modal-inseminador', (typeof cerrarModalInseminador==='function')?cerrarModalInseminador:null],
+    ['modal-botiquin', (typeof cerrarModalBotiquin==='function')?cerrarModalBotiquin:null],
+    ['leche-fab-menu', (typeof cerrarLecheFab==='function')?cerrarLecheFab:null],
+    ['modal-evento', null],['modal-evento-vaca', null],['modal-rechazo', null],
+    ['modal-baja-prod', null],['modal-tm', null],['modal-usuario', null],['mas-menu', null]
+  ];
+  for(var i=0;i<mapa.length;i++){
+    if(_overlayVisible(mapa[i][0])){
+      if(mapa[i][1]) mapa[i][1](); else { var el=document.getElementById(mapa[i][0]); if(el) el.style.display='none'; }
+      if(typeof unlockScroll==='function') unlockScroll();
+      return true;
+    }
+  }
+  if(document.getElementById('ficha-fab-menu')||document.getElementById('ficha-joven-fab-menu')){
+    ['ficha-fab-overlay','ficha-fab-menu','ficha-joven-fab-overlay','ficha-joven-fab-menu'].forEach(function(id){ var el=document.getElementById(id); if(el) el.remove(); });
+    return true;
+  }
+  return false;
+}
+function appBack(){
+  if(_cerrarOverlayAbierto()) return true;
+  var act=document.querySelector('.screen.active');
+  var actId=act? act.id.replace('screen-',''):'';
+  if(actId==='manga'){
+    if(_mangaStage==='work'){ if(typeof mangaVolverEntry==='function') mangaVolverEntry(); return true; }
+    if(_mangaStage==='entry'){ if(typeof mangaMenu==='function') mangaMenu('cambiar'); return true; }
+    if(typeof mangaSalir==='function') mangaSalir(); return true;
+  }
+  if(typeof _navStack!=='undefined' && _navStack && _navStack.length>0){ goBack(); return true; }
+  if(actId && actId!=='dashboard' && actId!=='login'){ goToNav('dashboard'); return true; }
+  return false;
+}
+function _initBackButton(){
+  try{ history.pushState(null,''); }catch(e){}
+  window.addEventListener('popstate', function(){
+    var hizo=false;
+    try{ hizo=appBack(); }catch(e){ console.warn('appBack:',e); }
+    if(hizo){ try{ history.pushState(null,''); }catch(e){} _backArmadoSalir=false; return; }
+    if(_backArmadoSalir){ history.go(-1); return; }
+    _backArmadoSalir=true;
+    if(typeof showToast==='function') showToast('Tocá de nuevo para salir');
+    try{ history.pushState(null,''); }catch(e){}
+    setTimeout(function(){ _backArmadoSalir=false; },2000);
+  });
+}
+
 function goBack() {
   unlockScroll();
   var anterior = _navStack.length > 0 ? _navStack.pop() : 'dashboard';
@@ -3808,7 +3864,7 @@ function goTo(screen, btn) {
   document.querySelectorAll('.screen').forEach(function(s){s.classList.remove('active');});
   var sc=document.getElementById('screen-'+screen);
   if(sc) sc.classList.add('active');
-  var _nav=document.getElementById('main-nav'); if(_nav) _nav.style.display=(screen==='manga')?'none':'';
+  var _nav=document.getElementById('main-nav'); if(_nav) _nav.style.display=(screen==='manga')?'none':'flex';
   var lecheFab = document.getElementById('leche-fab-btn');
   if(lecheFab) lecheFab.style.display = screen === 'leche' ? 'block' : 'none';
   if(screen !== 'leche') cerrarLecheFab && cerrarLecheFab();
@@ -5232,6 +5288,7 @@ function init() {
 
 // ---- ARRANQUE ----
 window.addEventListener('load', function() {
+  try{ _initBackButton(); }catch(e){ console.warn('initBack:',e); }
   // Intentar restaurar sesión sin Google
   try {
     var s = JSON.parse(localStorage.getItem('tambo_sesion') || 'null');
