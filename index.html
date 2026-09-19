@@ -3727,13 +3727,21 @@ async function guardarParto() {
   historialPartos[parseInt(madre)].push({fecha:fecha,padre:nombreToro,sexoCria:sexoCria,rpCria:parseInt(rpCria),nombreCria:nombreCria,tipo:document.getElementById('p-tipo').value});
 
   if(getRadio('viva')==='Sí'&&rpCria) {
-    rodeo.push({rp:parseInt(rpCria),nombre:nombreCria,sexo:sexoCria==='Hembra'?'H':'M',raza:a.raza,cat:catCria,estadoRepro:catCria,estadoProd:'',fechaNac:fecha,madre:parseInt(madre),padre:nombreToro,ultimoParto:null,ultimaInsem:null,ultimaInsemToro:null,partoEstimado:null,nroServicios:0,produccionUltima:null});
-    guachera.push({rp:parseInt(rpCria),nombre:nombreCria,sexo:sexoCria==='Hembra'?'H':'M',padre:nombreToro,madre:a.nombre+' (RP '+madre+')',fechaNac:fecha,vacunado:false,salio:false,eventos:[]});
-  agregarReciente('guachera', parseInt(rpCria), fecha);
+    var rpCriaN=parseInt(rpCria);
+    var yaExiste=(typeof getAnimal==='function'&&getAnimal(rpCriaN))||
+                 (typeof guachera!=='undefined'&&guachera.find(function(g){return g.rp===rpCriaN;}))||
+                 (typeof recria!=='undefined'&&recria.find(function(x){return x.rp===rpCriaN;}));
+    if(yaExiste){
+      showToast('RP '+rpCria+' ya existe — parto registrado sin duplicar la cría',true);
+    } else {
+    rodeo.push({rp:rpCriaN,nombre:nombreCria,sexo:sexoCria==='Hembra'?'H':'M',raza:a.raza,cat:catCria,estadoRepro:catCria,estadoProd:'',fechaNac:fecha,madre:parseInt(madre),padre:nombreToro,ultimoParto:null,ultimaInsem:null,ultimaInsemToro:null,partoEstimado:null,nroServicios:0,produccionUltima:null});
+    guachera.push({rp:rpCriaN,nombre:nombreCria,sexo:sexoCria==='Hembra'?'H':'M',padre:nombreToro,madre:a.nombre+' (RP '+madre+')',fechaNac:fecha,vacunado:false,salio:false,eventos:[]});
+    agregarReciente('guachera', rpCriaN, fecha);
     fb_syncAnimal(rpCria);
     enviarASheets('Guachera_Eventos',[generarID('Ing',rpCria),fecha,rpCria,nombreCria,'Ingreso',0,'',a.nombre,nombreToro,sexoCria]);
     // Agregar cría al Padrón en Sheets
-    enviarASheets('Padron',[parseInt(rpCria),nombreCria,'Holando','Activa',fecha,nombreToro,catCria,0,'','',0,'','',0,0,0,'',catCria,'',0,0,'']);
+    enviarASheets('Padron',[rpCriaN,nombreCria,'Holando','Activa',fecha,nombreToro,catCria,0,'','',0,'','',0,0,0,'',catCria,'',0,0,'']);
+    }
   }
 
   var fila=[generarID('Par',madre),fecha,madre,a.nombre,nombreToro,sexoCria,rpCria,nombreCria,document.getElementById('p-tipo').value,getRadio('viva'),getRadio('mellizo'),document.getElementById('p-obs').value||'',getRadio('placenta'),catCria];
