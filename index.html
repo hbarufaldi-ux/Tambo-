@@ -1313,9 +1313,12 @@ var CONFIG_DEFAULT = {
   // Reproducción
   diasEsperaPosparto: 45,
   umbralServicios: 5,
+  diasReinsemTemprana: 21,
+  mesesAbortoPorLactancia: 6,
   // Secado
   diasAntesPartoSecar: 60,
   diasAlertaSecado: 10,
+  litrosAlertaSecarVacia: 10,
   // Padrón
   diasR4: 7,
   // Calidad de leche
@@ -1945,7 +1948,7 @@ function ajustarMarginPadron(){
 function renderConfig() {
   var fields = ['nombreTambo','superficie','ubicacion','unidad','litrosR1',
     'umbralBajaProduccion','litrosVentaRechazo','diasEsperaPosparto',
-    'umbralServicios','diasAntesPartoSecar','diasAlertaSecado',
+    'umbralServicios','diasReinsemTemprana','diasAntesPartoSecar','diasAlertaSecado','litrosAlertaSecarVacia','mesesAbortoPorLactancia',
     'calUfcAlerta','calUfcMal','calCsAlerta','calCsMal','calGrasaMin','calProtMin'];
   fields.forEach(function(k) {
     var el = document.getElementById('cfg-' + k);
@@ -1989,6 +1992,9 @@ function guardarConfigUI() {
   CONFIG.litrosVentaRechazo = parseFloat(document.getElementById('cfg-litrosVentaRechazo').value) || CONFIG_DEFAULT.litrosVentaRechazo;
   CONFIG.diasEsperaPosparto = parseInt(document.getElementById('cfg-diasEsperaPosparto').value) || CONFIG_DEFAULT.diasEsperaPosparto;
   CONFIG.umbralServicios    = parseInt(document.getElementById('cfg-umbralServicios').value) || CONFIG_DEFAULT.umbralServicios;
+  CONFIG.diasReinsemTemprana = parseInt(document.getElementById('cfg-diasReinsemTemprana').value) || CONFIG_DEFAULT.diasReinsemTemprana;
+  CONFIG.litrosAlertaSecarVacia = parseFloat(document.getElementById('cfg-litrosAlertaSecarVacia').value) || CONFIG_DEFAULT.litrosAlertaSecarVacia;
+  CONFIG.mesesAbortoPorLactancia = parseInt(document.getElementById('cfg-mesesAbortoPorLactancia').value) || CONFIG_DEFAULT.mesesAbortoPorLactancia;
   CONFIG.diasAntesPartoSecar= parseInt(document.getElementById('cfg-diasAntesPartoSecar').value) || CONFIG_DEFAULT.diasAntesPartoSecar;
   CONFIG.diasAlertaSecado   = parseInt(document.getElementById('cfg-diasAlertaSecado').value) || CONFIG_DEFAULT.diasAlertaSecado;
   CONFIG.calUfcAlerta       = parseFloat(document.getElementById('cfg-calUfcAlerta').value) || CONFIG_DEFAULT.calUfcAlerta;
@@ -2435,7 +2441,7 @@ function abrirFicha(rp) {
     var rol   = (window.usuarioActual&&window.usuarioActual.rol)||'ayudante';
     var bloqueadas = [];
     // Preñada o Inseminada → no inseminar
-    if(repro==='Preñada'||repro==='Inseminada') bloqueadas.push('Inseminar');
+    if(repro==='Preñada') bloqueadas.push('Inseminar');
     // Preñada → no tacto (solo de confirmación, lo dejamos disponible)
     // Seca → no producción, no secar de nuevo
     if(prod==='Seca') { bloqueadas.push('Producción'); bloqueadas.push('Secar'); }
@@ -3693,11 +3699,83 @@ async function enviarUpdateASheets(hoja, id, fila) {
   }
 }
 
+// ===== BLOQUEOS/ALERTAS DE EVENTOS (reglas EV) — fuente unica =====
+function chequeoEvento(tipo, a, fecha){
+  fecha = fecha || fechaLocal();
+  var repro = a.estadoRepro || '';
+  var prod  = a.estadoProd  || '';
+  function diasEntre(f1, f2){
+    if(!f1 || !f2) return null;
+    var d1=new Date(f1), d2=new Date(f2);
+    if(isNaN(d1)||isNaN(d2)) return null;
+    return Math.round((d2-d1)/864e5);
+  }
+
+  if(tipo==='Inseminar'){                                   // EV2
+    if(repro==='Preñada') return {tipo:'stop', motivo:'Está preñada — inseminación no disponible.'};
+    var msgs=[], marcas=[];
+    if(prod==='Seca'){ msgs.push('Está seca (raro: pasaría la gestación sin producir)'); marcas.push('[AUDIT insem en seca]'); }
+    var dins = diasEntre(a.ultimaInsem, fecha);
+    if(repro==='Inseminada' && dins!=null && dins < (CONFIG.diasReinsemTemprana||21)){
+      msgs.push('Reinseminación temprana ('+dins+'d)'); marcas.push('[AUDIT reinsem '+dins+'d]');
+    }
+    if(marcas.length) return {tipo:'warn', motivo:msgs.join(' · ')+' — marcada para auditoría', marca:marcas.join(' ')};
+    return {tipo:'ok'};
+  }
+
+  if(tipo==='Producción'){                                  // EV7
+    if(prod==='Seca') return {tipo:'stop', motivo:'Está seca — no produce. Registrá el parto primero.'};
+    return {tipo:'ok'};
+  }
+
+  if(tipo==='Secar'){                                       // EV5
+    if(prod==='Seca') return {tipo:'stop', motivo:'Ya está seca.'};
+    if(repro==='Vacía' && a.produccionUltima!=null && a.produccionUltima > (CONFIG.litrosAlertaSecarVacia||10))
+      return {tipo:'warn', motivo:'Vacía y todavía produce '+a.produccionUltima+' L — marcada para auditoría', marca:'[AUDIT secado vacía '+a.produccionUltima+'L]'};
+    return {tipo:'ok'};
+  }
+
+  if(tipo==='Aborto'){                                      // EV6
+    if(repro!=='Preñada') return {tipo:'stop', motivo:'Solo se registra aborto si está preñada.'};
+    var d = diasEntre(a.ultimaInsem, fecha);
+    var meses = (d!=null) ? Math.floor(d/30) : null;
+    var lactNueva = (meses!=null) && (meses >= (CONFIG.mesesAbortoPorLactancia||6));
+    return {tipo:'ok', aborto:true, meses:meses, lactNueva:lactNueva};
+  }
+
+  if(tipo==='Parto'){                                       // EV8
+    if(repro!=='Preñada' && prod!=='Seca') return {tipo:'stop', motivo:'No está preñada ni seca — no se puede registrar el parto.'};
+    if(prod==='En Ordeñe') return {tipo:'warn', motivo:'Figuraba En Ordeñe, sin secado registrado — marcada para auditoría', marca:'[AUDIT parto sin secado]'};
+    return {tipo:'ok'};
+  }
+
+  return {tipo:'ok'};
+}
+
+// Aplica el efecto del aborto y arma la fila unificada de Reg_Abortos
+function aplicarAborto(a, fecha, causa, obs, chk){
+  var estadoAnt = a.estadoRepro;
+  a.estadoRepro = 'Vacía';
+  a.partoEstimado = null;
+  a.nroServicios = 0;
+  if(chk.lactNueva){
+    a.estadoProd = 'En Ordeñe';
+    a.nroLactancia = (a.nroLactancia||0)+1;
+    a.ultimoParto = fecha;
+    a.diasLactancia = 0; a.lecheAcum = 0;
+  }
+  return [generarID('Abo',a.rp), fecha, a.rp, a.nombre, estadoAnt,
+          causa||'', (chk.meses!=null?chk.meses:''), (chk.lactNueva?'sí':'no'), obs||''];
+}
+
 async function guardarProd() {
   var animal=document.getElementById('pr-animal').value;
   var am=document.getElementById('pr-am').value;
   if(!animal||!am){showToast('Completá animal y litros AM',true);return;}
-  var a=getAnimal(animal); var pm=parseFloat(document.getElementById('pr-pm').value)||0;
+  var a=getAnimal(animal);
+  var _chk=chequeoEvento('Producción',a);
+  if(_chk.tipo==='stop'){showToast(_chk.motivo,true);return;}
+  var pm=parseFloat(document.getElementById('pr-pm').value)||0;
   var total=(parseFloat(am)+pm).toFixed(1);
   a.produccionUltima=parseFloat(total);
   fb_syncAnimal(animal);
@@ -3710,7 +3788,8 @@ async function guardarParto() {
   var madre=document.getElementById('p-madre').value, toro=document.getElementById('p-toro').value;
   if(!madre||!toro){showToast('Seleccioná madre y toro',true);return;}
   var a=getAnimal(madre);
-  if(a&&a.estadoRepro!=='Preñada'&&a.estadoProd!=='Seca'){showToast(a.nombre+' no tiene preñez confirmada',true);return;}
+  var _chkP=chequeoEvento('Parto',a);
+  if(_chkP.tipo==='stop'){showToast(_chkP.motivo,true);return;}
   var nombreToro=toros.find(function(t){return t.rp==toro;})?toros.find(function(t){return t.rp==toro;}).nombre:toro;
   var fecha=document.getElementById('p-fecha').value;
   var sexoCria=getRadio('sexo');
@@ -3719,8 +3798,10 @@ async function guardarParto() {
   var entero=sexoCria==='Macho'?getRadio('entero'):'';
   var catCria=sexoCria==='Hembra'?'Ternera':(entero.includes('Sí')?'Torito':'Ternero');
 
-  a.estadoProd='En Ordeñe'; a.estadoRepro='Vacía'; a.ultimoParto=fecha; a.partoEstimado=null;
+  a.estadoProd='En Ordeñe'; a.estadoRepro='Vacía'; a.ultimoParto=fecha; a.partoEstimado=null; a.nroLactancia=(a.nroLactancia||0)+1;
   if(a.cat==='Vaquillona') a.cat='Vaca';
+  var _obsParto=document.getElementById('p-obs').value||'';
+  if(_chkP.tipo==='warn'&&_chkP.marca) _obsParto=(_obsParto?_obsParto+' ':'')+_chkP.marca;
   fb_syncAnimal(madre);
 
   if(!historialPartos[parseInt(madre)]) historialPartos[parseInt(madre)]=[];
@@ -3744,7 +3825,7 @@ async function guardarParto() {
     }
   }
 
-  var fila=[generarID('Par',madre),fecha,madre,a.nombre,nombreToro,sexoCria,rpCria,nombreCria,document.getElementById('p-tipo').value,getRadio('viva'),getRadio('mellizo'),document.getElementById('p-obs').value||'',getRadio('placenta'),catCria];
+  var fila=[generarID('Par',madre),fecha,madre,a.nombre,nombreToro,sexoCria,rpCria,nombreCria,document.getElementById('p-tipo').value,getRadio('viva'),getRadio('mellizo'),_obsParto,getRadio('placenta'),catCria];
   var ok=await enviarASheets('Reg_Partos',fila);
   if(ok){agregarReciente('parto', parseInt(madre), 'Cría RP '+rpCria+' · '+getRadio('sexo'));poblarSelects(); _selectsSucios=false; renderDashboard();renderRodeo();renderGuachera();document.getElementById('p-rp-cria').value=nextRP();document.getElementById('parto-ok-msg').textContent=a.nombre+' pasó a En Ordeñe. Cría RP '+rpCria+' en guachera.';document.getElementById('parto-form').style.display='none';document.getElementById('parto-ok').style.display='block';}
 }
@@ -3755,9 +3836,13 @@ async function guardarInsem() {
   var a=getAnimal(animal); var toroRp=document.getElementById('i-toro').value;
   var nombreToro=toros.find(function(t){return t.rp==toroRp;})?toros.find(function(t){return t.rp==toroRp;}).nombre:toroRp;
   var fecha=document.getElementById('i-fecha').value;
+  var _chk=chequeoEvento('Inseminar',a,fecha);
+  if(_chk.tipo==='stop'){showToast(_chk.motivo,true);return;}
+  var _obsIns=document.getElementById('i-obs').value||'';
+  if(_chk.tipo==='warn'){ if(_chk.marca) _obsIns=(_obsIns?_obsIns+' ':'')+_chk.marca; showToast(_chk.motivo); }
   a.estadoRepro='Inseminada'; a.ultimaInsem=fecha; a.ultimaInsemToro=nombreToro; a.nroServicios=(a.nroServicios||0)+1; a.partoEstimado=null;
   fb_syncAnimal(animal);
-  var fila=[generarID('Ins',animal),fecha,animal,a.nombre,nombreToro,document.getElementById('i-tipo').value,document.getElementById('i-inseminador').value,getRadio('celo'),a.nroServicios,document.getElementById('i-obs').value||''];
+  var fila=[generarID('Ins',animal),fecha,animal,a.nombre,nombreToro,document.getElementById('i-tipo').value,document.getElementById('i-inseminador').value,getRadio('celo'),a.nroServicios,_obsIns];
   var ok=await enviarASheets('Reg_Inseminaciones',fila);
   if(ok){agregarReciente('insem', animal, nombreToro+' — '+document.getElementById('i-tipo').value);poblarSelects(); _selectsSucios=false; renderDashboard();document.getElementById('insem-form').style.display='none';document.getElementById('insem-ok').style.display='block';}
 }
@@ -3780,9 +3865,12 @@ async function guardarTacto() {
   var eraPreniada = a.estadoRepro === 'Preñada';
   if(resultado==='Preñada'){a.estadoRepro='Preñada';a.partoEstimado=a.ultimaInsem?sumarDias(a.ultimaInsem,280):null;}
   else if(resultado==='Vacía'){
-    a.estadoRepro='Vacía';a.partoEstimado=null;
     if(eraPreniada) {
-      enviarASheets('Reg_Abortos',[generarID('Ab',animal),fecha,animal,a.nombre,'Aborto confirmado por tacto',document.getElementById('t-obs').value||'']);
+      var _chkT=chequeoEvento('Aborto',a,fecha);
+      var _filaAb=aplicarAborto(a, fecha, 'Aborto detectado por tacto', document.getElementById('t-obs').value||'', _chkT);
+      enviarASheets('Reg_Abortos', _filaAb);
+    } else {
+      a.estadoRepro='Vacía';a.partoEstimado=null;
     }
   }
   fb_syncAnimal(animal);
@@ -3797,9 +3885,13 @@ async function guardarSecado() {
   var animal=document.getElementById('s-animal').value;
   if(!animal){showToast('Seleccioná un animal',true);return;}
   var a=getAnimal(animal); var estadoAnt=a.estadoProd||'';
+  var _chk=chequeoEvento('Secar',a);
+  if(_chk.tipo==='stop'){showToast(_chk.motivo,true);return;}
+  var _obsSec=document.getElementById('s-obs').value||'';
+  if(_chk.tipo==='warn'){ if(_chk.marca) _obsSec=(_obsSec?_obsSec+' ':'')+_chk.marca; showToast(_chk.motivo); }
   a.estadoProd='Seca'; if(a.cat==='Vaquillona') a.cat='Vaca';
   fb_syncAnimal(animal);
-  var fila=[generarID('Sec',animal),document.getElementById('s-fecha').value,animal,a.nombre,estadoAnt,document.getElementById('s-obs').value||''];
+  var fila=[generarID('Sec',animal),document.getElementById('s-fecha').value,animal,a.nombre,estadoAnt,_obsSec];
   var ok=await enviarASheets('Reg_Secados',fila);
   if(ok){poblarSelects(); _selectsSucios=false; renderDashboard();renderRodeo();document.getElementById('secado-form').style.display='none';document.getElementById('secado-ok').style.display='block';}
 }
@@ -4014,16 +4106,14 @@ async function guardarAborto() {
   var fecha = document.getElementById('ab-fecha').value;
   var causa = document.getElementById('ab-causa').value;
   var obs = document.getElementById('ab-obs').value||'';
-  var estadoAnt = a.estadoRepro;
-  a.estadoRepro = 'Vacía';
-  a.partoEstimado = null;
-  a.nroServicios = 0;
+  var _chk = chequeoEvento('Aborto', a, fecha);
+  if(_chk.tipo==='stop'){showToast(_chk.motivo,true);return;}
+  var fila = aplicarAborto(a, fecha, causa, obs, _chk);
   fb_syncAnimal(animal);
-  var fila = [generarID('Ab',animal), fecha, animal, a.rp, estadoAnt, causa, obs];
   var ok = await enviarASheets('Reg_Abortos', fila);
   if(ok){
     poblarSelects(); _selectsSucios=false; renderDashboard(); renderRodeo();
-    document.getElementById('aborto-ok-msg').textContent = 'RP '+a.rp+' pasó a Vacía. Causa: '+causa;
+    document.getElementById('aborto-ok-msg').textContent = 'RP '+a.rp+' — '+(_chk.lactNueva?('aborto '+_chk.meses+'m: lactancia nueva'):'queda Vacía')+'. Causa: '+causa;
     document.getElementById('aborto-form').style.display='none';
     document.getElementById('aborto-ok').style.display='block';
   }
@@ -6860,23 +6950,13 @@ async function fichaGuardar(sheetId, rp) {
   if(sheetId==='ficha-sheet-aborto') {
     var fecha=document.getElementById('fsa2-fecha').value||hoy;
     var obs=document.getElementById('fsa2-obs').value||'';
-    // Calcular meses de gestación
-    var mesesAborto = 0;
-    if(a.ultimaInsem) {
-      mesesAborto = Math.floor((new Date(fecha)-new Date(a.ultimaInsem))/(30*864e5));
-    }
-    var umbral = (CONFIG && CONFIG.mesesAbortoPorLactancia) || 6;
-    // Resetear estado reproductivo
-    a.estadoRepro='Vacía'; a.partoEstimado=''; a.ultimaInsem='';
-    // Si ≥ umbral meses → nueva lactancia
-    if(mesesAborto >= umbral) {
-      a.estadoProd='En Ordeñe';
-      a.diasLactancia=0; a.lecheAcum=0;
-    }
+    var _chk=chequeoEvento('Aborto',a,fecha);
+    if(_chk.tipo==='stop'){ showToast(_chk.motivo,true); return; }
+    var _fila=aplicarAborto(a, fecha, 'Aborto', obs, _chk);
     guardarCacheLocal(); fb_syncAnimal(rp);
-    await enviarASheets('Reg_Abortos',[generarID('Abo',rp),fecha,rp,a.nombre,mesesAborto+'m',obs]);
-    agregarReciente('aborto', rp, mesesAborto+'m');
-    showToast('Aborto registrado ✓'); renderDashboard(); renderRodeo(); goBack(); return;
+    await enviarASheets('Reg_Abortos', _fila);
+    agregarReciente('aborto', rp, (_chk.meses!=null?_chk.meses+'m':'')+(_chk.lactNueva?' · lactancia nueva':''));
+    showToast(_chk.lactNueva?'Aborto — lactancia nueva':'Aborto registrado'); renderDashboard(); renderRodeo(); goBack(); return;
   } else if(sheetId==='ficha-sheet-parto') {
     var fecha=document.getElementById('fsp2-fecha').value||hoy;
     var tipo=document.getElementById('fsp2-tipo').value||'Normal';
@@ -6886,7 +6966,10 @@ async function fichaGuardar(sheetId, rp) {
     var toroVal=toroEl?toroEl.value:'';
     var toroNombre=toros.find(function(t){return String(t.rp)===String(toroVal);})?toros.find(function(t){return String(t.rp)===String(toroVal);}).nombre:toroVal;
     var obs=document.getElementById('fsp2-obs').value||'';
-    a.nPartos=(a.nPartos||0)+1; a.ultimoParto=fecha; a.estadoRepro='Vacía'; a.estadoProd='En Ordeñe';
+    var _chkP=chequeoEvento('Parto',a);
+    if(_chkP.tipo==='stop'){ showToast(_chkP.motivo,true); return; }
+    if(_chkP.tipo==='warn'&&_chkP.marca) obs=(obs?obs+' ':'')+_chkP.marca;
+    a.nroLactancia=(a.nroLactancia||0)+1; a.ultimoParto=fecha; a.estadoRepro='Vacía'; a.estadoProd='En Ordeñe';
     if(toroNombre) a.ultimaInsemToro=toroNombre;
     guardarCacheLocal(); fb_syncAnimal(rp);
     await enviarASheets('Reg_Partos',[generarID('Par',rp),fecha,rp,a.nombre,tipo,sexo,rpCria,toroNombre,obs]);
@@ -7661,6 +7744,20 @@ function cerrarJovenFab() {
         <span style="font-size:13px;color:#8E8E93;flex-shrink:0;">servicios</span>
       </div>
     </div>
+    <div class="form-row">
+      <label class="form-label">Ventana de reinseminación temprana</label>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <input type="number" id="cfg-diasReinsemTemprana" class="form-input" inputmode="numeric" style="flex:1;">
+        <span style="font-size:13px;color:#8E8E93;flex-shrink:0;">días</span>
+      </div>
+    </div>
+    <div class="form-row">
+      <label class="form-label">Aborto que inicia lactancia nueva</label>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <input type="number" id="cfg-mesesAbortoPorLactancia" class="form-input" inputmode="numeric" style="flex:1;">
+        <span style="font-size:13px;color:#8E8E93;flex-shrink:0;">meses</span>
+      </div>
+    </div>
   </div>
 
   <!-- SECADO -->
@@ -7680,6 +7777,13 @@ function cerrarJovenFab() {
         <span style="font-size:13px;color:#8E8E93;flex-shrink:0;">días antes</span>
       </div>
       <div style="font-size:12px;color:#8E8E93;margin-top:4px;">La alerta aparece cuando faltan <span id="cfg-alerta-preview">70</span> días para el parto</div>
+    </div>
+    <div class="form-row">
+      <label class="form-label">Litros que alertan al secar una vacía</label>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <input type="number" id="cfg-litrosAlertaSecarVacia" class="form-input" inputmode="decimal" style="flex:1;">
+        <span style="font-size:13px;color:#8E8E93;flex-shrink:0;">litros</span>
+      </div>
     </div>
   </div>
 
