@@ -3702,8 +3702,8 @@ async function enviarUpdateASheets(hoja, id, fila) {
 // ===== BLOQUEOS/ALERTAS DE EVENTOS (reglas EV) — fuente unica =====
 function chequeoEvento(tipo, a, fecha){
   fecha = fecha || fechaLocal();
-  var repro = a.estadoRepro || '';
-  var prod  = a.estadoProd  || '';
+  var repro = (a.estadoRepro || '').normalize('NFC');
+  var prod  = (a.estadoProd  || '').normalize('NFC');
   function diasEntre(f1, f2){
     if(!f1 || !f2) return null;
     var d1=new Date(f1), d2=new Date(f2);
@@ -7016,19 +7016,30 @@ async function fichaGuardar(sheetId, rp) {
     renderDashboard(); renderRodeo();
   } else if(sheetId==='ficha-sheet-inseminar') {
     var fecha=document.getElementById('fsi-fecha').value||hoy;
+    var _chk=chequeoEvento('Inseminar',a,fecha);
+    if(_chk.tipo==='stop'){ showToast(_chk.motivo,true); return; }
+    var _obsI=(_chk.tipo==='warn'&&_chk.marca)?_chk.marca:'';
     a.estadoRepro='Inseminada'; a.ultimaInsem=fecha; a.nroServicios=(a.nroServicios||0)+1;
     guardarCacheLocal(); fb_syncAnimal(rp);
     var fsiToroEl=document.getElementById('fsi-toro');
     var fsiToroNombre=fsiToroEl.options[fsiToroEl.selectedIndex]?fsiToroEl.options[fsiToroEl.selectedIndex].text:fsiToroEl.value;
     a.ultimaInsemToro=fsiToroNombre;
-    await enviarASheets('Reg_Inseminaciones',[generarID('Ins',rp),fecha,rp,a.nombre,fsiToroNombre,document.getElementById('fsi-tipo').value,document.getElementById('fsi-insem').value||'','']);
+    await enviarASheets('Reg_Inseminaciones',[generarID('Ins',rp),fecha,rp,a.nombre,fsiToroNombre,document.getElementById('fsi-tipo').value,document.getElementById('fsi-insem').value||'',_obsI]);
     agregarReciente('insem', rp, fsiToroNombre);
-    showToast('Inseminación registrada ✓'); renderDashboard(); renderRodeo();
+    showToast(_chk.tipo==='warn'?_chk.motivo:'Inseminación registrada ✓'); renderDashboard(); renderRodeo();
   } else if(sheetId==='ficha-sheet-tacto') {
     var fecha=document.getElementById('fst-fecha').value||hoy;
     var res=document.getElementById('ficha-sheet-tacto').getAttribute('data-res');
+    var _eraPren = a.estadoRepro && a.estadoRepro.normalize('NFC')==='Preñada';
     if(res==='Preñada'){a.estadoRepro='Preñada';if(a.ultimaInsem){var fp=new Date(a.ultimaInsem);fp.setDate(fp.getDate()+283);a.partoEstimado=fp.toISOString().split('T')[0];}}
-    else if(res==='Vacía'||res==='Repetición'){a.estadoRepro='Vacía';}
+    else if(res==='Vacía'||res==='Repetición'){
+      if(_eraPren){
+        var _chkA=chequeoEvento('Aborto',a,fecha);
+        var _filaAb=aplicarAborto(a, fecha, 'Aborto detectado por tacto', '', _chkA);
+        enviarASheets('Reg_Abortos', _filaAb);
+        if(_chkA.lactNueva) showToast('Aborto por tacto — lactancia nueva');
+      } else { a.estadoRepro='Vacía'; }
+    }
     else if(res==='Hormonal'){a.estadoRepro='IATF';}
     else{a.estadoRepro=res;}
     guardarCacheLocal(); fb_syncAnimal(rp);
@@ -7036,11 +7047,16 @@ async function fichaGuardar(sheetId, rp) {
     agregarReciente('tacto', rp, res);
     showToast('Tacto registrado ✓'); renderDashboard(); renderRodeo();
   } else if(sheetId==='ficha-sheet-secar') {
+    var _chk=chequeoEvento('Secar',a);
+    if(_chk.tipo==='stop'){ showToast(_chk.motivo,true); return; }
+    var _obsS=(_chk.tipo==='warn'&&_chk.marca)?_chk.marca:'';
     a.estadoProd='Seca'; guardarCacheLocal(); fb_syncAnimal(rp);
-    await enviarASheets('Reg_Secados',[generarID('Sec',rp),document.getElementById('fss-fecha').value||hoy,rp,a.nombre,'']);
+    await enviarASheets('Reg_Secados',[generarID('Sec',rp),document.getElementById('fss-fecha').value||hoy,rp,a.nombre,_obsS]);
     agregarReciente('secado', rp, 'Secado');
-    showToast('Secado registrado ✓'); renderDashboard(); renderRodeo();
+    showToast(_chk.tipo==='warn'?_chk.motivo:'Secado registrado ✓'); renderDashboard(); renderRodeo();
   } else if(sheetId==='ficha-sheet-produccion') {
+    var _chk=chequeoEvento('Producción',a);
+    if(_chk.tipo==='stop'){ showToast(_chk.motivo,true); return; }
     var litros = parseFloat(document.getElementById('fsp-litros').value)||0;
     a.produccionUltima = litros; // actualizar en memoria
     guardarCacheLocal(); fb_syncAnimal(rp); // sincronizar Firebase
