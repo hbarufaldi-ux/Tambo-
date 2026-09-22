@@ -2372,9 +2372,21 @@ function abrirFicha(rp) {
     var f2=[['Último parto',fmtFecha(a.ultimoParto)],['Última insem.',fmtFecha(a.ultimaInsem)],['Parto estimado',partoTxt],['N° servicios ciclo',a.nroServicios||0]];
     if(diasEnLeche!==null) f2.push(['Días en leche',diasEnLeche]);
     if(diasGest!==null) f2.push([esPrenada?'Días gestación':'Días post servicio',diasGest]);
-    if(a.estadoProd==='Seca' && a.ultimoSecado) f2.push(['Secado',fmtFecha(a.ultimoSecado)+' ('+(-diasHasta(a.ultimoSecado))+' días)']);
+    var _secAlerta=null;
+    if(a.estadoProd==='Seca' && a.ultimoSecado){
+      var _secTxt=fmtFecha(a.ultimoSecado)+' ('+(-diasHasta(a.ultimoSecado))+' días)';
+      if(a.estadoRepro==='Preñada' && a.partoEstimado){
+        var _gap=Math.round((new Date(a.partoEstimado)-new Date(a.ultimoSecado))/864e5);
+        var _ideal=(CONFIG.diasAntesPartoSecar||60);
+        if(_gap > _ideal+15){ _secTxt+=' · muy anticipada'; _secAlerta='Secado anticipado: '+_gap+' días antes del parto (lo normal es ~'+_ideal+').'; }
+        else if(_gap < _ideal-15){ _secTxt+=' · período seco corto'; _secAlerta='Período seco corto: '+_gap+' días antes del parto (lo normal es ~'+_ideal+').'; }
+        else { _secTxt+=' · a tiempo'; }
+      }
+      f2.push(['Secado',_secTxt]);
+    }
     var c2=mkCard('Reproducción',f2);
     if((a.nroServicios||0)>=5){var w=document.createElement('div');w.className='warn-block';w.textContent=''+a.nroServicios+' servicios en este ciclo — evaluar rechazo';c2.appendChild(w);}
+    if(_secAlerta){var ws=document.createElement('div');ws.className='warn-block';ws.textContent=_secAlerta;c2.appendChild(ws);}
     cont.appendChild(c2);
 
     var _enOrdene=a.estadoProd==='En Ordeñe';
@@ -3748,8 +3760,15 @@ function chequeoEvento(tipo, a, fecha){
 
   if(tipo==='Secar'){                                       // EV5
     if(prod==='Seca') return {tipo:'stop', motivo:'Ya está seca.'};
-    if(repro==='Vacía' && a.produccionUltima!=null && a.produccionUltima > (CONFIG.litrosAlertaSecarVacia||10))
+    var _umbralL=(CONFIG.litrosAlertaSecarVacia||10);
+    var _produce=a.produccionUltima!=null && a.produccionUltima > _umbralL;
+    if(repro==='Vacía' && _produce)
       return {tipo:'warn', motivo:'Vacía y todavía produce '+a.produccionUltima+' L — marcada para auditoría', marca:'[AUDIT secado vacía '+a.produccionUltima+'L]'};
+    if(repro==='Preñada' && _produce && a.partoEstimado){
+      var _dp=diasEntre(fecha, a.partoEstimado);
+      if(_dp!=null && _dp > (CONFIG.diasAntesPartoSecar||60))
+        return {tipo:'warn', motivo:'Secado prematuro: produce '+a.produccionUltima+' L y faltan '+_dp+' días para el parto — marcada para auditoría', marca:'[AUDIT secado prematuro '+_dp+'d]'};
+    }
     return {tipo:'ok'};
   }
 
