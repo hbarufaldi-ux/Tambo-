@@ -2372,19 +2372,37 @@ function abrirFicha(rp) {
     var f2=[['Último parto',fmtFecha(a.ultimoParto)],['Última insem.',fmtFecha(a.ultimaInsem)],['Parto estimado',partoTxt],['N° servicios ciclo',a.nroServicios||0]];
     if(diasEnLeche!==null) f2.push(['Días en leche',diasEnLeche]);
     if(diasGest!==null) f2.push([esPrenada?'Días gestación':'Días post servicio',diasGest]);
+    if(a.estadoProd==='Seca' && a.ultimoSecado) f2.push(['Secado',fmtFecha(a.ultimoSecado)+' ('+(-diasHasta(a.ultimoSecado))+' días)']);
     var c2=mkCard('Reproducción',f2);
     if((a.nroServicios||0)>=5){var w=document.createElement('div');w.className='warn-block';w.textContent=''+a.nroServicios+' servicios en este ciclo — evaluar rechazo';c2.appendChild(w);}
     cont.appendChild(c2);
 
+    var _enOrdene=a.estadoProd==='En Ordeñe';
+    var _esBaja=a.cat==='Baja';
     var c3=document.createElement('div'); c3.className='card';
-    var t3=document.createElement('div'); t3.className='section-title'; t3.textContent='Última producción'; c3.appendChild(t3);
-    if(a.produccionUltima!==null){
-      var pd=document.createElement('div'); pd.style.cssText='text-align:center;padding:8px 0;';
-      pd.innerHTML='<div style="font-size:36px;font-weight:700;">'+a.produccionUltima+'</div><div style="font-size:13px;color:#8E8E93;">litros/día</div>';
-      c3.appendChild(pd);
-      if(a.produccionUltima<12){var pw=document.createElement('div');pw.className='warn-block';pw.textContent='Producción baja. Evaluar baja.';c3.appendChild(pw);}
+    var t3=document.createElement('div'); t3.className='section-title'; t3.textContent=_enOrdene?'Producción actual':'Producción'; c3.appendChild(t3);
+    if(_enOrdene){
+      if(a.produccionUltima!==null){
+        var pd=document.createElement('div'); pd.style.cssText='text-align:center;padding:8px 0;';
+        pd.innerHTML='<div style="font-size:36px;font-weight:700;">'+a.produccionUltima+'</div><div style="font-size:13px;color:#8E8E93;">litros/día</div>';
+        c3.appendChild(pd);
+        if(a.produccionUltima<12){var pw=document.createElement('div');pw.className='warn-block';pw.textContent='Producción baja. Evaluar baja.';c3.appendChild(pw);}
+      } else {
+        var pn=document.createElement('div'); pn.style.cssText='padding:12px 0;text-align:center;color:#8E8E93;font-size:13px;'; pn.textContent='Sin registros de producción'; c3.appendChild(pn);
+      }
     } else {
-      var pn=document.createElement('div'); pn.style.cssText='padding:12px 0;text-align:center;color:#8E8E93;font-size:13px;'; pn.textContent='Sin registros de producción'; c3.appendChild(pn);
+      var _lbl=_esBaja?'Baja — sin producción':(a.estadoProd==='Seca'?'Vaca seca — no está en ordeñe':null);
+      var _sec=(a.estadoProd==='Seca'&&a.ultimoSecado)?('secada hace '+(-diasHasta(a.ultimoSecado))+' días'):'';
+      var _h='';
+      if(_lbl) _h+='<div style="font-size:15px;font-weight:600;color:#1C1C1E;margin-bottom:6px;">'+_lbl+'</div>';
+      if(a.produccionUltima!==null){
+        _h+='<div style="font-size:13px;color:#8E8E93;">Último control: <b style="color:#3C3C43;">'+a.produccionUltima+' L</b> · ciclo anterior'+(_sec?(' · '+_sec):'')+'</div>';
+      } else if(_sec){
+        _h+='<div style="font-size:13px;color:#8E8E93;">'+_sec.charAt(0).toUpperCase()+_sec.slice(1)+'</div>';
+      } else if(!_lbl){
+        _h+='<div style="text-align:center;color:#8E8E93;font-size:13px;">Sin registros de producción</div>';
+      }
+      var box=document.createElement('div'); box.style.cssText='padding:10px 0;'; box.innerHTML=_h; c3.appendChild(box);
     }
     cont.appendChild(c3);
 
@@ -2471,7 +2489,7 @@ function abrirFicha(rp) {
         item.style.opacity='0.35';
         item.style.cursor='default';
       } else {
-        item.onclick=(function(sid,_a){return function(){cerrarFichaFab();var s=document.getElementById(sid);if(s){var _ov=document.getElementById('ficha-fab-overlay');_ov.style.display='block';_ov.style.zIndex='202';_ov.onclick=function(){cerrarFichaSheet(sid);};s.style.display='block';lockScroll();if(sid==='ficha-sheet-parto'){setTimeout(function(){var toroEl=document.getElementById('fsp2-toro');if(toroEl){toroEl.value=_a.ultimaInsemToro||'';if(toroEl.value){toroEl.style.background='#D8E0E8';toroEl.style.borderColor='#B0BCC8';}fichaCheck('ficha-sheet-parto');}var rpCriaEl=document.getElementById('fsp2-rp');if(rpCriaEl&&!rpCriaEl.value){rpCriaEl.placeholder='Sugerido: '+nextRP();}},50);}}};})(op.s,a);
+        item.onclick=(function(sid,_a){return function(){_fichaGateAlerta(sid,_a);};})(op.s,a);
       }
       fabMenu.appendChild(item);
     });
@@ -3889,7 +3907,7 @@ async function guardarSecado() {
   if(_chk.tipo==='stop'){showToast(_chk.motivo,true);return;}
   var _obsSec=document.getElementById('s-obs').value||'';
   if(_chk.tipo==='warn'){ if(_chk.marca) _obsSec=(_obsSec?_obsSec+' ':'')+_chk.marca; showToast(_chk.motivo); }
-  a.estadoProd='Seca'; if(a.cat==='Vaquillona') a.cat='Vaca';
+  a.estadoProd='Seca'; a.ultimoSecado=document.getElementById('s-fecha').value; if(a.cat==='Vaquillona') a.cat='Vaca';
   fb_syncAnimal(animal);
   var fila=[generarID('Sec',animal),document.getElementById('s-fecha').value,animal,a.nombre,estadoAnt,_obsSec];
   var ok=await enviarASheets('Reg_Secados',fila);
@@ -4295,6 +4313,7 @@ function importarPadronDIRSA(input) {
           partoEstimado: (estadoRepro==='Preñada' ? (proxPartoStr || null) : null),
           nroServicios:  parseInt(String(row['Nro.Servicio']||'0').trim())||0,
           produccionUltima: produccion,
+          ultimoSecado:  parseFechaDIRSA(secadoStr),
           madre:         rpMadre,
           padre:         padre,
           nroLactancia:  nroLact,
@@ -6943,6 +6962,36 @@ function fichaSelTbc(el, val) {
   el.style.borderColor = val === 'Negativa' ? '#1A7A40' : '#A32D2D';
   el.setAttribute('data-selected','1');
 }
+// ===== ALERTA PREVIA + apertura de sheet desde el FAB de la ficha =====
+function _abrirSheetFicha(sid, _a){cerrarFichaFab();var s=document.getElementById(sid);if(s){var _ov=document.getElementById('ficha-fab-overlay');_ov.style.display='block';_ov.style.zIndex='202';_ov.onclick=function(){cerrarFichaSheet(sid);};s.style.display='block';lockScroll();if(sid==='ficha-sheet-parto'){setTimeout(function(){var toroEl=document.getElementById('fsp2-toro');if(toroEl){toroEl.value=_a.ultimaInsemToro||'';if(toroEl.value){toroEl.style.background='#D8E0E8';toroEl.style.borderColor='#B0BCC8';}fichaCheck('ficha-sheet-parto');}var rpCriaEl=document.getElementById('fsp2-rp');if(rpCriaEl&&!rpCriaEl.value){rpCriaEl.placeholder='Sugerido: '+nextRP();}},50);}}}
+
+function _fichaGateAlerta(sid, _a){
+  var mapa={'ficha-sheet-inseminar':'Inseminar','ficha-sheet-secar':'Secar','ficha-sheet-parto':'Parto','ficha-sheet-produccion':'Producción'};
+  var tipo=mapa[sid];
+  if(tipo){
+    var chk=chequeoEvento(tipo, _a);
+    if(chk.tipo==='warn'){ modalAlertaEvento(chk.motivo, function(){ _abrirSheetFicha(sid,_a); }); return; }
+  }
+  _abrirSheetFicha(sid,_a);
+}
+
+function modalAlertaEvento(motivo, onContinuar){
+  var prev=document.getElementById('modal-alerta-evento'); if(prev) prev.remove();
+  var ov=document.createElement('div'); ov.id='modal-alerta-evento';
+  ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:400;display:flex;align-items:center;justify-content:center;padding:24px;';
+  var card=document.createElement('div');
+  card.style.cssText='background:#fff;border-radius:16px;max-width:340px;width:100%;padding:20px;box-shadow:0 8px 30px rgba(0,0,0,0.25);position:relative;';
+  card.innerHTML='<button id="mae-x" aria-label="Cerrar" style="position:absolute;top:12px;right:12px;border:none;background:transparent;font-size:20px;font-weight:700;color:#8E8E93;cursor:pointer;line-height:1;">✕</button>'+
+    '<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;"><span style="display:inline-flex;width:28px;height:28px;border-radius:8px;background:#FFF3CC;color:#8A6D00;align-items:center;justify-content:center;font-weight:800;flex-shrink:0;">!</span><div style="font-size:17px;font-weight:800;color:#1C1C1E;">Atención</div></div>'+
+    '<div style="font-size:15px;line-height:1.45;color:#1C1C1E;margin-bottom:18px;">'+motivo+'</div>'+
+    '<div style="display:flex;gap:10px;"><button id="mae-cancel" style="flex:1;background:#EBF0F5;border:1px solid #B0BCC8;color:#1C1C1E;border-radius:12px;padding:13px;font-size:15px;font-weight:700;cursor:pointer;">Cancelar</button><button id="mae-ok" style="flex:1;background:#1C1C1E;border:none;color:#fff;border-radius:12px;padding:13px;font-size:15px;font-weight:700;cursor:pointer;">Continuar</button></div>';
+  ov.appendChild(card); document.body.appendChild(ov);
+  function cerrar(){ ov.remove(); }
+  document.getElementById('mae-x').onclick=cerrar;
+  document.getElementById('mae-cancel').onclick=cerrar;
+  document.getElementById('mae-ok').onclick=function(){ cerrar(); onContinuar(); };
+}
+
 async function fichaGuardar(sheetId, rp) {
   var a = getAnimal(rp); if(!a) return;
   cerrarFichaSheet(sheetId);
@@ -7050,7 +7099,7 @@ async function fichaGuardar(sheetId, rp) {
     var _chk=chequeoEvento('Secar',a);
     if(_chk.tipo==='stop'){ showToast(_chk.motivo,true); return; }
     var _obsS=(_chk.tipo==='warn'&&_chk.marca)?_chk.marca:'';
-    a.estadoProd='Seca'; guardarCacheLocal(); fb_syncAnimal(rp);
+    a.estadoProd='Seca'; a.ultimoSecado=document.getElementById('fss-fecha').value||hoy; guardarCacheLocal(); fb_syncAnimal(rp);
     await enviarASheets('Reg_Secados',[generarID('Sec',rp),document.getElementById('fss-fecha').value||hoy,rp,a.nombre,_obsS]);
     agregarReciente('secado', rp, 'Secado');
     showToast(_chk.tipo==='warn'?_chk.motivo:'Secado registrado ✓'); renderDashboard(); renderRodeo();
