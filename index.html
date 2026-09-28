@@ -434,7 +434,16 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 
 <!-- CELO -->
 <div id="screen-celo" class="screen">
-  <div id="celo-form">
+  <div class="card" id="celo-trabajo-card">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+      <div class="section-title" style="margin:0;">Detección de celo</div>
+      <button onclick="abrirCeloSuelto()" style="background:#1C1C1E;color:#fff;border:none;border-radius:12px;width:34px;height:34px;font-size:22px;line-height:1;cursor:pointer;flex-shrink:0;">+</button>
+    </div>
+    <div id="celo-trabajo-sub" style="font-size:13px;color:#8E8E93;margin-bottom:10px;">Vacas a servir y en observación</div>
+    <div id="celo-trabajo-lista"></div>
+  </div>
+
+  <div id="celo-form" style="display:none;">
     <div class="card">
       <div class="section-title">Registro de celo</div>
       <div class="field-row">
@@ -444,7 +453,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
       <div id="c-alerta"></div>
       <div class="field"><label>Observaciones</label><textarea id="c-obs" rows="2" placeholder="Opcional..."></textarea></div>
       <button class="btn-primary" onclick="guardarCelo()">Registrar celo</button>
-    <button class="btn-secondary" onclick="goBack()" style="margin-top:6px;">Cancelar</button>
+    <button class="btn-secondary" onclick="cerrarCeloSuelto()" style="margin-top:6px;">Cancelar</button>
     </div>
   </div>
 
@@ -1312,6 +1321,7 @@ var CONFIG_DEFAULT = {
   litrosVentaRechazo: 10,
   // Reproducción
   diasEsperaPosparto: 45,
+  diasAlertaAnestro: 60,
   umbralServicios: 5,
   diasReinsemTemprana: 21,
   mesesAbortoPorLactancia: 6,
@@ -1579,11 +1589,14 @@ function estaListo(a) {
 // ---- ALERTAS ----
 var ALERT_CATS = {
   parto:        {label:'Parto vencido',       color:'#FFE8E8', text:'#A0200A', dot:'#C03030'},
+  secadoVencido:{label:'Secado vencido',      color:'#FFE0D6', text:'#8A2A00', dot:'#D04000'},
+  servir:       {label:'A servir',            color:'#E0F0D6', text:'#2A6A10', dot:'#40A030'},
   tacto:        {label:'A tactar',            color:'#FFE8CC', text:'#7A3500', dot:'#E07000'},
   secar:        {label:'A secar',             color:'#FFF3CC', text:'#7A5500', dot:'#E0A000'},
+  anestro:      {label:'Anestro / sin celo',  color:'#E8E0F5', text:'#4A3080', dot:'#7050B0'},
   servicios:    {label:'Evaluar rechazo',     color:'#EEE0FF', text:'#5A2DA0', dot:'#8040D0'},
   produccion:   {label:'Producción baja',     color:'#D6EAFF', text:'#0A4FA6', dot:'#1060C0'},
-  SecaSinPreñez:{label:'Seca sin preñez',     color:'#FFE8CC', text:'#7A3500', dot:'#E07000'},
+  SecaSinPreñez:{label:'Seca sin preñez',     color:'#D9E4EC', text:'#3A5060', dot:'#5A7A90'},
 };
 
 
@@ -1663,8 +1676,14 @@ function calcAlertas() {
       var dp=diasHasta(a.partoEstimado);
       if(dp!==null&&dp<=0) {
         alerts.push({cat:'parto', rp:a.rp, detalle:'Hace '+Math.abs(dp)+' días', urgencia:Math.abs(dp)});
-      } else if(dp!==null&&dp<=(CONFIG.diasAntesPartoSecar+CONFIG.diasAlertaSecado)&&a.estadoProd!=='Seca') {
-        alerts.push({cat:'secar', rp:a.rp, detalle:'En '+dp+' días ('+fmtFecha(a.partoEstimado)+')', urgencia:(CONFIG.diasAntesPartoSecar+CONFIG.diasAlertaSecado)-dp});
+      } else if(dp!==null&&a.estadoProd!=='Seca') {
+        // Secado vencido: ya pasó la fecha ideal de secado y sigue en ordeñe (alerta fuerte)
+        if(dp<=CONFIG.diasAntesPartoSecar) {
+          alerts.push({cat:'secadoVencido', rp:a.rp, detalle:'Debía secarse (faltan '+dp+' días al parto)', urgencia:1000+(CONFIG.diasAntesPartoSecar-dp)});
+        // A secar: ventana de aviso anticipado antes de la fecha ideal
+        } else if(dp<=(CONFIG.diasAntesPartoSecar+CONFIG.diasAlertaSecado)) {
+          alerts.push({cat:'secar', rp:a.rp, detalle:'En '+dp+' días ('+fmtFecha(a.partoEstimado)+')', urgencia:(CONFIG.diasAntesPartoSecar+CONFIG.diasAlertaSecado)-dp});
+        }
       }
     }
 
@@ -1675,6 +1694,28 @@ function calcAlertas() {
     }
     if(a.diasNR&&a.diasNR>21&&a.estadoRepro!=='Preñada') {
       alerts.push({cat:'tacto', rp:a.rp, detalle:a.diasNR+' días sin retorno', urgencia:a.diasNR});
+    }
+
+    // A servir — parió, cumplió el PVE y sigue vacía sin inseminar
+    if(a.estadoProd==='En Ordeñe' && a.ultimoParto && !a.ultimaInsem
+       && (a.estadoRepro==='Vacía'||!a.estadoRepro)) {
+      var dPostParto=-diasHasta(a.ultimoParto);
+      if(dPostParto!==null && dPostParto>=CONFIG.diasEsperaPosparto) {
+        alerts.push({cat:'servir', rp:a.rp, detalle:'Día '+dPostParto+' post-parto, sin servicio', urgencia:dPostParto});
+      }
+    }
+
+    // Anestro / celo no detectado — marcada Anestro (vet), o vacía con un celo real que se hizo viejo.
+    // No se infiere anestro de la fecha de parto sin celo: eso ya lo cubre "A servir".
+    if(a.estadoProd==='En Ordeñe' && a.estadoRepro!=='Preñada' && a.estadoRepro!=='Inseminada' && !a.ultimaInsem) {
+      if(a.estadoRepro==='Anestro') {
+        alerts.push({cat:'anestro', rp:a.rp, detalle:'Marcada en anestro', urgencia:900});
+      } else if(a.ultimoCelo && a.ultimoParto && -diasHasta(a.ultimoParto)>=CONFIG.diasEsperaPosparto) {
+        var dSinCelo=-diasHasta(a.ultimoCelo);
+        if(dSinCelo!==null && dSinCelo>=CONFIG.diasAlertaAnestro) {
+          alerts.push({cat:'anestro', rp:a.rp, detalle:'Sin celo hace '+dSinCelo+' días', urgencia:dSinCelo});
+        }
+      }
     }
 
     // Evaluar rechazo
@@ -1786,7 +1827,7 @@ function renderDashboard() {
     lista.appendChild(ok);
   } else {
     // Grouped alerts by category
-    var catOrder = ['parto','SecaSinPreñez','tacto','secar','servicios','produccion'];
+    var catOrder = ['parto','secadoVencido','servir','SecaSinPreñez','tacto','secar','anestro','servicios','produccion'];
     catOrder.forEach(function(cat) {
       if(!grupos[cat] || grupos[cat].length===0) return;
       var cfg = ALERT_CATS[cat];
@@ -1815,11 +1856,17 @@ function renderDashboard() {
             },150);
           } else if(al.cat==='tacto') {
             abrirTactoMasivo();
-          } else if(al.cat==='secar') {
+          } else if(al.cat==='secar' || al.cat==='secadoVencido') {
             goTo('secado');
             setTimeout(function(){
               var sel=document.getElementById('s-animal');
               if(sel){ sel.value=String(al.rp); onAnimalSecado(); }
+            },150);
+          } else if(al.cat==='servir') {
+            goTo('inseminacion');
+            setTimeout(function(){
+              var sel=document.getElementById('i-animal');
+              if(sel){ sel.value=String(al.rp); if(typeof onAnimalInsem==='function') onAnimalInsem(); }
             },150);
           } else if(al.cat==='servicios') {
             abrirModalRechazo(al.rp);
@@ -1947,7 +1994,7 @@ function ajustarMarginPadron(){
 // ---- CONFIGURACIÓN UI ----
 function renderConfig() {
   var fields = ['nombreTambo','superficie','ubicacion','unidad','litrosR1',
-    'umbralBajaProduccion','litrosVentaRechazo','diasEsperaPosparto',
+    'umbralBajaProduccion','litrosVentaRechazo','diasEsperaPosparto','diasAlertaAnestro',
     'umbralServicios','diasReinsemTemprana','diasAntesPartoSecar','diasAlertaSecado','litrosAlertaSecarVacia','mesesAbortoPorLactancia',
     'calUfcAlerta','calUfcMal','calCsAlerta','calCsMal','calGrasaMin','calProtMin'];
   fields.forEach(function(k) {
@@ -1991,6 +2038,7 @@ function guardarConfigUI() {
   CONFIG.umbralBajaProduccion = parseFloat(document.getElementById('cfg-umbralBajaProduccion').value) || CONFIG_DEFAULT.umbralBajaProduccion;
   CONFIG.litrosVentaRechazo = parseFloat(document.getElementById('cfg-litrosVentaRechazo').value) || CONFIG_DEFAULT.litrosVentaRechazo;
   CONFIG.diasEsperaPosparto = parseInt(document.getElementById('cfg-diasEsperaPosparto').value) || CONFIG_DEFAULT.diasEsperaPosparto;
+  CONFIG.diasAlertaAnestro = parseInt(document.getElementById('cfg-diasAlertaAnestro').value) || CONFIG_DEFAULT.diasAlertaAnestro;
   CONFIG.umbralServicios    = parseInt(document.getElementById('cfg-umbralServicios').value) || CONFIG_DEFAULT.umbralServicios;
   CONFIG.diasReinsemTemprana = parseInt(document.getElementById('cfg-diasReinsemTemprana').value) || CONFIG_DEFAULT.diasReinsemTemprana;
   CONFIG.litrosAlertaSecarVacia = parseFloat(document.getElementById('cfg-litrosAlertaSecarVacia').value) || CONFIG_DEFAULT.litrosAlertaSecarVacia;
@@ -4023,7 +4071,139 @@ async function guardarCelo() {
   fb_syncAnimal(animal);
   var fila=[generarID('Cel',animal),document.getElementById('c-fecha').value,animal,a.nombre,a.estadoRepro,document.getElementById('c-obs').value||''];
   var ok=await enviarASheets('Reg_Celos',fila,{resultado:a.estadoRepro});
-  if(ok){agregarReciente('celo', animal, a.estadoRepro+' — '+document.getElementById('c-obs').value);document.getElementById('celo-form').style.display='none';document.getElementById('celo-ok').style.display='block';}
+  if(ok){agregarReciente('celo', animal, a.estadoRepro+' — '+document.getElementById('c-obs').value);cerrarCeloSuelto();renderCeloTrabajo();showToast('Celo registrado');}
+}
+
+// ===== DETECCIÓN DE CELO — embudo (entrega 1) =====
+// El estado vive en a.celoMarca = {metodo:'Parche'|'Pintura', fecha:'YYYY-MM-DD', motivo:'servicio'|'retorno'} | null
+// fb_syncAnimal sincroniza el objeto animal entero, así que el campo viaja solo (sin tocar Sheets).
+
+// ¿La vaca está "a servir"? (pasó el PVE, vacía, sin servicio) — mismo criterio que la alerta del dashboard
+function _esAServir(a){
+  if(a.cat==='Baja'||a.sexo!=='H') return false;
+  if(a.estadoProd!=='En Ordeñe') return false;
+  if(a.ultimaInsem) return false;
+  if(!(a.estadoRepro==='Vacía'||!a.estadoRepro)) return false;
+  if(!a.ultimoParto) return false;
+  var d=-diasHasta(a.ultimoParto);
+  return d!==null && d>=CONFIG.diasEsperaPosparto;
+}
+
+// Arma la lista de trabajo: sin marcar (a servir) + marcadas en observación. (El "vigilando retorno" llega en la entrega 2.)
+function _listaCeloTrabajo(){
+  var out=[];
+  rodeo.forEach(function(a){
+    if(a.cat==='Baja'||a.sexo!=='H') return;
+    var marca=a.celoMarca||null;
+    if(marca && marca.motivo==='servicio'){
+      out.push({rp:a.rp, estado:'marcada', marca:marca, urg:1000+(-diasHasta(marca.fecha)||0)});
+    } else if(!marca && _esAServir(a)){
+      out.push({rp:a.rp, estado:'aservir', urg:-diasHasta(a.ultimoParto)});
+    }
+  });
+  out.sort(function(x,y){ return (y.urg||0)-(x.urg||0); });
+  return out;
+}
+
+function renderCeloTrabajo(){
+  var cont=document.getElementById('celo-trabajo-lista');
+  var sub=document.getElementById('celo-trabajo-sub');
+  if(!cont) return;
+  var lista=_listaCeloTrabajo();
+  var nMarcar=lista.filter(function(x){return x.estado==='aservir';}).length;
+  var nObs=lista.filter(function(x){return x.estado==='marcada';}).length;
+  if(sub) sub.textContent = nMarcar+' a marcar · '+nObs+' en observación';
+  cont.innerHTML='';
+  if(!lista.length){
+    cont.innerHTML='<div style="text-align:center;color:#8E8E93;font-size:14px;padding:14px 0;">No hay vacas a servir ni marcadas.</div>';
+    return;
+  }
+  lista.forEach(function(item){
+    var a=getAnimal(item.rp); if(!a) return;
+    var card=document.createElement('div');
+    var color = item.estado==='marcada' ? '#7050B0' : '#40A030';
+    card.style.cssText='background:#fff;border-radius:14px;padding:14px 16px;margin-bottom:8px;border-left:4px solid '+color+';';
+
+    var head=document.createElement('div');
+    head.style.cssText='display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;';
+    var sub2 = item.estado==='marcada'
+      ? '<span style="color:#5A3D9A;font-weight:600;">'+item.marca.metodo+' hace '+(-diasHasta(item.marca.fecha))+' días</span>'
+      : 'Día '+(-diasHasta(a.ultimoParto))+' post-parto, a servir';
+    head.innerHTML='<div><div style="font-size:16px;font-weight:700;color:#1C1C1E;">RP '+a.rp+(a.nombre?' — '+a.nombre:'')+'</div>'
+      +'<div style="font-size:12px;color:#8E8E93;margin-top:2px;">'+sub2+'</div></div>';
+    card.appendChild(head);
+
+    var acc=document.createElement('div');
+    acc.style.cssText='display:flex;gap:8px;';
+    if(item.estado==='aservir'){
+      acc.appendChild(_btnCelo('Parche', '#EBF0F5', '#1C1C1E', function(){ marcarCelo(a.rp,'Parche'); }));
+      acc.appendChild(_btnCelo('Pintura', '#EBF0F5', '#1C1C1E', function(){ marcarCelo(a.rp,'Pintura'); }));
+    } else {
+      acc.appendChild(_btnCelo('Mostró celo', '#1C1C1E', '#fff', function(){ celoDetectado(a.rp); }));
+      acc.appendChild(_btnCelo('Quitar marca', '#F0EBF5', '#5A3D9A', function(){ quitarMarcaCelo(a.rp); }));
+    }
+    card.appendChild(acc);
+    cont.appendChild(card);
+  });
+}
+
+function _btnCelo(txt, bg, fg, fn){
+  var b=document.createElement('button');
+  b.textContent=txt;
+  b.style.cssText='flex:1;background:'+bg+';color:'+fg+';border:none;border-radius:12px;padding:12px 8px;font-size:15px;font-weight:700;cursor:pointer;';
+  b.onclick=fn;
+  return b;
+}
+
+function marcarCelo(rp, metodo){
+  var a=getAnimal(rp); if(!a) return;
+  a.celoMarca={metodo:metodo, fecha:fechaLocal(), motivo:'servicio'};
+  fb_syncAnimal(rp);
+  guardarCacheLocal();
+  renderCeloTrabajo();
+  showToast('RP '+rp+' marcada ('+metodo+')');
+}
+
+function quitarMarcaCelo(rp){
+  var a=getAnimal(rp); if(!a) return;
+  a.celoMarca=null;
+  fb_syncAnimal(rp);
+  guardarCacheLocal();
+  renderCeloTrabajo();
+  showToast('RP '+rp+' — marca quitada');
+}
+
+// Mostró celo → registra el celo y la manda a inseminar (limpia la marca de servicio)
+function celoDetectado(rp){
+  var a=getAnimal(rp); if(!a) return;
+  var fecha=fechaLocal();
+  a.ultimoCelo=fecha;
+  a.celoMarca=null;
+  fb_syncAnimal(rp);
+  guardarCacheLocal();
+  var fila=[generarID('Cel',rp),fecha,rp,a.nombre,a.estadoRepro,'Celo detectado (marca)'];
+  enviarASheets('Reg_Celos',fila,{resultado:a.estadoRepro});
+  agregarReciente('celo', rp, 'Celo detectado');
+  renderCeloTrabajo();
+  // Ir a inseminar con la vaca cargada
+  goTo('inseminacion');
+  setTimeout(function(){
+    var sel=document.getElementById('i-animal');
+    if(sel){ sel.value=String(rp); if(typeof onAnimalInsem==='function') onAnimalInsem(); }
+  },150);
+}
+
+// Botón + : registrar un celo suelto de cualquier vaca
+function abrirCeloSuelto(){
+  document.getElementById('celo-trabajo-card').style.display='none';
+  document.getElementById('celo-form').style.display='block';
+  var f=document.getElementById('c-fecha'); if(f&&!f.value) f.value=fechaLocal();
+}
+function cerrarCeloSuelto(){
+  document.getElementById('celo-form').style.display='none';
+  var ok=document.getElementById('celo-ok'); if(ok) ok.style.display='none';
+  document.getElementById('celo-trabajo-card').style.display='block';
+  renderCeloTrabajo();
 }
 
 async function guardarTacto() {
@@ -4244,7 +4424,7 @@ function goTo(screen, btn) {
   });
 
   if(screen==='guachera') renderGuachera();
-  if(screen==='celo')        { renderRecientes('celo');  poblarSelectsSiSucios(); }
+  if(screen==='celo')        { renderCeloTrabajo(); renderRecientes('celo');  poblarSelectsSiSucios(); }
   if(screen==='inseminacion'){ renderRecientes('insem'); poblarSelectsSiSucios(); }
   if(screen==='parto')       { renderRecientes('parto'); poblarSelectsSiSucios(); }
   if(screen==='produccion')  { renderRecientes('prod');  poblarSelectsSiSucios(); }
@@ -7982,6 +8162,13 @@ function cerrarJovenFab() {
       <label class="form-label">Días espera posparto (1ra insem.)</label>
       <div style="display:flex;align-items:center;gap:8px;">
         <input type="number" id="cfg-diasEsperaPosparto" class="form-input" inputmode="numeric" style="flex:1;">
+        <span style="font-size:13px;color:#8E8E93;flex-shrink:0;">días</span>
+      </div>
+    </div>
+    <div class="form-row">
+      <label class="form-label">Días sin celo para alerta de anestro</label>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <input type="number" id="cfg-diasAlertaAnestro" class="form-input" inputmode="numeric" style="flex:1;">
         <span style="font-size:13px;color:#8E8E93;flex-shrink:0;">días</span>
       </div>
     </div>
