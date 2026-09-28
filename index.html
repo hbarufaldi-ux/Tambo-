@@ -4244,6 +4244,7 @@ function cerrarCeloSuelto(){
   document.getElementById('celo-form').style.display='none';
   var ok=document.getElementById('celo-ok'); if(ok) ok.style.display='none';
   document.getElementById('celo-trabajo-card').style.display='block';
+  var _cb=document.getElementById('celo-buscar'); if(_cb) _cb.value='';
   renderCeloTrabajo();
 }
 
@@ -4465,7 +4466,7 @@ function goTo(screen, btn) {
   });
 
   if(screen==='guachera') renderGuachera();
-  if(screen==='celo')        { renderCeloTrabajo(); renderRecientes('celo');  poblarSelectsSiSucios(); }
+  if(screen==='celo')        { var _cb=document.getElementById('celo-buscar'); if(_cb) _cb.value=''; renderCeloTrabajo(); renderRecientes('celo');  poblarSelectsSiSucios(); }
   if(screen==='inseminacion'){ renderRecientes('insem'); poblarSelectsSiSucios(); }
   if(screen==='parto')       { renderRecientes('parto'); poblarSelectsSiSucios(); }
   if(screen==='produccion')  { renderRecientes('prod');  poblarSelectsSiSucios(); }
