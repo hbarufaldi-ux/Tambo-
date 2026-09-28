@@ -282,6 +282,21 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
     </div>
   </div>
 
+  <div class="d-panel" id="dash-celo-acceso" style="cursor:pointer;" onclick="goTo('celo')">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 18px;">
+      <div style="display:flex;align-items:center;gap:12px;">
+        <span style="width:38px;height:38px;border-radius:11px;background:#E0F0D6;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2A6A10" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-4.5-9.2-9C1 8.5 3 5 6.3 5 8.4 5 10 6.4 12 9c2-2.6 3.6-4 5.7-4C21 5 23 8.5 21.2 12 19 16.5 12 21 12 21Z"/></svg>
+        </span>
+        <div>
+          <div style="font-size:15px;font-weight:800;color:#1C1C1E;">Detección de celo</div>
+          <div id="dash-celo-sub" style="font-size:12.5px;color:#8E8E93;margin-top:1px;">—</div>
+        </div>
+      </div>
+      <span style="font-size:20px;color:#B0BCC8;flex-shrink:0;">›</span>
+    </div>
+  </div>
+
   <div class="d-2col">
     <div class="d-panel"><div class="d-sec">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
@@ -1777,6 +1792,15 @@ function calcGuacheraAlertas() {
 function renderDashboard() {
   var vacas=rodeo.filter(function(a){return a.cat==='Vaca'&&a.estadoRepro!=='Baja';});
   var totalVacas=vacas.length;
+  // Acceso a detección de celo: contador en vivo
+  (function(){
+    var sub=document.getElementById('dash-celo-sub');
+    if(!sub || typeof _listaCeloTrabajo!=='function') return;
+    var l=_listaCeloTrabajo();
+    var nM=l.filter(function(x){return x.estado==='aservir';}).length;
+    var nO=l.filter(function(x){return x.estado==='marcada';}).length;
+    sub.textContent = (nM+nO===0) ? 'Sin vacas pendientes hoy' : (nM+' a marcar · '+nO+' en observación');
+  })();
   // Indicadores del inicio: SOLO sobre vacas (mismo universo que el divisor totalVacas)
   var nOrdene=vacas.filter(function(a){return a.estadoProd==='En Ordeñe';}).length;
   var nPrenadas=vacas.filter(function(a){return a.estadoRepro==='Preñada';}).length;
