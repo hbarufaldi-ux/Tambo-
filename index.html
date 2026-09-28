@@ -455,6 +455,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
       <button onclick="abrirCeloSuelto()" style="background:#1C1C1E;color:#fff;border:none;border-radius:12px;width:34px;height:34px;font-size:22px;line-height:1;cursor:pointer;flex-shrink:0;">+</button>
     </div>
     <div id="celo-trabajo-sub" style="font-size:13px;color:#8E8E93;margin-bottom:10px;">Vacas a servir y en observación</div>
+    <input type="search" id="celo-buscar" placeholder="Buscar por RP o nombre..." oninput="renderCeloTrabajo()" style="width:100%;padding:11px 14px;border:1px solid #B0BCC8;border-radius:12px;font-size:17px;background:#fff;color:#1C1C1E;box-sizing:border-box;margin-bottom:12px;">
     <div id="celo-trabajo-lista"></div>
   </div>
 
@@ -3839,18 +3840,17 @@ function limpiarCache(){['tambo_rodeo','tambo_rodeo_ts','tambo_guachera','tambo_
 // ============================================================
 
 async function enviarASheetsEditar(hoja, buscarFecha, fila) {
-  // Edicion: envia con flag editar:true y fecha para buscar la fila en el GAS
+  // Edición: instantánea en local; el POST a Sheets (con editar:true) va en segundo plano.
   guardarCacheLocal();
-  showSaving(true); setSyncStatus('⟳ Guardando...');
-  try {
-    var payload = {hoja:hoja, fila:fila, rp:String(fila[2]||''), editar:true, buscarFecha:buscarFecha, datos:{}};
-    await fetch(SCRIPT_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain'},body:JSON.stringify(payload)});
-    setSyncStatus('● '+rodeo.length+' animales'); showSaving(false); return true;
-  } catch(e) {
-    var nPend = leerPendientes().length;
-    setSyncStatus('Sin red ('+nPend+' pend.)');
-    showSaving(false); showToast('Sin conexión — guardado localmente'); return true;
+  var payload = {hoja:hoja, fila:fila, rp:String(fila[2]||''), editar:true, buscarFecha:buscarFecha, datos:{}};
+  if(typeof navigator!=='undefined' && navigator.onLine===false){
+    setSyncStatus('Sin red — cambio local');
+    return true;
   }
+  fetch(SCRIPT_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain'},body:JSON.stringify(payload)})
+    .catch(function(e){ setSyncStatus('Sin red — cambio local'); });
+  setSyncStatus('● '+rodeo.length+' animales');
+  return true;
 }
 
 async function enviarASheets(hoja, fila, datosExtra) {
@@ -3885,20 +3885,27 @@ async function enviarASheets(hoja, fila, datosExtra) {
       }
     }
   } catch(e) { console.warn('Firebase paralelo:', e); }
-  // continuar con Sheet normalmente
+  // Guardado instantáneo: Firestore (arriba) + caché local. NO se espera a Sheets.
   guardarCacheLocal();
-  showSaving(true); setSyncStatus('⟳ Guardando...');
+  // Sheets queda como espejo, en segundo plano (no bloquea al usuario).
+  _enviarSheetsBackground(hoja, fila, datosExtra);
+  setSyncStatus('● '+rodeo.length+' animales');
+  return true;
+}
 
-  try {
-    var payload = {hoja:hoja, fila:fila, rp:String(fila[2]||''), datos:datosExtra||{}};
-    await fetch(SCRIPT_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain'},body:JSON.stringify(payload)});
-    setSyncStatus('● '+rodeo.length+' animales'); showSaving(false); return true;
-  } catch(e) {
+// Envía a Sheets sin bloquear. Si no hay red o falla, cae a la cola de pendientes (se reintenta al reconectar).
+function _enviarSheetsBackground(hoja, fila, datosExtra){
+  if(typeof navigator!=='undefined' && navigator.onLine===false){
     agregarPendiente(hoja, fila, datosExtra||null);
-    var nPend = leerPendientes().length;
-    setSyncStatus('Sin red ('+nPend+' pend.)');
-    showSaving(false); showToast('Sin conexión — guardado localmente'); return true;
+    setSyncStatus('Sin red ('+leerPendientes().length+' pend.)');
+    return;
   }
+  var payload = {hoja:hoja, fila:fila, rp:String((fila&&fila[2])||''), datos:datosExtra||{}};
+  fetch(SCRIPT_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain'},body:JSON.stringify(payload)})
+    .catch(function(e){
+      agregarPendiente(hoja, fila, datosExtra||null);
+      setSyncStatus('Sin red ('+leerPendientes().length+' pend.)');
+    });
 }
 
 // Sincronizar animal actualizado a Firestore después de un evento
@@ -4136,47 +4143,57 @@ function renderCeloTrabajo(){
   var lista=_listaCeloTrabajo();
   var nMarcar=lista.filter(function(x){return x.estado==='aservir';}).length;
   var nObs=lista.filter(function(x){return x.estado==='marcada';}).length;
-  if(sub) sub.textContent = nMarcar+' a marcar · '+nObs+' en observación';
-  cont.innerHTML='';
+  if(sub) sub.textContent = (nMarcar+nObs===0) ? 'Sin vacas pendientes hoy' : (nMarcar+' a marcar · '+nObs+' en observación');
+
+  // Filtro del buscador (RP o nombre)
+  var q=(document.getElementById('celo-buscar')||{}).value||'';
+  q=q.trim().toLowerCase();
+  if(q){
+    lista=lista.filter(function(item){
+      var a=getAnimal(item.rp); if(!a) return false;
+      return String(a.rp).indexOf(q)>=0 || (a.nombre&&a.nombre.toLowerCase().indexOf(q)>=0);
+    });
+  }
+
   if(!lista.length){
-    cont.innerHTML='<div style="text-align:center;color:#8E8E93;font-size:14px;padding:14px 0;">No hay vacas a servir ni marcadas.</div>';
+    cont.innerHTML='<div style="text-align:center;color:#8E8E93;font-size:14px;padding:14px 0;">'+(q?'Sin resultados para "'+q+'".':'No hay vacas a servir ni marcadas.')+'</div>';
     return;
   }
-  lista.forEach(function(item){
-    var a=getAnimal(item.rp); if(!a) return;
-    var card=document.createElement('div');
-    var color = item.estado==='marcada' ? '#7050B0' : '#40A030';
-    card.style.cssText='background:#fff;border-radius:14px;padding:14px 16px;margin-bottom:8px;border-left:4px solid '+color+';';
 
-    var head=document.createElement('div');
-    head.style.cssText='display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;';
-    var sub2 = item.estado==='marcada'
-      ? '<span style="color:#5A3D9A;font-weight:600;">'+item.marca.metodo+' hace '+(-diasHasta(item.marca.fecha))+' días</span>'
-      : 'Día '+(-diasHasta(a.ultimoParto))+' post-parto, a servir';
-    head.innerHTML='<div><div style="font-size:16px;font-weight:700;color:#1C1C1E;">RP '+a.rp+(a.nombre?' — '+a.nombre:'')+'</div>'
-      +'<div style="font-size:12px;color:#8E8E93;margin-top:2px;">'+sub2+'</div></div>';
-    card.appendChild(head);
-
-    var acc=document.createElement('div');
-    acc.style.cssText='display:flex;gap:8px;';
-    if(item.estado==='aservir'){
-      acc.appendChild(_btnCelo('Parche', '#EBF0F5', '#1C1C1E', function(){ marcarCelo(a.rp,'Parche'); }));
-      acc.appendChild(_btnCelo('Pintura', '#EBF0F5', '#1C1C1E', function(){ marcarCelo(a.rp,'Pintura'); }));
-    } else {
-      acc.appendChild(_btnCelo('Mostró celo', '#1C1C1E', '#fff', function(){ celoDetectado(a.rp); }));
-      acc.appendChild(_btnCelo('Quitar marca', '#F0EBF5', '#5A3D9A', function(){ quitarMarcaCelo(a.rp); }));
-    }
-    card.appendChild(acc);
-    cont.appendChild(card);
-  });
+  // Dos grupos: A marcar (acción ya) arriba, En observación abajo
+  var aMarcar=lista.filter(function(x){return x.estado==='aservir';});
+  var enObs=lista.filter(function(x){return x.estado==='marcada';});
+  var html='';
+  if(aMarcar.length) html+=_grupoCelo('A marcar', aMarcar);
+  if(enObs.length)   html+=_grupoCelo('En observación', enObs);
+  cont.innerHTML=html;
 }
 
-function _btnCelo(txt, bg, fg, fn){
-  var b=document.createElement('button');
-  b.textContent=txt;
-  b.style.cssText='flex:1;background:'+bg+';color:'+fg+';border:none;border-radius:12px;padding:12px 8px;font-size:15px;font-weight:700;cursor:pointer;';
-  b.onclick=fn;
-  return b;
+function _grupoCelo(titulo, items){
+  var h='<div style="font-size:12px;font-weight:700;color:#8E8E93;text-transform:uppercase;letter-spacing:0.4px;margin:6px 0 8px;">'+titulo+' ('+items.length+')</div>';
+  items.forEach(function(item){
+    var a=getAnimal(item.rp); if(!a) return;
+    var marcada=item.estado==='marcada';
+    // Tarjeta entera con el color del estado: borde fino + fondo tenue
+    var borde = marcada ? '#7050B0' : '#40A030';
+    var fondo = marcada ? '#F3F0FA' : '#EDF6E8';
+    var sub2 = marcada
+      ? '<span style="color:#5A3D9A;font-weight:600;">'+item.marca.metodo+' hace '+(-diasHasta(item.marca.fecha))+' días</span>'
+      : 'Día '+(-diasHasta(a.ultimoParto))+' post-parto, a servir';
+    var acciones = marcada
+      ? '<button onclick="celoDetectado('+a.rp+')" style="flex:1;background:#1C1C1E;color:#fff;border:none;border-radius:12px;padding:12px 8px;font-size:15px;font-weight:700;cursor:pointer;">Mostró celo</button>'
+        +'<button onclick="quitarMarcaCelo('+a.rp+')" style="flex:0 0 auto;background:transparent;color:#5A3D9A;border:1px solid #C9BCE6;border-radius:12px;padding:12px 14px;font-size:14px;font-weight:600;cursor:pointer;">Quitar</button>'
+      : '<button onclick="marcarCelo('+a.rp+',\'Parche\')" style="flex:1;background:#fff;color:#1C1C1E;border:1px solid #B8C4CE;border-radius:12px;padding:12px 8px;font-size:15px;font-weight:700;cursor:pointer;">Parche</button>'
+        +'<button onclick="marcarCelo('+a.rp+',\'Pintura\')" style="flex:1;background:#fff;color:#1C1C1E;border:1px solid #B8C4CE;border-radius:12px;padding:12px 8px;font-size:15px;font-weight:700;cursor:pointer;">Pintura</button>';
+    h+='<div style="background:'+fondo+';border:1.5px solid '+borde+';border-radius:14px;padding:14px 16px;margin-bottom:8px;">'
+      +'<div style="margin-bottom:10px;">'
+        +'<div style="font-size:16px;font-weight:700;color:#1C1C1E;">RP '+a.rp+(a.nombre?' — '+a.nombre:'')+'</div>'
+        +'<div style="font-size:12px;color:#6B7683;margin-top:2px;">'+sub2+'</div>'
+      +'</div>'
+      +'<div style="display:flex;gap:8px;">'+acciones+'</div>'
+    +'</div>';
+  });
+  return h;
 }
 
 function marcarCelo(rp, metodo){
