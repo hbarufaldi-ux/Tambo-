@@ -4088,6 +4088,7 @@ async function guardarInsem() {
   var _obsIns=document.getElementById('i-obs').value||'';
   if(_chk.tipo==='warn'){ if(_chk.marca) _obsIns=(_obsIns?_obsIns+' ':'')+_chk.marca; showToast(_chk.motivo); }
   a.estadoRepro='Inseminada'; a.ultimaInsem=fecha; a.ultimaInsemToro=nombreToro; a.nroServicios=(a.nroServicios||0)+1; a.partoEstimado=null;
+  a.celoMarca=null;   // servida → sale del embudo de detección de celo
   fb_syncAnimal(animal);
   var fila=[generarID('Ins',animal),fecha,animal,a.nombre,nombreToro,document.getElementById('i-tipo').value,document.getElementById('i-inseminador').value,getRadio('celo'),a.nroServicios,_obsIns];
   var ok=await enviarASheets('Reg_Inseminaciones',fila);
@@ -4126,7 +4127,9 @@ function _listaCeloTrabajo(){
   rodeo.forEach(function(a){
     if(a.cat==='Baja'||a.sexo!=='H') return;
     var marca=a.celoMarca||null;
-    if(marca && marca.motivo==='servicio'){
+    if(marca && marca.motivo==='detectado'){
+      out.push({rp:a.rp, estado:'detectada', marca:marca, urg:2000+(-diasHasta(marca.fecha)||0)});
+    } else if(marca && marca.motivo==='servicio'){
       out.push({rp:a.rp, estado:'marcada', marca:marca, urg:1000+(-diasHasta(marca.fecha)||0)});
     } else if(!marca && _esAServir(a)){
       out.push({rp:a.rp, estado:'aservir', urg:-diasHasta(a.ultimoParto)});
@@ -4141,9 +4144,16 @@ function renderCeloTrabajo(){
   var sub=document.getElementById('celo-trabajo-sub');
   if(!cont) return;
   var lista=_listaCeloTrabajo();
+  var nInsem=lista.filter(function(x){return x.estado==='detectada';}).length;
   var nMarcar=lista.filter(function(x){return x.estado==='aservir';}).length;
   var nObs=lista.filter(function(x){return x.estado==='marcada';}).length;
-  if(sub) sub.textContent = (nMarcar+nObs===0) ? 'Sin vacas pendientes hoy' : (nMarcar+' a marcar · '+nObs+' en observación');
+  if(sub){
+    var partes=[];
+    if(nInsem) partes.push(nInsem+' a inseminar');
+    partes.push(nMarcar+' a marcar');
+    partes.push(nObs+' en observación');
+    sub.textContent = (nInsem+nMarcar+nObs===0) ? 'Sin vacas pendientes hoy' : partes.join(' · ');
+  }
 
   // Filtro del buscador (RP o nombre)
   var q=(document.getElementById('celo-buscar')||{}).value||'';
@@ -4160,10 +4170,12 @@ function renderCeloTrabajo(){
     return;
   }
 
-  // Dos grupos: A marcar (acción ya) arriba, En observación abajo
+  // Grupos por urgencia: A inseminar (celo hoy) arriba, luego A marcar, luego En observación
+  var aInsem=lista.filter(function(x){return x.estado==='detectada';});
   var aMarcar=lista.filter(function(x){return x.estado==='aservir';});
   var enObs=lista.filter(function(x){return x.estado==='marcada';});
   var html='';
+  if(aInsem.length)  html+=_grupoCelo('A inseminar', aInsem);
   if(aMarcar.length) html+=_grupoCelo('A marcar', aMarcar);
   if(enObs.length)   html+=_grupoCelo('En observación', enObs);
   cont.innerHTML=html;
@@ -4173,18 +4185,25 @@ function _grupoCelo(titulo, items){
   var h='<div style="font-size:12px;font-weight:700;color:#8E8E93;text-transform:uppercase;letter-spacing:0.4px;margin:6px 0 8px;">'+titulo+' ('+items.length+')</div>';
   items.forEach(function(item){
     var a=getAnimal(item.rp); if(!a) return;
-    var marcada=item.estado==='marcada';
-    // Tarjeta entera con el color del estado: borde fino + fondo tenue
-    var borde = marcada ? '#7050B0' : '#40A030';
-    var fondo = marcada ? '#F3F0FA' : '#EDF6E8';
-    var sub2 = marcada
-      ? '<span style="color:#5A3D9A;font-weight:600;">'+item.marca.metodo+' hace '+(-diasHasta(item.marca.fecha))+' días</span>'
-      : 'Día '+(-diasHasta(a.ultimoParto))+' post-parto, a servir';
-    var acciones = marcada
-      ? '<button onclick="celoDetectado('+a.rp+')" style="flex:1;background:#1C1C1E;color:#fff;border:none;border-radius:12px;padding:12px 8px;font-size:15px;font-weight:700;cursor:pointer;">Mostró celo</button>'
-        +'<button onclick="quitarMarcaCelo('+a.rp+')" style="flex:0 0 auto;background:transparent;color:#5A3D9A;border:1px solid #C9BCE6;border-radius:12px;padding:12px 14px;font-size:14px;font-weight:600;cursor:pointer;">Quitar</button>'
-      : '<button onclick="marcarCelo('+a.rp+',\'Parche\')" style="flex:1;background:#fff;color:#1C1C1E;border:1px solid #B8C4CE;border-radius:12px;padding:12px 8px;font-size:15px;font-weight:700;cursor:pointer;">Parche</button>'
+    var est=item.estado;
+    // Colores por estado: detectada azul, marcada violeta, a servir verde
+    var borde, fondo, sub2, acciones;
+    if(est==='detectada'){
+      borde='#1060C0'; fondo='#E4EFFB';
+      sub2='<span style="color:#0A4FA6;font-weight:600;">Celo detectado'+(item.marca.metodo?' ('+item.marca.metodo+')':'')+' — inseminar</span>';
+      acciones='<button onclick="celoAInseminar('+a.rp+')" style="flex:1;background:#1C1C1E;color:#fff;border:none;border-radius:12px;padding:12px 8px;font-size:15px;font-weight:700;cursor:pointer;">Inseminar</button>'
+        +'<button onclick="quitarMarcaCelo('+a.rp+')" style="flex:0 0 auto;background:transparent;color:#0A4FA6;border:1px solid #A9CBEE;border-radius:12px;padding:12px 14px;font-size:14px;font-weight:600;cursor:pointer;">Quitar</button>';
+    } else if(est==='marcada'){
+      borde='#7050B0'; fondo='#F3F0FA';
+      sub2='<span style="color:#5A3D9A;font-weight:600;">'+item.marca.metodo+' hace '+(-diasHasta(item.marca.fecha))+' días</span>';
+      acciones='<button onclick="celoDetectado('+a.rp+')" style="flex:1;background:#1C1C1E;color:#fff;border:none;border-radius:12px;padding:12px 8px;font-size:15px;font-weight:700;cursor:pointer;">Mostró celo</button>'
+        +'<button onclick="quitarMarcaCelo('+a.rp+')" style="flex:0 0 auto;background:transparent;color:#5A3D9A;border:1px solid #C9BCE6;border-radius:12px;padding:12px 14px;font-size:14px;font-weight:600;cursor:pointer;">Quitar</button>';
+    } else {
+      borde='#40A030'; fondo='#EDF6E8';
+      sub2='Día '+(-diasHasta(a.ultimoParto))+' post-parto, a servir';
+      acciones='<button onclick="marcarCelo('+a.rp+',\'Parche\')" style="flex:1;background:#fff;color:#1C1C1E;border:1px solid #B8C4CE;border-radius:12px;padding:12px 8px;font-size:15px;font-weight:700;cursor:pointer;">Parche</button>'
         +'<button onclick="marcarCelo('+a.rp+',\'Pintura\')" style="flex:1;background:#fff;color:#1C1C1E;border:1px solid #B8C4CE;border-radius:12px;padding:12px 8px;font-size:15px;font-weight:700;cursor:pointer;">Pintura</button>';
+    }
     h+='<div style="background:'+fondo+';border:1.5px solid '+borde+';border-radius:14px;padding:14px 16px;margin-bottom:8px;">'
       +'<div style="margin-bottom:10px;">'
         +'<div style="font-size:16px;font-weight:700;color:#1C1C1E;">RP '+a.rp+(a.nombre?' — '+a.nombre:'')+'</div>'
@@ -4194,6 +4213,15 @@ function _grupoCelo(titulo, items){
     +'</div>';
   });
   return h;
+}
+
+// Desde "A inseminar" (celo ya detectado) → ir a la pantalla de inseminación con la vaca cargada
+function celoAInseminar(rp){
+  goTo('inseminacion');
+  setTimeout(function(){
+    var sel=document.getElementById('i-animal');
+    if(sel){ sel.value=String(rp); if(typeof onAnimalInsem==='function') onAnimalInsem(); }
+  },150);
 }
 
 function marcarCelo(rp, metodo){
@@ -4214,18 +4242,20 @@ function quitarMarcaCelo(rp){
   showToast('RP '+rp+' — marca quitada');
 }
 
-// Mostró celo → registra el celo y la manda a inseminar (limpia la marca de servicio)
+// Mostró celo → registra el celo y la pasa a estado "detectado / a inseminar" (NO la devuelve a "a marcar")
 function celoDetectado(rp){
   var a=getAnimal(rp); if(!a) return;
   var fecha=fechaLocal();
   a.ultimoCelo=fecha;
-  a.celoMarca=null;
+  var metodoPrev=(a.celoMarca&&a.celoMarca.metodo)||'';
+  a.celoMarca={metodo:metodoPrev, fecha:fecha, motivo:'detectado'};
   fb_syncAnimal(rp);
   guardarCacheLocal();
   var fila=[generarID('Cel',rp),fecha,rp,a.nombre,a.estadoRepro,'Celo detectado (marca)'];
   enviarASheets('Reg_Celos',fila,{resultado:a.estadoRepro});
   agregarReciente('celo', rp, 'Celo detectado');
   renderCeloTrabajo();
+  if(typeof renderDashboard==='function') renderDashboard();
   // Ir a inseminar con la vaca cargada
   goTo('inseminacion');
   setTimeout(function(){
