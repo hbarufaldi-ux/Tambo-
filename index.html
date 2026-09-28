@@ -2384,6 +2384,31 @@ function abrirFicha(rp) {
       }
       f2.push(['Secado',_secTxt]);
     }
+    // FI4 — último tacto (fecha + resultado) · FI3 — último evento reproductivo
+    (function(){
+      if(typeof eventosDeRP!=='function') return;
+      var _evs=eventosDeRP(a.rp); if(!_evs||!_evs.length) return;
+      var _reproTipos={Inseminacion:1,Tacto:1,Celo:1,Parto:1,Aborto:1};
+      var _ultTacto=null, _ultRepro=null;
+      for(var _k=_evs.length-1;_k>=0;_k--){
+        var _e=_evs[_k];
+        if(!_ultTacto && _e.tipo==='Tacto') _ultTacto=_e;
+        if(!_ultRepro && _reproTipos[_e.tipo]) _ultRepro=_e;
+        if(_ultTacto && _ultRepro) break;
+      }
+      function _resTacto(e){ return (e.fila&&e.fila[4])?e.fila[4]:''; }
+      function _lblRepro(e){
+        var t=e.tipo;
+        if(t==='Inseminacion') return 'Inseminación'+(e.fila&&e.fila[4]?' ('+e.fila[4]+')':'');
+        if(t==='Tacto') return 'Tacto'+(_resTacto(e)?' ('+_resTacto(e)+')':'');
+        if(t==='Aborto') return 'Aborto detectado por tacto';
+        if(t==='Parto') return 'Parto';
+        if(t==='Celo') return 'Celo';
+        return t;
+      }
+      if(_ultTacto) f2.push(['Último tacto', fmtFecha(_ultTacto.fecha)+(_resTacto(_ultTacto)?' · '+_resTacto(_ultTacto):'')]);
+      if(_ultRepro) f2.push(['Último evento', _lblRepro(_ultRepro)+' — '+fmtFecha(_ultRepro.fecha)]);
+    })();
     var c2=mkCard('Reproducción',f2);
     if((a.nroServicios||0)>=5){var w=document.createElement('div');w.className='warn-block';w.textContent=''+a.nroServicios+' servicios en este ciclo — evaluar rechazo';c2.appendChild(w);}
     if(_secAlerta){var ws=document.createElement('div');ws.className='warn-block';ws.textContent=_secAlerta;c2.appendChild(ws);}
@@ -3650,7 +3675,43 @@ function registrarEventoTipo(rp, tipo) {
 }
 
 function guardarPendientes(l){try{localStorage.setItem(CACHE_KEY_PENDING,JSON.stringify(l));}catch(e){}}
-function agregarPendiente(hoja,fila){var l=leerPendientes();l.push({hoja:hoja,fila:fila,ts:Date.now()});guardarPendientes(l);}
+function agregarPendiente(hoja,fila,datos){var l=leerPendientes();l.push({hoja:hoja,fila:fila,datos:datos||null,ts:Date.now()});guardarPendientes(l);}
+
+// ===== SINCRONIZACIÓN AL RECONECTAR (T6) =====
+// Reenvía la cola de pendientes (tambo_pending) cuando vuelve la señal, al arrancar
+// y al volver a primer plano. Saca de la cola los que entran; deja los que fallan.
+var _sincronizando=false;
+async function sincronizarPendientes(){
+  if(_sincronizando) return;
+  if(typeof navigator!=='undefined' && navigator.onLine===false) return;
+  var cola=leerPendientes();
+  if(!cola.length) return;
+  _sincronizando=true;
+  setSyncStatus('\u27F3 Sincronizando '+cola.length+' pend...');
+  var quedan=[];
+  for(var i=0;i<cola.length;i++){
+    var p=cola[i];
+    try{
+      var payload={hoja:p.hoja, fila:p.fila, rp:String((p.fila&&p.fila[2])||''), datos:p.datos||{}};
+      await fetch(SCRIPT_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain'},body:JSON.stringify(payload)});
+    }catch(e){
+      quedan.push(p);
+    }
+  }
+  guardarPendientes(quedan);
+  _sincronizando=false;
+  if(quedan.length){
+    setSyncStatus('Sin red ('+quedan.length+' pend.)');
+  }else{
+    setSyncStatus('\u25CF '+rodeo.length+' animales');
+    if(cola.length) showToast(cola.length+' registro'+(cola.length>1?'s':'')+' sincronizado'+(cola.length>1?'s':''));
+  }
+}
+function _initSyncPendientes(){
+  window.addEventListener('online', function(){ sincronizarPendientes(); });
+  document.addEventListener('visibilitychange', function(){ if(!document.hidden) sincronizarPendientes(); });
+  setTimeout(sincronizarPendientes, 2500);
+}
 function limpiarCache(){['tambo_rodeo','tambo_rodeo_ts','tambo_guachera','tambo_recria','tambo_pending'].forEach(function(k){localStorage.removeItem(k);});showToast('Caché limpiada — recargando...');setTimeout(function(){location.reload();},1200);}
 // ============================================================
 
@@ -3701,7 +3762,7 @@ async function enviarASheets(hoja, fila, datosExtra) {
     await fetch(SCRIPT_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain'},body:JSON.stringify(payload)});
     setSyncStatus('● '+rodeo.length+' animales'); showSaving(false); return true;
   } catch(e) {
-    agregarPendiente(hoja, fila);
+    agregarPendiente(hoja, fila, datosExtra||null);
     var nPend = leerPendientes().length;
     setSyncStatus('Sin red ('+nPend+' pend.)');
     showSaving(false); showToast('Sin conexión — guardado localmente'); return true;
@@ -3749,7 +3810,7 @@ function chequeoEvento(tipo, a, fecha){
     if(repro==='Inseminada' && dins!=null && dins < (CONFIG.diasReinsemTemprana||21)){
       msgs.push('Reinseminación temprana ('+dins+'d)'); marcas.push('[AUDIT reinsem '+dins+'d]');
     }
-    if(marcas.length) return {tipo:'warn', motivo:msgs.join(' · ')+' — marcada para auditoría', marca:marcas.join(' ')};
+    if(marcas.length) return {tipo:'warn', motivo:msgs.join(' · '), marca:marcas.join(' ')};
     return {tipo:'ok'};
   }
 
@@ -3763,11 +3824,11 @@ function chequeoEvento(tipo, a, fecha){
     var _umbralL=(CONFIG.litrosAlertaSecarVacia||10);
     var _produce=a.produccionUltima!=null && a.produccionUltima > _umbralL;
     if(repro==='Vacía' && _produce)
-      return {tipo:'warn', motivo:'Vacía y todavía produce '+a.produccionUltima+' L — marcada para auditoría', marca:'[AUDIT secado vacía '+a.produccionUltima+'L]'};
+      return {tipo:'warn', motivo:'Vacía y todavía produce '+a.produccionUltima+' L', marca:'[AUDIT secado vacía '+a.produccionUltima+'L]'};
     if(repro==='Preñada' && _produce && a.partoEstimado){
       var _dp=diasEntre(fecha, a.partoEstimado);
       if(_dp!=null && _dp > (CONFIG.diasAntesPartoSecar||60))
-        return {tipo:'warn', motivo:'Secado prematuro: produce '+a.produccionUltima+' L y faltan '+_dp+' días para el parto — marcada para auditoría', marca:'[AUDIT secado prematuro '+_dp+'d]'};
+        return {tipo:'warn', motivo:'Secado prematuro: produce '+a.produccionUltima+' L y faltan '+_dp+' días para el parto', marca:'[AUDIT secado prematuro '+_dp+'d]'};
     }
     return {tipo:'ok'};
   }
@@ -3782,11 +3843,19 @@ function chequeoEvento(tipo, a, fecha){
 
   if(tipo==='Parto'){                                       // EV8
     if(repro!=='Preñada' && prod!=='Seca') return {tipo:'stop', motivo:'No está preñada ni seca — no se puede registrar el parto.'};
-    if(prod==='En Ordeñe') return {tipo:'warn', motivo:'Figuraba En Ordeñe, sin secado registrado — marcada para auditoría', marca:'[AUDIT parto sin secado]'};
+    if(prod==='En Ordeñe') return {tipo:'warn', motivo:'Figuraba En Ordeñe, sin secado registrado', marca:'[AUDIT parto sin secado]'};
+    if(prod==='Seca' && repro==='Vacía') return {tipo:'warn', motivo:'Figura seca sin preñez confirmada por tacto. ¿Registrás el parto igual?', marca:'[AUDIT parto seca sin preñez]'};   // EV8.2
     return {tipo:'ok'};
   }
 
   return {tipo:'ok'};
+}
+
+// Texto de la confirmación previa del aborto por tacto (EV6.1)
+function _msgAbortoConfirm(a, chk){
+  var m = (chk.meses!=null) ? chk.meses+' mes'+(chk.meses===1?'':'es') : 'gestación no calculable';
+  var efecto = chk.lactNueva ? 'inicia una lactancia nueva (pasa a En Ordeñe)' : 'queda Vacía, sin lactancia nueva';
+  return (a.nombre||('RP '+a.rp))+' figuraba preñada y el tacto dio vacía. Aborto de '+m+' \u2192 '+efecto+'. \u00bfConfirm\u00e1s?';
 }
 
 // Aplica el efecto del aborto y arma la fila unificada de Reg_Abortos
@@ -3795,6 +3864,7 @@ function aplicarAborto(a, fecha, causa, obs, chk){
   a.estadoRepro = 'Vacía';
   a.partoEstimado = null;
   a.nroServicios = 0;
+  a.ultimaInsem = null; a.ultimaInsemToro = null;   // EV6.2: no dejar el servicio viejo como vigente
   if(chk.lactNueva){
     a.estadoProd = 'En Ordeñe';
     a.nroLactancia = (a.nroLactancia||0)+1;
@@ -3900,11 +3970,19 @@ async function guardarTacto() {
   if(!animal){showToast('Seleccioná un animal',true);return;}
   var a=getAnimal(animal); var resultado=getRadio('tacto-res'); var fecha=document.getElementById('t-fecha').value;
   var eraPreniada = a.estadoRepro === 'Preñada';
-  if(resultado==='Preñada'){a.estadoRepro='Preñada';a.partoEstimado=a.ultimaInsem?sumarDias(a.ultimaInsem,280):null;}
+  // EV6.1: si el tacto detecta un aborto (preñada da vacía), confirmar antes de aplicar
+  if(resultado==='Vacía' && eraPreniada){
+    var _chkT=chequeoEvento('Aborto',a,fecha);
+    modalAlertaEvento(_msgAbortoConfirm(a,_chkT), function(){ _guardarTactoAplicar(a,animal,resultado,fecha,eraPreniada,_chkT); });
+    return;
+  }
+  _guardarTactoAplicar(a,animal,resultado,fecha,eraPreniada,null);
+}
+async function _guardarTactoAplicar(a,animal,resultado,fecha,eraPreniada,_chkT){
+  if(resultado==='Preñada'){a.estadoRepro='Preñada';if(!eraPreniada){a.partoEstimado=a.ultimaInsem?sumarDias(a.ultimaInsem,280):null;}}   // FI5: retacto no recalcula
   else if(resultado==='Vacía'){
     if(eraPreniada) {
-      var _chkT=chequeoEvento('Aborto',a,fecha);
-      var _filaAb=aplicarAborto(a, fecha, 'Aborto detectado por tacto', document.getElementById('t-obs').value||'', _chkT);
+      var _filaAb=aplicarAborto(a, fecha, 'Aborto detectado por tacto', document.getElementById('t-obs').value||'', _chkT||chequeoEvento('Aborto',a,fecha));
       enviarASheets('Reg_Abortos', _filaAb);
     } else {
       a.estadoRepro='Vacía';a.partoEstimado=null;
@@ -5656,17 +5734,34 @@ async function guardarTactoMasivo() {
   var obs = document.getElementById('tm-obs').value || '';
   var diasGest = document.getElementById('tm-dias-gest').value || '';
   var fecha = fechaLocal();
+  var a = rodeo.find(function(r){ return String(r.rp) === String(rp); });
 
+  // EV6.1: preñada que da vacía/repetición = aborto por tacto → confirmar antes de aplicar
+  var _eraPren = a && a.estadoRepro && a.estadoRepro.normalize('NFC')==='Preñada';
+  if(a && _eraPren && (resultado==='Vacía'||resultado==='Repetición')){
+    var _chkA=chequeoEvento('Aborto',a,fecha);
+    modalAlertaEvento(_msgAbortoConfirm(a,_chkA), function(){
+      _guardarTMAplicar(rp, a, resultado, obs, diasGest, fecha, _chkA);
+    });
+    return;
+  }
+  _guardarTMAplicar(rp, a, resultado, obs, diasGest, fecha, null);
+}
+
+async function _guardarTMAplicar(rp, a, resultado, obs, diasGest, fecha, _chkA){
   // Guardar en memoria
   _tactoMasivoResultados[rp] = { resultado: resultado, obs: obs, fecha: fecha };
 
   // Actualizar animal en rodeo local
-  var a = rodeo.find(function(r){ return String(r.rp) === String(rp); });
   if(a) {
-    if(resultado === 'Preñada') {
+    if(_chkA){                                  // aborto por tacto (preñada → vacía)
+      var _filaAb=aplicarAborto(a, fecha, 'Aborto detectado por tacto', obs, _chkA);
+      enviarASheets('Reg_Abortos', _filaAb);
+      a.diasNR = 0;
+    } else if(resultado === 'Preñada') {
       a.estadoRepro = 'Preñada';
       if(diasGest) {
-        var diasRestantes = 283 - parseInt(diasGest);
+        var diasRestantes = 280 - parseInt(diasGest);
         a.partoEstimado = sumarDias(fecha, diasRestantes);
       }
     } else if(resultado === 'Vacía' || resultado === 'Repetición') {
@@ -5705,7 +5800,7 @@ async function guardarTactoMasivo() {
   renderTactoMasivo();
   renderDashboard();
 
-  showToast('RP ' + rp + ' — ' + resultado);
+  showToast(_chkA ? ('RP '+rp+' — aborto'+(_chkA.lactNueva?' · lactancia nueva':'')) : ('RP ' + rp + ' — ' + resultado));
 }
 // ============ FIN TACTO MASIVO ============
 
@@ -7002,7 +7097,8 @@ function modalAlertaEvento(motivo, onContinuar){
   card.style.cssText='background:#fff;border-radius:16px;max-width:340px;width:100%;padding:20px;box-shadow:0 8px 30px rgba(0,0,0,0.25);position:relative;';
   card.innerHTML='<button id="mae-x" aria-label="Cerrar" style="position:absolute;top:12px;right:12px;border:none;background:transparent;font-size:20px;font-weight:700;color:#8E8E93;cursor:pointer;line-height:1;">✕</button>'+
     '<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;"><span style="display:inline-flex;width:28px;height:28px;border-radius:8px;background:#FFF3CC;color:#8A6D00;align-items:center;justify-content:center;font-weight:800;flex-shrink:0;">!</span><div style="font-size:17px;font-weight:800;color:#1C1C1E;">Atención</div></div>'+
-    '<div style="font-size:15px;line-height:1.45;color:#1C1C1E;margin-bottom:18px;">'+motivo+'</div>'+
+    '<div style="font-size:15px;line-height:1.45;color:#1C1C1E;margin-bottom:6px;">'+motivo+'</div>'+
+    '<div style="font-size:13px;color:#8E8E93;margin-bottom:18px;">Se registra y queda para auditoría.</div>'+
     '<div style="display:flex;gap:10px;"><button id="mae-cancel" style="flex:1;background:#EBF0F5;border:1px solid #B0BCC8;color:#1C1C1E;border-radius:12px;padding:13px;font-size:15px;font-weight:700;cursor:pointer;">Cancelar</button><button id="mae-ok" style="flex:1;background:#1C1C1E;border:none;color:#fff;border-radius:12px;padding:13px;font-size:15px;font-weight:700;cursor:pointer;">Continuar</button></div>';
   ov.appendChild(card); document.body.appendChild(ov);
   function cerrar(){ ov.remove(); }
@@ -7099,15 +7195,21 @@ async function fichaGuardar(sheetId, rp) {
     var fecha=document.getElementById('fst-fecha').value||hoy;
     var res=document.getElementById('ficha-sheet-tacto').getAttribute('data-res');
     var _eraPren = a.estadoRepro && a.estadoRepro.normalize('NFC')==='Preñada';
-    if(res==='Preñada'){a.estadoRepro='Preñada';if(a.ultimaInsem){var fp=new Date(a.ultimaInsem);fp.setDate(fp.getDate()+283);a.partoEstimado=fp.toISOString().split('T')[0];}}
-    else if(res==='Vacía'||res==='Repetición'){
-      if(_eraPren){
-        var _chkA=chequeoEvento('Aborto',a,fecha);
+    // EV6.1: preñada que da vacía = aborto por tacto → confirmar antes de aplicar
+    if((res==='Vacía'||res==='Repetición') && _eraPren){
+      var _chkA=chequeoEvento('Aborto',a,fecha);
+      modalAlertaEvento(_msgAbortoConfirm(a,_chkA), function(){
         var _filaAb=aplicarAborto(a, fecha, 'Aborto detectado por tacto', '', _chkA);
+        guardarCacheLocal(); fb_syncAnimal(rp);
         enviarASheets('Reg_Abortos', _filaAb);
-        if(_chkA.lactNueva) showToast('Aborto por tacto — lactancia nueva');
-      } else { a.estadoRepro='Vacía'; }
+        enviarASheets('Reg_Tactos',[generarID('Tac',rp),fecha,rp,a.nombre,res,''],{resultado:res});
+        agregarReciente('tacto', rp, res);
+        showToast(_chkA.lactNueva?'Aborto por tacto — lactancia nueva':'Aborto registrado'); renderDashboard(); renderRodeo(); abrirFicha(rp);
+      });
+      return;
     }
+    if(res==='Preñada'){a.estadoRepro='Preñada';if(!_eraPren && a.ultimaInsem){a.partoEstimado=sumarDias(a.ultimaInsem,280);}}
+    else if(res==='Vacía'||res==='Repetición'){ a.estadoRepro='Vacía'; }
     else if(res==='Hormonal'){a.estadoRepro='IATF';}
     else{a.estadoRepro=res;}
     guardarCacheLocal(); fb_syncAnimal(rp);
@@ -8086,6 +8188,7 @@ _authReady.then(function(){
   cargarEventos();
   _inicializarInseminadores();
   _inicializarBotiquin();
+  _initSyncPendientes();
 }).catch(function(e){
   console.error('Error en arranque:', e);
   initLogin(); // igual arrancar
