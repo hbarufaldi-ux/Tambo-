@@ -2296,6 +2296,15 @@ function renderRecria() {
 }
 
 // ---- FICHA VACA ----
+// Abre la ficha de una cría, sea adulta (rodeo) o joven (guachera/recría)
+function _irFichaCria(rp){
+  var enRodeo=(typeof getAnimal==='function')&&getAnimal(rp);
+  if(enRodeo && enRodeo.cat!=='Ternera' && enRodeo.cat!=='Ternero' && enRodeo.cat!=='Torito'){ abrirFicha(rp); return; }
+  var enJoven=(typeof guachera!=='undefined'&&guachera.find(function(g){return g.rp===rp;}))||(typeof recria!=='undefined'&&recria.find(function(r){return r.rp===rp;}));
+  if(enJoven && typeof abrirFichaJoven==='function'){ abrirFichaJoven(rp); return; }
+  if(enRodeo){ abrirFicha(rp); return; }
+  if(typeof showToast==='function') showToast('La cría RP '+rp+' no está en el padrón');
+}
 function abrirFicha(rp) {
   var a=getAnimal(rp);
   if(!a) return;
@@ -2357,19 +2366,49 @@ function abrirFicha(rp) {
       var r=document.createElement('div'); r.className='ficha-row';
       if(i===filas.length-1) r.style.borderBottom='none';
       var k=document.createElement('span'); k.className='ficha-key'; k.textContent=f[0];
-      var v=document.createElement('span'); v.className='ficha-val'; v.textContent=f[1]||'—';
+      var v=document.createElement('span'); v.className='ficha-val';
+      if(f[2]===true){ v.innerHTML=f[1]||'—'; } else { v.textContent=f[1]||'—'; }
       r.appendChild(k); r.appendChild(v); c.appendChild(r);
     });
     return c;
   }
 
   var f1=[['Fecha nac.',fmtFecha(a.fechaNac)],['Edad',eStr],['Raza',a.raza],['Categoría',a.cat]];
+  if(a.sexo==='H'){
+    var _nLact=(a.nroLactancia!=null?a.nroLactancia:((historialPartos[rp]||[]).length))||0;
+    if(_nLact>0) f1.push(['Lactancias',_nLact]);
+  }
   if(madre) f1.push(['Madre',madre]);
   if(padre) f1.push(['Padre',padre]);
   if(a.sexo==='H') {
     var esPrenada=(a.estadoRepro==='Preñada');
     var partoTxt = esPrenada && a.partoEstimado ? (fmtFecha(a.partoEstimado)+(diasHasta(a.partoEstimado)!==null?' ('+diasHasta(a.partoEstimado)+' días)':'')) : (a.estadoRepro==='Inseminada' ? 'A confirmar por tacto' : '—');
-    var f2=[['Último parto',fmtFecha(a.ultimoParto)],['Última insem.',fmtFecha(a.ultimaInsem)],['Parto estimado',partoTxt],['N° servicios ciclo',a.nroServicios||0]];
+    // Opción A: si la lactancia actual arrancó por un aborto tardío (≥6m), la fecha de ultimoParto es en realidad el aborto → rotular distinto.
+    var _lblUltParto='Último parto';
+    if(a.ultimoParto && typeof eventosDeRP==='function'){
+      var _evsP=eventosDeRP(a.rp);
+      for(var _p=_evsP.length-1;_p>=0;_p--){
+        var _evP=_evsP[_p];
+        if(_evP.tipo==='Aborto' && _evP.fecha===a.ultimoParto && _evP.fila && _evP.fila[7]==='sí'){ _lblUltParto='Inicio lactancia (aborto)'; break; }
+      }
+    }
+    var f2=[];
+    if(a.ultimoParto) f2.push([_lblUltParto,fmtFecha(a.ultimoParto)]);
+    // Cría de la lactancia en curso, debajo del último parto (link a su ficha)
+    (function(){
+      var _partos=historialPartos[rp]||[];
+      if(!_partos.length) return;
+      var _ult=_partos[_partos.length-1];
+      if(!_ult || !_ult.rpCria) return;
+      var _rc=_ult.rpCria;
+      var _enR=(typeof getAnimal==='function'&&getAnimal(_rc))||(typeof guachera!=='undefined'&&guachera.find(function(g){return g.rp===_rc;}))||(typeof recria!=='undefined'&&recria.find(function(r){return r.rp===_rc;}));
+      var _txt='RP '+_rc+(_ult.nombreCria&&_ult.nombreCria!=='Cría'?' · '+_ult.nombreCria:'');
+      if(_enR) _txt='<span style="color:#0A4FA6;cursor:pointer;text-decoration:underline;" onclick="_irFichaCria('+_rc+')">'+_txt+'</span>';
+      f2.push(['Cría', _txt, true]);   // true = HTML
+    })();
+    if(a.ultimaInsem) f2.push(['Última insem.',fmtFecha(a.ultimaInsem)]);
+    if(partoTxt!=='—') f2.push(['Parto estimado',partoTxt]);
+    if((a.nroServicios||0)>0) f2.push(['N° servicios ciclo',a.nroServicios]);
     if(diasEnLeche!==null) f2.push(['Días en leche',diasEnLeche]);
     if(diasGest!==null) f2.push([esPrenada?'Días gestación':'Días post servicio',diasGest]);
     var _secAlerta=null;
@@ -2387,7 +2426,11 @@ function abrirFicha(rp) {
     // FI4 — último tacto (fecha + resultado) · FI3 — último evento reproductivo
     (function(){
       if(typeof eventosDeRP!=='function') return;
-      var _evs=eventosDeRP(a.rp); if(!_evs||!_evs.length) return;
+      var _evsAll=eventosDeRP(a.rp); if(!_evsAll||!_evsAll.length) return;
+      // Acotar a la lactancia actual: eventos desde el último parto (inclusive). Si nunca parió, todos.
+      var _corte=a.ultimoParto||null;
+      var _evs=_corte ? _evsAll.filter(function(e){ return e.fecha && e.fecha>=_corte; }) : _evsAll;
+      if(!_evs.length) return;
       var _reproTipos={Inseminacion:1,Tacto:1,Celo:1,Parto:1,Aborto:1};
       var _ultTacto=null, _ultRepro=null;
       for(var _k=_evs.length-1;_k>=0;_k--){
@@ -2407,8 +2450,16 @@ function abrirFicha(rp) {
         return t;
       }
       if(_ultTacto) f2.push(['Último tacto', fmtFecha(_ultTacto.fecha)+(_resTacto(_ultTacto)?' · '+_resTacto(_ultTacto):'')]);
+      // FI3: si el último evento es un tacto que dio vacía y hay un aborto del mismo día, mostrar el aborto (una sola línea)
+      if(_ultRepro && _ultRepro.tipo==='Tacto'){
+        var _r=_resTacto(_ultRepro);
+        if(_r==='Vacía'||_r==='Repetición'){
+          for(var _m=_evs.length-1;_m>=0;_m--){ if(_evs[_m].tipo==='Aborto' && _evs[_m].fecha===_ultRepro.fecha){ _ultRepro=_evs[_m]; break; } }
+        }
+      }
       if(_ultRepro) f2.push(['Último evento', _lblRepro(_ultRepro)+' — '+fmtFecha(_ultRepro.fecha)]);
     })();
+    if(!f2.length) f2.push(['Estado','Sin ciclo reproductivo iniciado']);
     var c2=mkCard('Reproducción',f2);
     if((a.nroServicios||0)>=5){var w=document.createElement('div');w.className='warn-block';w.textContent=''+a.nroServicios+' servicios en este ciclo — evaluar rechazo';c2.appendChild(w);}
     if(_secAlerta){var ws=document.createElement('div');ws.className='warn-block';ws.textContent=_secAlerta;c2.appendChild(ws);}
@@ -3751,6 +3802,15 @@ async function enviarASheets(hoja, fila, datosExtra) {
     if(col && fila && fila[0]) {
       var obj = {id: String(fila[0]), hoja: hoja, fila: fila, ts: Date.now()};
       fb_guardarEvento(col, obj).catch(function(e){ console.warn('Firebase evento:', e); });
+      // Refrescar el índice en memoria para que la ficha (FI3/FI4) muestre el evento al instante,
+      // sin esperar a recargar la app (cargarEventos solo corre al arrancar).
+      if(typeof eventosPorRP!=='undefined' && _EVENTOS_COLS[col]){
+        var _rpEv=Number(fila[2]);
+        if(_rpEv){
+          if(!eventosPorRP[_rpEv]) eventosPorRP[_rpEv]=[];
+          eventosPorRP[_rpEv].push({tipo:_EVENTOS_COLS[col], fecha:fila[1]||'', rp:_rpEv, fila:fila, ts:obj.ts});
+        }
+      }
     }
   } catch(e) { console.warn('Firebase paralelo:', e); }
   // continuar con Sheet normalmente
@@ -3906,6 +3966,7 @@ async function guardarParto() {
   var catCria=sexoCria==='Hembra'?'Ternera':(entero.includes('Sí')?'Torito':'Ternero');
 
   a.estadoProd='En Ordeñe'; a.estadoRepro='Vacía'; a.ultimoParto=fecha; a.partoEstimado=null; a.nroLactancia=(a.nroLactancia||0)+1;
+  a.ultimaInsem=null; a.ultimaInsemToro=null; a.nroServicios=0;   // EV8.3: el parto cierra el ciclo repro anterior
   if(a.cat==='Vaquillona') a.cat='Vaca';
   var _obsParto=document.getElementById('p-obs').value||'';
   if(_chkP.tipo==='warn'&&_chkP.marca) _obsParto=(_obsParto?_obsParto+' ':'')+_chkP.marca;
@@ -7134,6 +7195,7 @@ async function fichaGuardar(sheetId, rp) {
     if(_chkP.tipo==='stop'){ showToast(_chkP.motivo,true); return; }
     if(_chkP.tipo==='warn'&&_chkP.marca) obs=(obs?obs+' ':'')+_chkP.marca;
     a.nroLactancia=(a.nroLactancia||0)+1; a.ultimoParto=fecha; a.estadoRepro='Vacía'; a.estadoProd='En Ordeñe';
+    a.ultimaInsem=null; a.ultimaInsemToro=null; a.nroServicios=0;   // EV8.3: el parto cierra el ciclo repro anterior
     if(toroNombre) a.ultimaInsemToro=toroNombre;
     guardarCacheLocal(); fb_syncAnimal(rp);
     await enviarASheets('Reg_Partos',[generarID('Par',rp),fecha,rp,a.nombre,tipo,sexo,rpCria,toroNombre,obs]);
