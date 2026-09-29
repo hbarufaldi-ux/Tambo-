@@ -458,7 +458,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
       <button onclick="abrirCeloSuelto()" style="background:#1C1C1E;color:#fff;border:none;border-radius:12px;width:34px;height:34px;font-size:22px;line-height:1;cursor:pointer;flex-shrink:0;">+</button>
     </div>
     <div id="celo-trabajo-sub" style="font-size:13px;color:#8E8E93;margin-bottom:10px;">Vacas a servir y en observación</div>
-    <input type="search" id="celo-buscar" inputmode="numeric" placeholder="Buscar por RP..." oninput="renderCeloTrabajo()" style="width:100%;padding:11px 14px;border:1px solid #B0BCC8;border-radius:12px;font-size:17px;background:#fff;color:#1C1C1E;box-sizing:border-box;margin-bottom:12px;">
+    <input type="search" id="celo-buscar" inputmode="numeric" placeholder="Buscar por RP..." oninput="_debounceCeloBuscar()" style="width:100%;padding:11px 14px;border:1px solid #B0BCC8;border-radius:12px;font-size:17px;background:#fff;color:#1C1C1E;box-sizing:border-box;margin-bottom:12px;">
     <div id="celo-trabajo-lista"></div>
   </div>
 
@@ -2430,7 +2430,7 @@ function abrirFicha(rp) {
   hdr.appendChild(info); hdr.appendChild(bdgs);
   var volverBtn = document.createElement('button');
   volverBtn.style.cssText = 'background:none;border:none;color:#1C1C1E;font-size:14px;font-weight:600;cursor:pointer;padding:0 0 12px;display:block;';
-  volverBtn.textContent = '← Volver al Padrón';
+  volverBtn.textContent = '← Volver';
   volverBtn.onclick = function(){ goBack(); };
   var _stickyHead=document.createElement('div'); _stickyHead.className='ficha-sticky';
   _stickyHead.appendChild(volverBtn); _stickyHead.appendChild(hdr);
@@ -2735,7 +2735,7 @@ function abrirFicha(rp) {
 
   var btn=document.createElement('button');
   btn.style.cssText='background:none;border:none;color:#1C1C1E;font-size:14px;font-weight:600;cursor:pointer;padding:16px 0 8px;display:block;text-align:left;';
-  btn.textContent='← Volver al Padrón';
+  btn.textContent='← Volver';
   btn.onclick=function(){goBack();};
   cont.appendChild(btn);
 
@@ -4160,19 +4160,38 @@ function _esAServir(a){
   return d!==null && d>=CONFIG.diasEsperaPosparto;
 }
 
-// Arma la lista de trabajo: sin marcar (a servir) + marcadas en observación. (El "vigilando retorno" llega en la entrega 2.)
+// Vencimiento de celos: limpia las marcas detectadas que pasaron la ventana. Se llama UNA vez
+// (al entrar a la pantalla), NO en cada render. Escribe a disco una sola vez si hubo cambios.
+function _vencerCelosDetectados(){
+  var cambios=false;
+  rodeo.forEach(function(a){
+    var m=a.celoMarca;
+    if(m && m.motivo==='detectado'){
+      var d=-diasHasta(m.fecha);
+      if(d!==null && d>CONFIG.diasVentanaCelo){ a.celoMarca=null; fb_syncAnimal(a.rp); cambios=true; }
+    }
+  });
+  if(cambios) guardarCacheLocal();
+}
+
+// ¿La categoría entra en la detección de celo? Solo hembras activas en ordeñe/seca + vaquillonas.
+function _celoCandidata(a){
+  if(a.sexo!=='H') return false;
+  if(a.cat==='Baja') return false;
+  if(a.cat==='Ternera'||a.cat==='Ternero'||a.cat==='Torito') return false;
+  return true;
+}
+
+// Arma la lista de trabajo. SOLO lee y arma (no escribe a disco): un render nunca toca el disco.
 function _listaCeloTrabajo(){
   var out=[];
   rodeo.forEach(function(a){
-    if(a.cat==='Baja'||a.sexo!=='H') return;
+    if(!_celoCandidata(a)) return;
     var marca=a.celoMarca||null;
-    // Vencimiento del celo: si mostró celo y pasó la ventana sin inseminar, el celo se perdió → repintar
     if(marca && marca.motivo==='detectado'){
+      // Si venció y todavía no se limpió, no la muestro como "a inseminar" (se limpia al entrar a la pantalla)
       var dDet=-diasHasta(marca.fecha);
-      if(dDet!==null && dDet>CONFIG.diasVentanaCelo){
-        a.celoMarca=null; marca=null;           // celo vencido → vuelve a "A marcar"
-        fb_syncAnimal(a.rp); guardarCacheLocal();
-      }
+      if(dDet!==null && dDet>CONFIG.diasVentanaCelo) marca=null;
     }
     if(marca && marca.motivo==='detectado'){
       out.push({rp:a.rp, estado:'detectada', marca:marca, urg:2000+(-diasHasta(marca.fecha)||0)});
@@ -4186,8 +4205,10 @@ function _listaCeloTrabajo(){
   return out;
 }
 
-var _celoMarcarAbierto=false;   // "A marcar" arranca plegado
-function toggleCeloMarcar(){ _celoMarcarAbierto=!_celoMarcarAbierto; renderCeloTrabajo(); }
+var _celoGruposAbiertos={insem:true, obs:true, marcar:false};   // A marcar arranca plegado
+var _celoBuscarTimer=null;
+function _debounceCeloBuscar(){ clearTimeout(_celoBuscarTimer); _celoBuscarTimer=setTimeout(renderCeloTrabajo, 180); }
+function toggleCeloGrupo(clave){ _celoGruposAbiertos[clave]=!_celoGruposAbiertos[clave]; renderCeloTrabajo(); }
 
 // Cierra el modo aislado de detección de celo y vuelve al inicio (restaura la nav)
 function cerrarDeteccionCelo(){
@@ -4226,21 +4247,26 @@ function renderCeloTrabajo(){
     return;
   }
 
-  // Grupos por urgencia: A inseminar (celo hoy) arriba, En observación, y A marcar al final (plegable)
+  // Grupos por urgencia: A inseminar (celo hoy) arriba, En observación, y A marcar al final. Los tres colapsables.
   var aInsem=lista.filter(function(x){return x.estado==='detectada';});
   var enObs=lista.filter(function(x){return x.estado==='marcada';});
   var aMarcar=lista.filter(function(x){return x.estado==='aservir';});
   var html='';
-  if(aInsem.length)  html+=_grupoCelo('A inseminar', aInsem);
-  if(enObs.length)   html+=_grupoCelo('En observación', enObs);
-  if(aMarcar.length){
-    html+='<div style="font-size:12px;font-weight:700;color:#8E8E93;text-transform:uppercase;letter-spacing:0.4px;margin:6px 0 8px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;" onclick="toggleCeloMarcar()">'
-      +'<span>A marcar ('+aMarcar.length+')</span>'
-      +'<span style="font-size:15px;color:#B0BCC8;">'+(_celoMarcarAbierto?'▾':'▸')+'</span>'
-    +'</div>';
-    if(_celoMarcarAbierto) html+=_grupoCelo('', aMarcar);
-  }
+  if(aInsem.length)  html+=_grupoCeloPlegable('A inseminar', 'insem', aInsem);
+  if(enObs.length)   html+=_grupoCeloPlegable('En observación', 'obs', enObs);
+  if(aMarcar.length) html+=_grupoCeloPlegable('A marcar', 'marcar', aMarcar);
   cont.innerHTML=html;
+}
+
+// Encabezado plegable + tarjetas (si está abierto). El estado abierto/cerrado vive en _celoGruposAbiertos.
+function _grupoCeloPlegable(titulo, clave, items){
+  var abierto=_celoGruposAbiertos[clave];
+  var h='<div style="font-size:12px;font-weight:700;color:#8E8E93;text-transform:uppercase;letter-spacing:0.4px;margin:6px 0 8px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;" onclick="toggleCeloGrupo(\''+clave+'\')">'
+    +'<span>'+titulo+' ('+items.length+')</span>'
+    +'<span style="font-size:15px;color:#B0BCC8;">'+(abierto?'▾':'▸')+'</span>'
+  +'</div>';
+  if(abierto) h+=_grupoCelo('', items);
+  return h;
 }
 
 function _grupoCelo(titulo, items){
@@ -4301,10 +4327,12 @@ function quitarMarcaCelo(rp){
   fb_syncAnimal(rp);
   guardarCacheLocal();
   renderCeloTrabajo();
-  showToast('RP '+rp+' — marca quitada');
+  if(typeof renderDashboard==='function') renderDashboard();
+  showToast('RP '+rp+' vuelve a "A marcar"');
 }
 
-// Mostró celo → registra el celo y la pasa a estado "detectado / a inseminar" (NO la devuelve a "a marcar")
+// Mostró celo → SOLO aparta la vaca a "A inseminar" (no abre inseminación).
+// El peón detecta el celo; el inseminador insemina después desde esa lista o desde la ficha.
 function celoDetectado(rp){
   var a=getAnimal(rp); if(!a) return;
   var fecha=fechaLocal();
@@ -4318,12 +4346,7 @@ function celoDetectado(rp){
   agregarReciente('celo', rp, 'Celo detectado');
   renderCeloTrabajo();
   if(typeof renderDashboard==='function') renderDashboard();
-  // Ir a inseminar con la vaca cargada
-  goTo('inseminacion');
-  setTimeout(function(){
-    var sel=document.getElementById('i-animal');
-    if(sel){ sel.value=String(rp); if(typeof onAnimalInsem==='function') onAnimalInsem(); }
-  },150);
+  showToast('RP '+rp+' apartada para inseminar');
 }
 
 // Botón + : registrar un celo suelto de cualquier vaca
@@ -4470,6 +4493,9 @@ function goBack() {
   else if(anterior === 'guachera') renderGuachera();
   else if(anterior === 'recria') renderRecria();
   else if(anterior === 'dashboard') renderDashboard();
+  else if(anterior === 'celo') { renderCeloTrabajo(); }
+  // Modo aislado: la nav se oculta en manga y celo, se muestra en el resto
+  var _navB=document.getElementById('main-nav'); if(_navB) _navB.style.display=(anterior==='manga'||anterior==='celo')?'none':'flex';
   // Limpiar FAB de ficha al volver
   ['ficha-fab-overlay','ficha-fab-menu','ficha-fab-btn',
    'ficha-joven-fab-overlay','ficha-joven-fab-menu','ficha-joven-fab-btn'].forEach(function(id){
@@ -4558,7 +4584,7 @@ function goTo(screen, btn) {
   });
 
   if(screen==='guachera') renderGuachera();
-  if(screen==='celo')        { var _cb=document.getElementById('celo-buscar'); if(_cb) _cb.value=''; renderCeloTrabajo(); renderRecientes('celo');  poblarSelectsSiSucios(); }
+  if(screen==='celo')        { _vencerCelosDetectados(); var _cb=document.getElementById('celo-buscar'); if(_cb) _cb.value=''; renderCeloTrabajo(); renderRecientes('celo');  poblarSelectsSiSucios(); }
   if(screen==='inseminacion'){ renderRecientes('insem'); poblarSelectsSiSucios(); }
   if(screen==='parto')       { renderRecientes('parto'); poblarSelectsSiSucios(); }
   if(screen==='produccion')  { renderRecientes('prod');  poblarSelectsSiSucios(); }
