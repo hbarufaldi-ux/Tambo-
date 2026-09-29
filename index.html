@@ -2588,23 +2588,43 @@ function abrirFicha(rp) {
 
     var partos=(historialPartos[rp]||[]).slice().reverse();
     if(partos.length>0) {
+      var _evsL = (typeof eventosDeRP==='function') ? eventosDeRP(rp) : [];
+      var _serviciosEnVentana=function(desde, hasta){
+        return _evsL.filter(function(e){
+          return e.tipo==='Inseminacion' && e.fecha && e.fecha>=desde && (!hasta || e.fecha<hasta);
+        }).length;
+      };
       var c4=document.createElement('div'); c4.className='card';
-      var t4=document.createElement('div'); t4.className='section-title'; t4.textContent='Historial de lactancias'; c4.appendChild(t4);
+      var t4=document.createElement('div');
+      t4.style.cssText='display:flex;align-items:center;justify-content:space-between;cursor:pointer;';
+      t4.innerHTML='<span class="section-title" style="margin:0;">Lactancias ('+partos.length+')</span><span class="lact-flecha" style="font-size:15px;color:#B0BCC8;transition:transform .15s;">▸</span>';
+      var body4=document.createElement('div'); body4.style.display='none'; body4.style.marginTop='4px';
+      t4.onclick=function(){ var ab=body4.style.display==='none'; body4.style.display=ab?'block':'none'; var fl=t4.querySelector('.lact-flecha'); if(fl) fl.textContent=ab?'▾':'▸'; };
+      c4.appendChild(t4);
       partos.forEach(function(p,i) {
         var nro=partos.length-i;
         var esAct=i===0&&a.estadoProd==='En Ordeñe';
-        var pd2=document.createElement('div'); pd2.style.cssText='padding:10px 0;border-bottom:1px solid #C8D0D8;';
-        var ph=document.createElement('div'); ph.style.cssText='display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;';
-        ph.innerHTML='<span style="font-size:17px;font-weight:700;">Lactancia '+nro+'</span>'+(esAct?'<span class="badge badge-green">Actual</span>':'');
-        var grid=document.createElement('div'); grid.style.cssText='display:grid;grid-template-columns:1fr 1fr;gap:4px;';
+        var fin=(i>0)?partos[i-1].fecha:null;   // parto siguiente (más nuevo) = fin de esta lactancia
+        var nServ=_serviciosEnVentana(p.fecha, fin);
+        var pd2=document.createElement('div'); pd2.style.cssText='border-bottom:1px solid #E6EBF0;';
+        var ph=document.createElement('div'); ph.style.cssText='display:flex;justify-content:space-between;align-items:center;padding:11px 0;cursor:pointer;gap:8px;';
+        ph.innerHTML='<span style="font-size:15px;font-weight:700;">Lactancia '+nro+' · '+fmtFecha(p.fecha)+'</span>'
+          +'<span style="display:flex;align-items:center;gap:8px;flex-shrink:0;">'+(esAct?'<span class="badge badge-green">Actual</span>':'')+'<span class="lact-flecha2" style="font-size:14px;color:#B0BCC8;">▸</span></span>';
+        var det=document.createElement('div'); det.style.cssText='display:none;padding:0 0 12px;';
         var criaEnRodeo = getAnimal(p.rpCria) || guachera.find(function(g){return g.rp===p.rpCria;}) || recria.find(function(r){return r.rp===p.rpCria;});
-        var criaLink = criaEnRodeo ? '<span style="color:#0A4FA6;cursor:pointer;text-decoration:underline;" onclick="abrirFichaJoven('+p.rpCria+')">'+p.nombreCria+' (RP '+p.rpCria+')</span>' : p.nombreCria+' (RP '+p.rpCria+')';
-        [['Fecha parto',fmtFecha(p.fecha)],['Padre',p.padre],['Cría','__CRIA__'],['Sexo',p.sexoCria],['Tipo',p.tipo]].forEach(function(f){
+        var criaLink = p.rpCria
+          ? (criaEnRodeo ? '<span style="color:#0A4FA6;cursor:pointer;text-decoration:underline;" onclick="_irFichaCria('+p.rpCria+')">'+(p.nombreCria&&p.nombreCria!=='Cría'?p.nombreCria+' ':'')+'RP '+p.rpCria+'</span>' : (p.nombreCria&&p.nombreCria!=='Cría'?p.nombreCria+' ':'')+'RP '+p.rpCria)
+          : '—';
+        var grid=document.createElement('div'); grid.style.cssText='display:grid;grid-template-columns:1fr 1fr;gap:6px 10px;';
+        [['Fecha parto',fmtFecha(p.fecha)],['Toro',p.padre||'—'],['Cría','__CRIA__'],['Sexo cría',p.sexoCria||'—'],['Servicios del ciclo',String(nServ)],['Producción','—']].forEach(function(f){
           var val = f[1]==='__CRIA__' ? criaLink : (f[1]||'—');
-          grid.innerHTML+='<div style="font-size:12px;color:#8E8E93;">'+f[0]+'</div><div style="font-size:12px;font-weight:500;">'+val+'</div>';
+          grid.innerHTML+='<div style="font-size:12px;color:#8E8E93;">'+f[0]+'</div><div style="font-size:13px;font-weight:500;">'+val+'</div>';
         });
-        pd2.appendChild(ph); pd2.appendChild(grid); c4.appendChild(pd2);
+        det.appendChild(grid);
+        ph.onclick=function(){ var ab=det.style.display==='none'; det.style.display=ab?'block':'none'; var fl=ph.querySelector('.lact-flecha2'); if(fl) fl.textContent=ab?'▾':'▸'; };
+        pd2.appendChild(ph); pd2.appendChild(det); body4.appendChild(pd2);
       });
+      c4.appendChild(body4);
       cont.appendChild(c4);
     }
   }
