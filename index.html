@@ -284,13 +284,13 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 
   <div class="d-panel" id="dash-celo-acceso" style="cursor:pointer;" onclick="goTo('celo')">
     <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 18px;">
-      <div style="display:flex;align-items:center;gap:12px;">
+      <div style="display:flex;align-items:center;gap:12px;flex:1;min-width:0;">
         <span style="width:38px;height:38px;border-radius:11px;background:#E0F0D6;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2A6A10" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-4.5-9.2-9C1 8.5 3 5 6.3 5 8.4 5 10 6.4 12 9c2-2.6 3.6-4 5.7-4C21 5 23 8.5 21.2 12 19 16.5 12 21 12 21Z"/></svg>
         </span>
-        <div>
+        <div style="min-width:0;">
           <div style="font-size:15px;font-weight:800;color:#1C1C1E;">Detección de celo</div>
-          <div id="dash-celo-sub" style="font-size:12.5px;color:#8E8E93;margin-top:1px;">—</div>
+          <div id="dash-celo-sub" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:5px;"></div>
         </div>
       </div>
       <span style="font-size:20px;color:#B0BCC8;flex-shrink:0;">›</span>
@@ -451,11 +451,14 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 <div id="screen-celo" class="screen">
   <div class="card" id="celo-trabajo-card">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
-      <div class="section-title" style="margin:0;">Detección de celo</div>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <button onclick="cerrarDeteccionCelo()" aria-label="Cerrar" style="background:#EBF0F5;color:#1C1C1E;border:none;border-radius:10px;width:34px;height:34px;font-size:20px;line-height:1;cursor:pointer;flex-shrink:0;">✕</button>
+        <div class="section-title" style="margin:0;">Detección de celo</div>
+      </div>
       <button onclick="abrirCeloSuelto()" style="background:#1C1C1E;color:#fff;border:none;border-radius:12px;width:34px;height:34px;font-size:22px;line-height:1;cursor:pointer;flex-shrink:0;">+</button>
     </div>
     <div id="celo-trabajo-sub" style="font-size:13px;color:#8E8E93;margin-bottom:10px;">Vacas a servir y en observación</div>
-    <input type="search" id="celo-buscar" placeholder="Buscar por RP o nombre..." oninput="renderCeloTrabajo()" style="width:100%;padding:11px 14px;border:1px solid #B0BCC8;border-radius:12px;font-size:17px;background:#fff;color:#1C1C1E;box-sizing:border-box;margin-bottom:12px;">
+    <input type="search" id="celo-buscar" inputmode="numeric" placeholder="Buscar por RP..." oninput="renderCeloTrabajo()" style="width:100%;padding:11px 14px;border:1px solid #B0BCC8;border-radius:12px;font-size:17px;background:#fff;color:#1C1C1E;box-sizing:border-box;margin-bottom:12px;">
     <div id="celo-trabajo-lista"></div>
   </div>
 
@@ -1338,6 +1341,7 @@ var CONFIG_DEFAULT = {
   // Reproducción
   diasEsperaPosparto: 45,
   diasAlertaAnestro: 60,
+  diasVentanaCelo: 1,
   umbralServicios: 5,
   diasReinsemTemprana: 21,
   mesesAbortoPorLactancia: 6,
@@ -1793,14 +1797,24 @@ function calcGuacheraAlertas() {
 function renderDashboard() {
   var vacas=rodeo.filter(function(a){return a.cat==='Vaca'&&a.estadoRepro!=='Baja';});
   var totalVacas=vacas.length;
-  // Acceso a detección de celo: contador en vivo
+  // Acceso a detección de celo: contador en vivo con chips grandes
   (function(){
     var sub=document.getElementById('dash-celo-sub');
     if(!sub || typeof _listaCeloTrabajo!=='function') return;
     var l=_listaCeloTrabajo();
+    var nI=l.filter(function(x){return x.estado==='detectada';}).length;
     var nM=l.filter(function(x){return x.estado==='aservir';}).length;
     var nO=l.filter(function(x){return x.estado==='marcada';}).length;
-    sub.textContent = (nM+nO===0) ? 'Sin vacas pendientes hoy' : (nM+' a marcar · '+nO+' en observación');
+    function chip(n,txt,bg,fg){ return '<span style="display:inline-flex;align-items:baseline;gap:5px;background:'+bg+';color:'+fg+';border-radius:9px;padding:3px 9px;font-size:13px;font-weight:600;"><b style="font-size:16px;font-weight:800;">'+n+'</b>'+txt+'</span>'; }
+    if(nI+nM+nO===0){
+      sub.innerHTML='<span style="font-size:13px;color:#8E8E93;">Sin vacas pendientes hoy</span>';
+    } else {
+      var h='';
+      if(nI) h+=chip(nI,'a inseminar','#E4EFFB','#0A4FA6');
+      h+=chip(nM,'a marcar','#EDF6E8','#2A6A10');
+      h+=chip(nO,'en observación','#F3F0FA','#5A3D9A');
+      sub.innerHTML=h;
+    }
   })();
   // Indicadores del inicio: SOLO sobre vacas (mismo universo que el divisor totalVacas)
   var nOrdene=vacas.filter(function(a){return a.estadoProd==='En Ordeñe';}).length;
@@ -1862,11 +1876,15 @@ function renderDashboard() {
       // Header
       var hdr = document.createElement('div');
       hdr.style.cssText='display:flex;align-items:baseline;justify-content:space-between;margin-bottom:8px;cursor:pointer;';
-      hdr.innerHTML='<div style="display:flex;align-items:baseline;gap:8px;flex:1;"><span style="display:inline-flex;align-items:center;height:1em;flex-shrink:0;"><span style="width:8px;height:8px;border-radius:50%;background:'+cfg.dot+';display:inline-block;"></span></span><span style="font-size:16px;font-weight:700;color:#1C1C1E;">'+cfg.label+'</span></div><span style="font-size:15px;font-weight:600;color:#8493a5;white-space:nowrap;">'+grupos[cat].length+' animales'+(cat==='tacto'?' <button onclick="event.stopPropagation();abrirTactoMasivo()" style="background:#E07000;color:#fff;border:none;border-radius:10px;padding:4px 10px;font-size:12px;font-weight:700;cursor:pointer;">Lista</button>':'')+' ›</span>';
+      hdr.innerHTML='<div style="display:flex;align-items:baseline;gap:8px;flex:1;"><span style="display:inline-flex;align-items:center;height:1em;flex-shrink:0;"><span style="width:8px;height:8px;border-radius:50%;background:'+cfg.dot+';display:inline-block;"></span></span><span style="font-size:16px;font-weight:700;color:#1C1C1E;">'+cfg.label+'</span></div><span style="font-size:15px;font-weight:600;color:#8493a5;white-space:nowrap;">'+grupos[cat].length+' animales'+(cat==='tacto'?' <button onclick="event.stopPropagation();abrirTactoMasivo()" style="background:#E07000;color:#fff;border:none;border-radius:10px;padding:4px 10px;font-size:12px;font-weight:700;cursor:pointer;">Lista</button>':'')+' <span class="alerta-flecha" style="display:inline-block;transition:transform .15s;">▸</span></span>';
 
       var body = document.createElement('div');
       body.style.display='none';
-      hdr.onclick=function(){ body.style.display=body.style.display==='none'?'block':'none'; };
+      hdr.onclick=function(){
+        var abrir=body.style.display==='none';
+        body.style.display=abrir?'block':'none';
+        var fl=hdr.querySelector('.alerta-flecha'); if(fl) fl.style.transform=abrir?'rotate(90deg)':'rotate(0deg)';
+      };
 
       grupos[cat].forEach(function(a) {
         var row=document.createElement('div');
@@ -2019,7 +2037,7 @@ function ajustarMarginPadron(){
 // ---- CONFIGURACIÓN UI ----
 function renderConfig() {
   var fields = ['nombreTambo','superficie','ubicacion','unidad','litrosR1',
-    'umbralBajaProduccion','litrosVentaRechazo','diasEsperaPosparto','diasAlertaAnestro',
+    'umbralBajaProduccion','litrosVentaRechazo','diasEsperaPosparto','diasAlertaAnestro','diasVentanaCelo',
     'umbralServicios','diasReinsemTemprana','diasAntesPartoSecar','diasAlertaSecado','litrosAlertaSecarVacia','mesesAbortoPorLactancia',
     'calUfcAlerta','calUfcMal','calCsAlerta','calCsMal','calGrasaMin','calProtMin'];
   fields.forEach(function(k) {
@@ -2064,6 +2082,7 @@ function guardarConfigUI() {
   CONFIG.litrosVentaRechazo = parseFloat(document.getElementById('cfg-litrosVentaRechazo').value) || CONFIG_DEFAULT.litrosVentaRechazo;
   CONFIG.diasEsperaPosparto = parseInt(document.getElementById('cfg-diasEsperaPosparto').value) || CONFIG_DEFAULT.diasEsperaPosparto;
   CONFIG.diasAlertaAnestro = parseInt(document.getElementById('cfg-diasAlertaAnestro').value) || CONFIG_DEFAULT.diasAlertaAnestro;
+  CONFIG.diasVentanaCelo = parseInt(document.getElementById('cfg-diasVentanaCelo').value) || CONFIG_DEFAULT.diasVentanaCelo;
   CONFIG.umbralServicios    = parseInt(document.getElementById('cfg-umbralServicios').value) || CONFIG_DEFAULT.umbralServicios;
   CONFIG.diasReinsemTemprana = parseInt(document.getElementById('cfg-diasReinsemTemprana').value) || CONFIG_DEFAULT.diasReinsemTemprana;
   CONFIG.litrosAlertaSecarVacia = parseFloat(document.getElementById('cfg-litrosAlertaSecarVacia').value) || CONFIG_DEFAULT.litrosAlertaSecarVacia;
@@ -4127,6 +4146,14 @@ function _listaCeloTrabajo(){
   rodeo.forEach(function(a){
     if(a.cat==='Baja'||a.sexo!=='H') return;
     var marca=a.celoMarca||null;
+    // Vencimiento del celo: si mostró celo y pasó la ventana sin inseminar, el celo se perdió → repintar
+    if(marca && marca.motivo==='detectado'){
+      var dDet=-diasHasta(marca.fecha);
+      if(dDet!==null && dDet>CONFIG.diasVentanaCelo){
+        a.celoMarca=null; marca=null;           // celo vencido → vuelve a "A marcar"
+        fb_syncAnimal(a.rp); guardarCacheLocal();
+      }
+    }
     if(marca && marca.motivo==='detectado'){
       out.push({rp:a.rp, estado:'detectada', marca:marca, urg:2000+(-diasHasta(marca.fecha)||0)});
     } else if(marca && marca.motivo==='servicio'){
@@ -4137,6 +4164,15 @@ function _listaCeloTrabajo(){
   });
   out.sort(function(x,y){ return (y.urg||0)-(x.urg||0); });
   return out;
+}
+
+var _celoMarcarAbierto=false;   // "A marcar" arranca plegado
+function toggleCeloMarcar(){ _celoMarcarAbierto=!_celoMarcarAbierto; renderCeloTrabajo(); }
+
+// Cierra el modo aislado de detección de celo y vuelve al inicio (restaura la nav)
+function cerrarDeteccionCelo(){
+  var nav=document.getElementById('main-nav'); if(nav) nav.style.display='flex';
+  goTo('dashboard', document.getElementById('nav-inicio'));
 }
 
 function renderCeloTrabajo(){
@@ -4170,19 +4206,25 @@ function renderCeloTrabajo(){
     return;
   }
 
-  // Grupos por urgencia: A inseminar (celo hoy) arriba, luego A marcar, luego En observación
+  // Grupos por urgencia: A inseminar (celo hoy) arriba, En observación, y A marcar al final (plegable)
   var aInsem=lista.filter(function(x){return x.estado==='detectada';});
-  var aMarcar=lista.filter(function(x){return x.estado==='aservir';});
   var enObs=lista.filter(function(x){return x.estado==='marcada';});
+  var aMarcar=lista.filter(function(x){return x.estado==='aservir';});
   var html='';
   if(aInsem.length)  html+=_grupoCelo('A inseminar', aInsem);
-  if(aMarcar.length) html+=_grupoCelo('A marcar', aMarcar);
   if(enObs.length)   html+=_grupoCelo('En observación', enObs);
+  if(aMarcar.length){
+    html+='<div style="font-size:12px;font-weight:700;color:#8E8E93;text-transform:uppercase;letter-spacing:0.4px;margin:6px 0 8px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;" onclick="toggleCeloMarcar()">'
+      +'<span>A marcar ('+aMarcar.length+')</span>'
+      +'<span style="font-size:15px;color:#B0BCC8;">'+(_celoMarcarAbierto?'▾':'▸')+'</span>'
+    +'</div>';
+    if(_celoMarcarAbierto) html+=_grupoCelo('', aMarcar);
+  }
   cont.innerHTML=html;
 }
 
 function _grupoCelo(titulo, items){
-  var h='<div style="font-size:12px;font-weight:700;color:#8E8E93;text-transform:uppercase;letter-spacing:0.4px;margin:6px 0 8px;">'+titulo+' ('+items.length+')</div>';
+  var h = titulo ? '<div style="font-size:12px;font-weight:700;color:#8E8E93;text-transform:uppercase;letter-spacing:0.4px;margin:6px 0 8px;">'+titulo+' ('+items.length+')</div>' : '';
   items.forEach(function(item){
     var a=getAnimal(item.rp); if(!a) return;
     var est=item.estado;
@@ -4455,7 +4497,7 @@ function goTo(screen, btn) {
   document.querySelectorAll('.screen').forEach(function(s){s.classList.remove('active');});
   var sc=document.getElementById('screen-'+screen);
   if(sc) sc.classList.add('active');
-  var _nav=document.getElementById('main-nav'); if(_nav) _nav.style.display=(screen==='manga')?'none':'flex';
+  var _nav=document.getElementById('main-nav'); if(_nav) _nav.style.display=(screen==='manga'||screen==='celo')?'none':'flex';
   var lecheFab = document.getElementById('leche-fab-btn');
   if(lecheFab) lecheFab.style.display = screen === 'leche' ? 'block' : 'none';
   if(screen !== 'leche') cerrarLecheFab && cerrarLecheFab();
@@ -5461,6 +5503,9 @@ async function _fetchPadronFirebase(callback) {
         diasAcum:        Number(a.diasLact || a.diasAcum) || 0,
         lecheAcum:       Number(a.lecheAcum) || 0,
         nroLactancia:    Number(a.nroPartos || a.nroLactancia) || 0,
+        ultimoCelo:      a.ultimoCelo || null,
+        ultimoSecado:    a.ultimoSecado || null,
+        celoMarca:       a.celoMarca || null,
         enSanitario:     false,
         rodeoManual:     a.rodeoManual || null,
         fechaEgreso:     null,
@@ -8234,6 +8279,13 @@ function cerrarJovenFab() {
       <label class="form-label">Días espera posparto (1ra insem.)</label>
       <div style="display:flex;align-items:center;gap:8px;">
         <input type="number" id="cfg-diasEsperaPosparto" class="form-input" inputmode="numeric" style="flex:1;">
+        <span style="font-size:13px;color:#8E8E93;flex-shrink:0;">días</span>
+      </div>
+    </div>
+    <div class="form-row">
+      <label class="form-label">Días que dura el celo detectado (para inseminar)</label>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <input type="number" id="cfg-diasVentanaCelo" class="form-input" inputmode="numeric" style="flex:1;">
         <span style="font-size:13px;color:#8E8E93;flex-shrink:0;">días</span>
       </div>
     </div>
