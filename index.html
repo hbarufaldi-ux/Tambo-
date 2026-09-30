@@ -1342,6 +1342,8 @@ var CONFIG_DEFAULT = {
   diasEsperaPosparto: 45,
   diasAlertaAnestro: 60,
   diasVentanaCelo: 1,
+  diasRetornoMin: 18,
+  diasRetornoMax: 24,
   umbralServicios: 5,
   diasReinsemTemprana: 21,
   mesesAbortoPorLactancia: 6,
@@ -1803,14 +1805,16 @@ function renderDashboard() {
     if(!sub || typeof _listaCeloTrabajo!=='function') return;
     var l=_listaCeloTrabajo();
     var nI=l.filter(function(x){return x.estado==='detectada';}).length;
+    var nR=l.filter(function(x){return x.estado==='retorno';}).length;
     var nM=l.filter(function(x){return x.estado==='aservir';}).length;
     var nO=l.filter(function(x){return x.estado==='marcada';}).length;
     function chip(n,txt,bg,fg){ return '<span style="display:inline-flex;align-items:baseline;gap:5px;background:'+bg+';color:'+fg+';border-radius:9px;padding:3px 9px;font-size:13px;font-weight:600;"><b style="font-size:16px;font-weight:800;">'+n+'</b>'+txt+'</span>'; }
-    if(nI+nM+nO===0){
+    if(nI+nR+nM+nO===0){
       sub.innerHTML='<span style="font-size:13px;color:#8E8E93;">Sin vacas pendientes hoy</span>';
     } else {
       var h='';
       if(nI) h+=chip(nI,'a inseminar','#E4EFFB','#0A4FA6');
+      if(nR) h+=chip(nR,'vigilar retorno','#FFF6E0','#7A5500');
       h+=chip(nM,'a marcar','#EDF6E8','#2A6A10');
       h+=chip(nO,'en observación','#F3F0FA','#5A3D9A');
       sub.innerHTML=h;
@@ -4197,6 +4201,12 @@ function _listaCeloTrabajo(){
       out.push({rp:a.rp, estado:'detectada', marca:marca, urg:2000+(-diasHasta(marca.fecha)||0)});
     } else if(marca && marca.motivo==='servicio'){
       out.push({rp:a.rp, estado:'marcada', marca:marca, urg:1000+(-diasHasta(marca.fecha)||0)});
+    } else if(!marca && a.estadoRepro==='Inseminada' && a.ultimaInsem){
+      // Vigilando retorno: servida y en la ventana del próximo celo (18-24 días)
+      var dPS=-diasHasta(a.ultimaInsem);
+      if(dPS!==null && dPS>=CONFIG.diasRetornoMin && dPS<=CONFIG.diasRetornoMax){
+        out.push({rp:a.rp, estado:'retorno', dias:dPS, urg:1500+dPS});
+      }
     } else if(!marca && _esAServir(a)){
       out.push({rp:a.rp, estado:'aservir', urg:-diasHasta(a.ultimoParto)});
     }
@@ -4205,7 +4215,7 @@ function _listaCeloTrabajo(){
   return out;
 }
 
-var _celoGruposAbiertos={insem:true, obs:true, marcar:false};   // A marcar arranca plegado
+var _celoGruposAbiertos={insem:true, retorno:true, obs:true, marcar:false};   // A marcar arranca plegado
 var _celoBuscarTimer=null;
 function _debounceCeloBuscar(){ clearTimeout(_celoBuscarTimer); _celoBuscarTimer=setTimeout(renderCeloTrabajo, 180); }
 function toggleCeloGrupo(clave){ _celoGruposAbiertos[clave]=!_celoGruposAbiertos[clave]; renderCeloTrabajo(); }
@@ -4247,12 +4257,14 @@ function renderCeloTrabajo(){
     return;
   }
 
-  // Grupos por urgencia: A inseminar (celo hoy) arriba, En observación, y A marcar al final. Los tres colapsables.
+  // Grupos por urgencia: A inseminar → Vigilando retorno → En observación → A marcar. Todos colapsables.
   var aInsem=lista.filter(function(x){return x.estado==='detectada';});
+  var retorno=lista.filter(function(x){return x.estado==='retorno';});
   var enObs=lista.filter(function(x){return x.estado==='marcada';});
   var aMarcar=lista.filter(function(x){return x.estado==='aservir';});
   var html='';
   if(aInsem.length)  html+=_grupoCeloPlegable('A inseminar', 'insem', aInsem);
+  if(retorno.length) html+=_grupoCeloPlegable('Vigilando retorno', 'retorno', retorno);
   if(enObs.length)   html+=_grupoCeloPlegable('En observación', 'obs', enObs);
   if(aMarcar.length) html+=_grupoCeloPlegable('A marcar', 'marcar', aMarcar);
   cont.innerHTML=html;
@@ -4281,6 +4293,10 @@ function _grupoCelo(titulo, items){
       sub2='<span style="color:#0A4FA6;font-weight:600;">Celo detectado'+(item.marca.metodo?' ('+item.marca.metodo+')':'')+' — inseminar</span>';
       acciones='<button onclick="celoAInseminar('+a.rp+')" style="flex:1;background:#1C1C1E;color:#fff;border:none;border-radius:12px;padding:12px 8px;font-size:15px;font-weight:700;cursor:pointer;">Inseminar</button>'
         +'<button onclick="quitarMarcaCelo('+a.rp+')" style="flex:0 0 auto;background:transparent;color:#0A4FA6;border:1px solid #A9CBEE;border-radius:12px;padding:12px 14px;font-size:14px;font-weight:600;cursor:pointer;">Quitar</button>';
+    } else if(est==='retorno'){
+      borde='#E0A000'; fondo='#FFF6E0';
+      sub2='<span style="color:#7A5500;font-weight:600;">Servida hace '+item.dias+' días — vigilar retorno</span>';
+      acciones='<button onclick="volvioEnCelo('+a.rp+')" style="flex:1;background:#1C1C1E;color:#fff;border:none;border-radius:12px;padding:12px 8px;font-size:15px;font-weight:700;cursor:pointer;">Volvió en celo</button>';
     } else if(est==='marcada'){
       borde='#7050B0'; fondo='#F3F0FA';
       sub2='<span style="color:#5A3D9A;font-weight:600;">'+item.marca.metodo+' hace '+(-diasHasta(item.marca.fecha))+' días</span>';
@@ -4301,6 +4317,24 @@ function _grupoCelo(titulo, items){
     +'</div>';
   });
   return h;
+}
+
+// Volvió en celo (retorno): el servicio anterior no prendió → registra celo y la manda a "A inseminar" para reinseminar
+function volvioEnCelo(rp){
+  var a=getAnimal(rp); if(!a) return;
+  var fecha=fechaLocal();
+  a.ultimoCelo=fecha;
+  a.estadoRepro='Vacía';                 // volvió en celo = no quedó preñada
+  a.ultimaInsem=null; a.ultimaInsemToro=null;   // el servicio anterior falló (queda en el historial de eventos)
+  a.celoMarca={metodo:'', fecha:fecha, motivo:'detectado'};   // → aparece en "A inseminar"
+  fb_syncAnimal(rp);
+  guardarCacheLocal();
+  var fila=[generarID('Cel',rp),fecha,rp,a.nombre,'Repetición','Volvió en celo (retorno)'];
+  enviarASheets('Reg_Celos',fila,{resultado:'Repetición'});
+  agregarReciente('celo', rp, 'Volvió en celo');
+  renderCeloTrabajo();
+  if(typeof renderDashboard==='function') renderDashboard();
+  showToast('RP '+rp+' volvió en celo — a reinseminar');
 }
 
 // Desde "A inseminar" (celo ya detectado) → ir a la pantalla de inseminación con la vaca cargada
