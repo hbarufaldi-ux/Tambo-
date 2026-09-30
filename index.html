@@ -1732,6 +1732,10 @@ function calcAlertas() {
     if(a.estadoProd==='En Ordeñe' && a.estadoRepro!=='Preñada' && a.estadoRepro!=='Inseminada' && !a.ultimaInsem) {
       if(a.estadoRepro==='Anestro') {
         alerts.push({cat:'anestro', rp:a.rp, detalle:'Marcada en anestro', urgencia:900});
+      } else if(a.celoMarca && a.celoMarca.motivo==='servicio' && -diasHasta(a.celoMarca.fecha)>=CONFIG.diasAlertaAnestro) {
+        // Fase 3: marcada (parche/pintura) hace mucho y nunca mostró celo → sospecha con fundamento
+        var dMarcada=-diasHasta(a.celoMarca.fecha);
+        alerts.push({cat:'anestro', rp:a.rp, detalle:'Marcada hace '+dMarcada+' días sin mostrar celo', urgencia:800+dMarcada});
       } else if(a.ultimoCelo && a.ultimoParto && -diasHasta(a.ultimoParto)>=CONFIG.diasEsperaPosparto) {
         var dSinCelo=-diasHasta(a.ultimoCelo);
         if(dSinCelo!==null && dSinCelo>=CONFIG.diasAlertaAnestro) {
@@ -4142,11 +4146,15 @@ async function guardarCelo() {
   var animal=document.getElementById('c-animal').value;
   if(!animal){showToast('Seleccioná un animal',true);return;}
   var a=getAnimal(animal);
-  a.ultimoCelo=document.getElementById('c-fecha').value;
+  var fecha=document.getElementById('c-fecha').value;
+  a.ultimoCelo=fecha;
+  // Unifica con "Mostró celo": registrar un celo también la manda a "A inseminar"
+  a.celoMarca={metodo:(a.celoMarca&&a.celoMarca.metodo)||'', fecha:fecha, motivo:'detectado'};
   fb_syncAnimal(animal);
-  var fila=[generarID('Cel',animal),document.getElementById('c-fecha').value,animal,a.nombre,a.estadoRepro,document.getElementById('c-obs').value||''];
+  guardarCacheLocal();
+  var fila=[generarID('Cel',animal),fecha,animal,a.nombre,a.estadoRepro,document.getElementById('c-obs').value||''];
   var ok=await enviarASheets('Reg_Celos',fila,{resultado:a.estadoRepro});
-  if(ok){agregarReciente('celo', animal, a.estadoRepro+' — '+document.getElementById('c-obs').value);cerrarCeloSuelto();renderCeloTrabajo();showToast('Celo registrado');}
+  if(ok){agregarReciente('celo', animal, 'Celo detectado'+(document.getElementById('c-obs').value?' — '+document.getElementById('c-obs').value:''));cerrarCeloSuelto();renderCeloTrabajo();if(typeof renderDashboard==='function')renderDashboard();showToast('RP '+animal+' apartada para inseminar');}
 }
 
 // ===== DETECCIÓN DE CELO — embudo (entrega 1) =====
@@ -4200,7 +4208,12 @@ function _listaCeloTrabajo(){
     if(marca && marca.motivo==='detectado'){
       out.push({rp:a.rp, estado:'detectada', marca:marca, urg:2000+(-diasHasta(marca.fecha)||0)});
     } else if(marca && marca.motivo==='servicio'){
-      out.push({rp:a.rp, estado:'marcada', marca:marca, urg:1000+(-diasHasta(marca.fecha)||0)});
+      var dMarca=-diasHasta(marca.fecha);
+      if(dMarca!==null && dMarca>=CONFIG.diasAlertaAnestro){
+        out.push({rp:a.rp, estado:'anestro_sosp', marca:marca, dias:dMarca, urg:dMarca});
+      } else {
+        out.push({rp:a.rp, estado:'marcada', marca:marca, urg:1000+(-diasHasta(marca.fecha)||0)});
+      }
     } else if(!marca && a.estadoRepro==='Inseminada' && a.ultimaInsem){
       // Vigilando retorno: servida y en la ventana del próximo celo (18-24 días)
       var dPS=-diasHasta(a.ultimaInsem);
@@ -4215,7 +4228,7 @@ function _listaCeloTrabajo(){
   return out;
 }
 
-var _celoGruposAbiertos={insem:true, retorno:true, obs:true, marcar:false};   // A marcar arranca plegado
+var _celoGruposAbiertos={insem:true, retorno:true, obs:true, anestro:true, marcar:false};   // A marcar arranca plegado
 var _celoBuscarTimer=null;
 function _debounceCeloBuscar(){ clearTimeout(_celoBuscarTimer); _celoBuscarTimer=setTimeout(renderCeloTrabajo, 180); }
 function toggleCeloGrupo(clave){ _celoGruposAbiertos[clave]=!_celoGruposAbiertos[clave]; renderCeloTrabajo(); }
@@ -4261,11 +4274,13 @@ function renderCeloTrabajo(){
   var aInsem=lista.filter(function(x){return x.estado==='detectada';});
   var retorno=lista.filter(function(x){return x.estado==='retorno';});
   var enObs=lista.filter(function(x){return x.estado==='marcada';});
+  var anestro=lista.filter(function(x){return x.estado==='anestro_sosp';});
   var aMarcar=lista.filter(function(x){return x.estado==='aservir';});
   var html='';
   if(aInsem.length)  html+=_grupoCeloPlegable('A inseminar', 'insem', aInsem);
   if(retorno.length) html+=_grupoCeloPlegable('Vigilando retorno', 'retorno', retorno);
   if(enObs.length)   html+=_grupoCeloPlegable('En observación', 'obs', enObs);
+  if(anestro.length) html+=_grupoCeloPlegable('Posible anestro', 'anestro', anestro);
   if(aMarcar.length) html+=_grupoCeloPlegable('A marcar', 'marcar', aMarcar);
   cont.innerHTML=html;
 }
@@ -4297,6 +4312,11 @@ function _grupoCelo(titulo, items){
       borde='#E0A000'; fondo='#FFF6E0';
       sub2='<span style="color:#7A5500;font-weight:600;">Servida hace '+item.dias+' días — vigilar retorno</span>';
       acciones='<button onclick="volvioEnCelo('+a.rp+')" style="flex:1;background:#1C1C1E;color:#fff;border:none;border-radius:12px;padding:12px 8px;font-size:15px;font-weight:700;cursor:pointer;">Volvió en celo</button>';
+    } else if(est==='anestro_sosp'){
+      borde='#C03030'; fondo='#FBE9E9';
+      sub2='<span style="color:#A0200A;font-weight:600;">Marcada hace '+item.dias+' días sin celo — avisar al veterinario</span>';
+      acciones='<button onclick="celoDetectado('+a.rp+')" style="flex:1;background:#1C1C1E;color:#fff;border:none;border-radius:12px;padding:12px 8px;font-size:15px;font-weight:700;cursor:pointer;">Mostró celo</button>'
+        +'<button onclick="_irFichaCria('+a.rp+')" style="flex:0 0 auto;background:transparent;color:#A0200A;border:1px solid #E6B0B0;border-radius:12px;padding:12px 14px;font-size:14px;font-weight:600;cursor:pointer;">Ficha</button>';
     } else if(est==='marcada'){
       borde='#7050B0'; fondo='#F3F0FA';
       sub2='<span style="color:#5A3D9A;font-weight:600;">'+item.marca.metodo+' hace '+(-diasHasta(item.marca.fecha))+' días</span>';
